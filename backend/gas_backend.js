@@ -351,13 +351,23 @@ function errorResponse(message) {
 }
 
 // แปลงวันที่ฟอร์แมต DD/MM/YYYY เป็นวัตถุ Date
-function parseDate(dateStr) {
-  if (!dateStr) return new Date(0);
-  var parts = dateStr.split("/");
-  if (parts.length === 3) {
-    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+function parseDate(dateVal) {
+  if (!dateVal) return new Date(0);
+  if (dateVal instanceof Date) return dateVal;
+  
+  if (typeof dateVal === "string") {
+    var parts = dateVal.split("/");
+    if (parts.length === 3) {
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    }
   }
-  return new Date(dateStr);
+  
+  try {
+    var d = new Date(dateVal);
+    if (!isNaN(d.getTime())) return d;
+  } catch (e) {}
+  
+  return new Date(0);
 }
 
 // หาวันที่ปัจจุบันในเขตเวลาไทย (รูปแบบ DD/MM/YYYY)
