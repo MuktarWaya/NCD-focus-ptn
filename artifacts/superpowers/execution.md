@@ -43,3 +43,13 @@ This file tracks the execution steps of the Tailwind CSS UI redesign and Body Co
 - **Result**: PASS (หน้าจอเข้าสู่ระบบล็อกอินได้ถูกต้อง และจดจำแท็บผ่าน sessionStorage สำเร็จ)
 
 
+### Step 5: ตั้งค่าลิงก์เชื่อมต่อ Google Sheets API (GAS URL) เป็นค่าเริ่มต้น
+- **Files changed**: [app.js](file:///G:/My%20Drive/%E0%B8%AA%E0%B8%98%E0%B8%99.%E0%B8%A1%E0%B8%B2%E0%B8%A2%E0%B8%AD/%E0%B8%81%E0%B8%A5%E0%B8%B8%E0%B9%88%E0%B8%A1%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%9E%E0%B8%B1%E0%B8%92%E0%B8%99%E0%B8%B2%E0%B8%9A%E0%B8%A3%E0%B8%B4%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3/webapp/%E0%B8%A3%E0%B8%B0%E0%B8%9A%E0%B8%9A%E0%B8%95%E0%B8%B4%E0%B8%94%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%9E%E0%B8%A4%E0%B8%95%E0%B8%B4%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1%20%E0%B8%A1%E0%B8%B8%E0%B9%88%E0%B8%87%E0%B9%80%E0%B8%9B%E0%B9%89%E0%B8%B2%E0%B8%9B%E0%B8%B1%E0%B8%95%E0%B8%95%E0%B8%B2%E0%B8%99%E0%B8%B5/app.js)
+- **What changed**:
+  - ตั้งค่าตัวแปร `gasUrl` เริ่มต้นในสถานะแอปเป็นลิงก์ Apps Script URL จริงของผู้ใช้งาน
+  - ปรับปรุงฟังก์ชัน `loadSettings()` ให้โหลดค่าเริ่มต้นของ `gasUrl` และ `apiPasscode` มาตั้งค่าฟิลด์และสลับเข้าโหมดเชื่อมต่อจริง (`online`) ตั้งแต่เริ่มหากเปิดในเบราว์เซอร์อื่น
+- **Verification command(s)**: ตรวจสอบไวยากรณ์ด้วย `node -c app.js`
+- **Result**: PASS (ระบบเปิดใช้งานพร้อมเชื่อมต่อฐานข้อมูล Google Sheets เป็นค่าเริ่มต้นทันที)
+
+
+

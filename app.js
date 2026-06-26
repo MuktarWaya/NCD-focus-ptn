@@ -7,7 +7,7 @@
 const state = {
     currentView: 'dashboard-view',
     connectionMode: 'demo', // 'demo' or 'online'
-    gasUrl: '',
+    gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
     apiPasscode: '123456',
     
     // In-memory data (loaded from CSV or API)
@@ -51,16 +51,22 @@ function loadSettings() {
     
     if (savedUrl) {
         state.gasUrl = savedUrl;
-        document.getElementById('setting-gas-url').value = savedUrl;
     }
+    if (state.gasUrl) {
+        document.getElementById('setting-gas-url').value = state.gasUrl;
+    }
+    
     if (savedPasscode) {
         state.apiPasscode = savedPasscode;
-        document.getElementById('setting-passcode').value = savedPasscode;
     }
+    if (state.apiPasscode) {
+        document.getElementById('setting-passcode').value = state.apiPasscode;
+    }
+    
     if (savedMode) {
         state.connectionMode = savedMode;
     } else {
-        state.connectionMode = savedUrl ? 'online' : 'demo';
+        state.connectionMode = state.gasUrl ? 'online' : 'demo';
     }
 
     updateConnectionIndicator();
