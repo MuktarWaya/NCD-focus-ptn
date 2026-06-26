@@ -391,8 +391,8 @@ function renderDashboard() {
                 if (latest.bmi < m0.bmi) improvedBmi++;
                 
                 if (latest.bp && m0.bp) {
-                    const m0Sys = parseInt(m0.bp.split('/')[0]);
-                    const latSys = parseInt(latest.bp.split('/')[0]);
+                    const m0Sys = parseInt(m0.bp.toString().split('/')[0]);
+                    const latSys = parseInt(latest.bp.toString().split('/')[0]);
                     if (latSys < m0Sys) improvedBp++;
                 }
                 
@@ -540,7 +540,7 @@ function renderUrgentTargetsTable() {
         let isUrgent = false;
         let sys = 0, dia = 0;
         if (log.bp) {
-            const parts = log.bp.split('/');
+            const parts = log.bp.toString().split('/');
             sys = parseInt(parts[0]);
             dia = parseInt(parts[1]);
             if (sys >= 140 || dia >= 90) isUrgent = true;
@@ -678,7 +678,7 @@ function renderTargetsList() {
             if (filterDisease === 'DM') {
                 matchDisease = t.chronic_disease.includes('DM') || (log.dtx >= 126);
             } else if (filterDisease === 'HT') {
-                matchDisease = t.chronic_disease.includes('HT') || (log.bp && parseInt(log.bp.split('/')[0]) >= 130);
+                matchDisease = t.chronic_disease.includes('HT') || (log.bp && parseInt(log.bp.toString().split('/')[0]) >= 130);
             } else if (filterDisease === 'Obesity') {
                 matchDisease = log.bmi >= 25 || (t.co_morbidity && t.co_morbidity.includes('อ้วน'));
             } else if (filterDisease === 'Dyslipidemia') {
@@ -717,9 +717,9 @@ function renderTargetsList() {
         
         // Status indicator color bar based on health risk
         let dotColorClass = 'bg-emerald-500';
-        if (log.dtx >= 140 || (log.bp && parseInt(log.bp.split('/')[0]) >= 140)) {
+        if (log.dtx >= 140 || (log.bp && parseInt(log.bp.toString().split('/')[0]) >= 140)) {
             dotColorClass = 'bg-risk-danger'; // Red
-        } else if (log.dtx >= 110 || (log.bp && parseInt(log.bp.split('/')[0]) >= 130) || log.bmi >= 25) {
+        } else if (log.dtx >= 110 || (log.bp && parseInt(log.bp.toString().split('/')[0]) >= 130) || log.bmi >= 25) {
             dotColorClass = 'bg-risk-warning'; // Yellow
         }
         
@@ -920,7 +920,7 @@ function renderTimelineCards() {
         let bpStatusText = 'ปกติ';
         let bpStatusClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
         if (log.bp) {
-            const sys = parseInt(log.bp.split('/')[0]);
+            const sys = parseInt(log.bp.toString().split('/')[0]);
             if (sys >= 140) {
                 bpStatusText = 'สูง';
                 bpStatusClass = 'bg-rose-50 text-rose-700 border border-rose-200';
@@ -1079,8 +1079,8 @@ function renderProfileCharts() {
     const ctx2 = document.getElementById('chart-bp-dtx').getContext('2d');
     if (state.charts.bpDtx) state.charts.bpDtx.destroy();
     
-    const bpSys = logs.map(l => l.bp ? parseInt(l.bp.split('/')[0]) : null);
-    const bpDia = logs.map(l => l.bp ? parseInt(l.bp.split('/')[1]) : null);
+    const bpSys = logs.map(l => l.bp ? parseInt(l.bp.toString().split('/')[0]) : null);
+    const bpDia = logs.map(l => l.bp ? parseInt(l.bp.toString().split('/')[1]) : null);
     
     state.charts.bpDtx = new Chart(ctx2, {
         type: 'line',

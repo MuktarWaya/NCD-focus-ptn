@@ -166,8 +166,8 @@ function getDashboardStats(ss) {
         
         // 2. ความดันโลหิตดีขึ้น (Systolic ล่าสุด น้อยกว่า M0)
         if (latest.bp && m0.bp) {
-          var m0Sys = parseInt(m0.bp.split("/")[0]);
-          var latSys = parseInt(latest.bp.split("/")[0]);
+          var m0Sys = parseInt(m0.bp.toString().split("/")[0]);
+          var latSys = parseInt(latest.bp.toString().split("/")[0]);
           if (latSys < m0Sys) improvedBpCount++;
         }
         
