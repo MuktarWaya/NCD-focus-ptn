@@ -380,3 +380,38 @@ function getTodayThaiDate() {
   var yyyy = thDate.getFullYear();
   return dd + "/" + mm + "/" + yyyy;
 }
+
+// ฟังก์ชันสำหรับตั้งค่าสร้างแผ่นงาน (Tabs) และหัวตาราง (Headers) เริ่มต้นอัตโนมัติ
+// สามารถกดเลือกและรันฟังก์ชันนี้จาก Apps Script Editor เพื่อเตรียมความพร้อมของชีตได้ทันที
+function setupSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    Logger.log("ไม่พบ Google Sheets");
+    return;
+  }
+  
+  var sheetsConfig = {
+    "Targets": ["id", "name", "address", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
+    "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"],
+    "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"]
+  };
+  
+  Object.keys(sheetsConfig).forEach(function(sheetName) {
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+    
+    // หากชีตยังไม่มีข้อมูล ให้เขียนหัวตาราง (Row 1)
+    if (sheet.getLastRow() === 0) {
+      var headers = sheetsConfig[sheetName];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+      Logger.log("สร้างแผ่นงาน '" + sheetName + "' และเขียนหัวตารางสำเร็จ");
+    } else {
+      Logger.log("แผ่นงาน '" + sheetName + "' มีข้อมูลอยู่แล้ว ข้ามขั้นตอนการเขียนหัวตาราง");
+    }
+  });
+  
+  Logger.log("ตั้งค่าระบบฐานข้อมูลชีตเสร็จสมบูรณ์!");
+}
+
