@@ -1,0 +1,14 @@
+# local agent runner cache
+.agent/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+
+# Google Drive Desktop metadata links
+*.gsheet
+*.gslides
+*.gdoc
+*.gdraw

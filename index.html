@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบติดตามพฤติกรรมสุขภาพ มุ่งเป้าปัตตานี (NCDs Focus)</title>
+    <!-- Tailwind CSS CDN with forms and container queries -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts: Outfit for English/Numbers & Sarabun for Thai -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Material Symbols Outlined -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-primary": "#89ceff",
+                        "primary-fixed": "#c9e6ff",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "surface": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-error": "#ffffff",
+                        "surface-glass": "rgba(255, 255, 255, 0.7)",
+                        "surface-dim": "#cbdbf5",
+                        "on-secondary-container": "#fffbff",
+                        "secondary-fixed-dim": "#c0c1ff",
+                        "secondary-fixed": "#e1e0ff",
+                        "outline": "#6e7881",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#dce9ff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "background-base": "#f4f6fa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-container-low": "#eff4ff",
+                        "surface-bright": "#f8f9ff",
+                        "surface-tint": "#006591",
+                        "primary-fixed-dim": "#89ceff",
+                        "primary-container": "#0ea5e9",
+                        "on-primary-fixed": "#001e2f",
+                        "on-secondary-fixed-variant": "#2f2ebe",
+                        "on-tertiary-container": "#003b26",
+                        "secondary-container": "#6063ee",
+                        "secondary": "#4648d4",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-surface-variant": "#3e4850",
+                        "error-container": "#ffdad6",
+                        "on-background": "#0b1c30",
+                        "text-slate": "#0f172a",
+                        "risk-danger": "#ef4444",
+                        "primary": "#006591",
+                        "on-tertiary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#003751",
+                        "on-secondary-fixed": "#07006c",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#d3e4fe",
+                        "risk-warning": "#f59e0b",
+                        "background": "#f8f9ff",
+                        "outline-variant": "#bec8d2",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "inverse-surface": "#213145",
+                        "tertiary-container": "#00b17b",
+                        "tertiary": "#006c49",
+                        "surface-container": "#e5eeff"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "stack-md": "1rem",
+                        "margin-desktop": "2.5rem",
+                        "margin-mobile": "1rem",
+                        "stack-sm": "0.5rem",
+                        "gutter": "1.5rem",
+                        "container-max": "1280px",
+                        "stack-lg": "2rem"
+                    },
+                    fontFamily: {
+                        "sans": ["Sarabun", "Outfit", "sans-serif"],
+                        "headline": ["Outfit", "Sarabun", "sans-serif"],
+                        "body-md": ["Sarabun", "sans-serif"],
+                        "body-sm": ["Sarabun", "sans-serif"],
+                        "headline-sm": ["Outfit", "sans-serif"],
+                        "label-caps": ["Outfit", "sans-serif"],
+                        "stat-display": ["Outfit", "sans-serif"],
+                        "headline-lg": ["Outfit", "sans-serif"],
+                        "body-lg": ["Sarabun", "sans-serif"],
+                        "headline-md": ["Outfit", "sans-serif"]
+                    }
+                }
+            }
+        };
+    </script>
+    <!-- Local CSS stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-background-base text-on-surface antialiased font-body-md h-full flex flex-col overflow-hidden">
+
+    <!-- Demo Mode Banner -->
+    <div id="demo-banner" class="bg-amber-500 text-white px-4 py-2 flex items-center justify-between text-sm font-medium z-50 shadow-md">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined">warning</span>
+            <span>ขณะนี้แอปทำงานใน <strong>"โหมดทดลอง (Demo Mode)"</strong> ใช้ข้อมูลจำลองในเครื่อง สามารถเชื่อมต่อฐานข้อมูล Google Sheets ได้ที่เมนู <strong>"ตั้งค่า API"</strong></span>
+        </div>
+        <button id="close-demo-banner" class="text-white hover:text-amber-100 p-1 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+    </div>
+
+    <!-- Login Passcode Screen -->
+    <div id="login-screen" class="fixed inset-0 bg-background-base/80 backdrop-blur-xl flex items-center justify-center z-50 p-4">
+        <div class="glass-floating rounded-2xl p-8 max-w-md w-full border border-white/50 shadow-xl flex flex-col items-center">
+            <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
+                <span class="material-symbols-outlined text-3xl">shield_person</span>
+            </div>
+            <h2 class="font-headline text-2xl font-bold text-primary mb-2 text-center">ระบบติดตามพฤติกรรมสุขภาพ</h2>
+            <p class="font-body-sm text-sm text-on-surface-variant mb-6 text-center">กรุณากรอกรหัสผ่านเพื่อเข้าใช้งานฐานข้อมูลมุ่งเป้าปัตตานี</p>
+            <form id="login-form" class="w-full space-y-4">
+                <div class="relative flex items-center">
+                    <span class="material-symbols-outlined absolute left-3 text-outline">lock</span>
+                    <input type="password" id="login-passcode" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-4 py-3 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="กรอกรหัสผ่าน (เริ่มต้น: 123456)" required>
+                </div>
+                <div id="login-error" class="hidden text-xs text-rose-500 font-medium text-center">รหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง</div>
+                <button type="submit" class="w-full bg-primary text-on-primary font-semibold py-3 rounded-xl hover:bg-primary-container shadow-[0_4px_12px_rgba(0,101,145,0.2)] active:scale-98 transition-all flex items-center justify-center gap-2">
+                    <span>เข้าสู่ระบบ</span>
+                    <span class="material-symbols-outlined text-[18px]">login</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="app-container" class="flex flex-1 h-full w-full relative overflow-hidden">
+        
+        <!-- Sidebar Navigation -->
+        <aside class="hidden md:flex flex-col h-full py-stack-lg px-gutter bg-surface-glass backdrop-blur-xl w-64 border-r border-white/40 shadow-sm z-30 shrink-0">
+            <div class="mb-8 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined text-2xl font-bold">favorite</span>
+                </div>
+                <div>
+                    <h1 class="font-headline text-lg font-bold text-primary">NCDs Focus</h1>
+                    <span class="text-xs text-on-surface-variant font-medium">มุ่งเป้าปัตตานี</span>
+                </div>
+            </div>
+            
+            <nav class="flex-1 space-y-2">
+                <a href="#" class="nav-item active flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-view="dashboard-view">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span class="font-body-md text-sm">แผงควบคุม (Dashboard)</span>
+                </a>
+                <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-view="targets-view">
+                    <span class="material-symbols-outlined">groups</span>
+                    <span class="font-body-md text-sm">กลุ่มเป้าหมาย (~200 คน)</span>
+                </a>
+                <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-view="interpreter-view">
+                    <span class="material-symbols-outlined">analytics</span>
+                    <span class="font-body-md text-sm">แปลผลร่างกาย (Scale Interpreter)</span>
+                </a>
+                <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-view="settings-view">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span class="font-body-md text-sm">ตั้งค่า API เชื่อมต่อ</span>
+                </a>
+            </nav>
+
+            <div class="mt-auto pt-6 border-t border-white/40 flex flex-col gap-4">
+                <div class="flex items-center gap-3 px-2">
+                    <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700">
+                        <span class="material-symbols-outlined">account_circle</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-bold text-on-surface truncate">ผู้บันทึกข้อมูล</div>
+                        <div class="text-[10px] text-on-surface-variant font-medium truncate">เจ้าหน้าที่สาธารณสุข / อสม.</div>
+                    </div>
+                    <button id="logout-btn" class="text-on-surface-variant hover:text-rose-500 p-1 flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors" title="ออกจากระบบ">
+                        <span class="material-symbols-outlined text-[20px]">logout</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col min-h-screen overflow-hidden">
+            
+            <!-- Header Bar -->
+            <header class="flex justify-between items-center h-16 px-6 sticky top-0 z-20 border-b border-white/40 bg-surface-glass backdrop-blur-md shadow-sm shrink-0">
+                <div class="flex items-center gap-4">
+                    <!-- Mobile Nav Toggle button (decorative / toggle side navigation if needed) -->
+                    <button class="md:hidden text-on-surface-variant hover:text-primary p-1 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors">
+                        <span class="material-symbols-outlined">menu</span>
+                    </button>
+                    <div>
+                        <h2 id="view-title" class="font-headline text-lg font-bold text-primary">แผงควบคุม (Dashboard)</h2>
+                        <p id="view-subtitle" class="text-xs text-on-surface-variant">สรุปสถิติสถานะสุขภาพและการเปลี่ยนแปลงพฤติกรรมภาพรวม</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-all" id="theme-toggle">
+                        <span class="material-symbols-outlined">dark_mode</span>
+                    </button>
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/40 shadow-sm bg-white/50" id="conn-status-indicator">
+                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                        <span class="text-xs font-bold text-on-surface-variant status-text">Demo Mode</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable View Container -->
+            <main class="flex-1 overflow-y-auto p-6 space-y-6 pb-24 md:pb-6">
+                
+                <!-- VIEW 1: Dashboard View -->
+                <section id="dashboard-view" class="view-section space-y-6">
+                    <!-- Statistics Summary Cards -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <!-- Stat 1 -->
+                        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="font-label-caps text-xs text-outline-variant font-bold uppercase tracking-wider">กลุ่มเป้าหมายทั้งหมด</span>
+                                <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">groups</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-stat-display text-3xl font-extrabold text-on-surface" id="stat-total">-</div>
+                                <span class="text-xs text-on-surface-variant">คนในระบบติดตาม</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 2 -->
+                        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between status-bar-warning">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="font-label-caps text-xs text-outline-variant font-bold uppercase tracking-wider">กลุ่มเสี่ยง</span>
+                                <div class="w-8 h-8 rounded-full bg-risk-warning/10 flex items-center justify-center text-risk-warning">
+                                    <span class="material-symbols-outlined text-[20px]">warning</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-stat-display text-3xl font-extrabold text-on-surface" id="stat-risk">-</div>
+                                <span class="text-xs text-on-surface-variant" id="stat-risk-percent">- ของทั้งหมด</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 3 -->
+                        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between status-bar-danger">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="font-label-caps text-xs text-outline-variant font-bold uppercase tracking-wider">กลุ่มป่วย</span>
+                                <div class="w-8 h-8 rounded-full bg-risk-danger/10 flex items-center justify-center text-risk-danger">
+                                    <span class="material-symbols-outlined text-[20px]">personal_injury</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-stat-display text-3xl font-extrabold text-on-surface" id="stat-patient">-</div>
+                                <span class="text-xs text-on-surface-variant" id="stat-patient-percent">- ของทั้งหมด</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat 4 -->
+                        <div class="glass-card rounded-2xl p-5 flex flex-col justify-between status-bar-success">
+                            <div class="flex justify-between items-start mb-4">
+                                <span class="font-label-caps text-xs text-outline-variant font-bold uppercase tracking-wider">อัตราสุขภาพดีขึ้น</span>
+                                <div class="w-8 h-8 rounded-full bg-tertiary-container/10 flex items-center justify-center text-tertiary-container">
+                                    <span class="material-symbols-outlined text-[20px]">trending_up</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="font-stat-display text-3xl font-extrabold text-on-surface" id="stat-improved-rate">-%</div>
+                                <span class="text-xs text-on-surface-variant" id="stat-improved-desc">วิเคราะห์จากผลติดตาม 3 เดือน</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Charts Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left bar chart (Spans 2 cols on Desktop) -->
+                        <div class="lg:col-span-2 glass-card rounded-2xl p-6">
+                            <h3 class="font-headline text-base font-bold text-on-surface mb-4 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">bar_chart</span>
+                                อัตราการพัฒนาสุขภาพรายตัวชี้วัด (ดีขึ้น)
+                            </h3>
+                            <div class="h-64 relative">
+                                <canvas id="improvement-chart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Right Pie Chart -->
+                        <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                            <h3 class="font-headline text-base font-bold text-on-surface mb-4 text-center">สัดส่วนกลุ่มเป้าหมาย</h3>
+                            <div class="h-48 relative flex items-center justify-center">
+                                <canvas id="ratio-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- High Risk & Recent Updates -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- High Risk Alerts Table -->
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="font-headline text-base font-bold text-risk-danger mb-4 flex items-center gap-2">
+                                <span class="material-symbols-outlined">notifications_active</span>
+                                เป้าหมายที่ต้องการการดูแลเร่งด่วน (ค่าน้ำตาล/ความดันสูงมาก)
+                            </h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-slate-100/50 text-slate-600 font-semibold border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-2.5 px-4 rounded-l-lg">ชื่อ-สกุล</th>
+                                            <th class="py-2.5 px-3">ประเภท</th>
+                                            <th class="py-2.5 px-3">ความดัน (BP)</th>
+                                            <th class="py-2.5 px-3">น้ำตาล (DTX)</th>
+                                            <th class="py-2.5 px-4 rounded-r-lg text-center">จัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dashboard-urgent-list" class="divide-y divide-slate-100">
+                                        <!-- Dynamic rows will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Behavior statistics -->
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="font-headline text-base font-bold text-on-surface mb-6 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">analytics</span>
+                                ภาพรวมพฤติกรรมสุขภาพกลุ่มเป้าหมาย (สัปดาห์นี้)
+                            </h3>
+                            <div class="space-y-5">
+                                <!-- Exercise -->
+                                <div>
+                                    <div class="flex justify-between items-center mb-2 text-sm">
+                                        <span class="text-on-surface flex items-center gap-2 font-medium">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">directions_run</span> 
+                                            ออกกำลังกายเพียงพอ (>=150 นาที/สัปดาห์)
+                                        </span>
+                                        <span class="font-semibold text-primary" id="val-exercise">0%</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-primary rounded-full transition-all duration-500" id="bar-exercise" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <!-- Fruit -->
+                                <div>
+                                    <div class="flex justify-between items-center mb-2 text-sm">
+                                        <span class="text-on-surface flex items-center gap-2 font-medium">
+                                            <span class="material-symbols-outlined text-tertiary-container text-[18px]">nutrition</span> 
+                                            ทานผักผลไม้เพียงพอ (>= 5 ส่วน/วัน)
+                                        </span>
+                                        <span class="font-semibold text-tertiary-container" id="val-veggie">0%</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-tertiary-container rounded-full transition-all duration-500" id="bar-veggie" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <!-- Sleep -->
+                                <div>
+                                    <div class="flex justify-between items-center mb-2 text-sm">
+                                        <span class="text-on-surface flex items-center gap-2 font-medium">
+                                            <span class="material-symbols-outlined text-secondary text-[18px]">bedtime</span> 
+                                            นอนหลับพักผ่อนเพียงพอ (7-8 ชม.)
+                                        </span>
+                                        <span class="font-semibold text-secondary" id="val-sleep">0%</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-secondary rounded-full transition-all duration-500" id="bar-sleep" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <!-- Smoking -->
+                                <div>
+                                    <div class="flex justify-between items-center mb-2 text-sm">
+                                        <span class="text-on-surface flex items-center gap-2 font-medium">
+                                            <span class="material-symbols-outlined text-rose-500 text-[18px]">smoke_free</span> 
+                                            ไม่สูบบุหรี่
+                                        </span>
+                                        <span class="font-semibold text-rose-500" id="val-smoking">0%</span>
+                                    </div>
+                                    <div class="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden">
+                                        <div class="h-full bg-rose-500 rounded-full transition-all duration-500" id="bar-smoking" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 2: Targets List View -->
+                <section id="targets-view" class="view-section space-y-6 hidden">
+                    <!-- Advanced Filters (Glassmorphism Bar) -->
+                    <div class="glass-card rounded-2xl p-5 flex flex-col lg:flex-row gap-4 items-end">
+                        <div class="w-full lg:w-1/3 relative flex items-center">
+                            <span class="material-symbols-outlined absolute left-3 text-outline">search</span>
+                            <input type="text" id="target-search-input" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-4 py-2.5 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="ค้นหา ชื่อ-สกุล หรือ บ้านเลขที่...">
+                        </div>
+                        <div class="w-full sm:w-1/2 lg:w-1/4">
+                            <label for="filter-type" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">ประเภทกลุ่ม</label>
+                            <div class="relative">
+                                <select id="filter-type" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                    <option value="all">ทั้งหมด (กลุ่มเสี่ยง/กลุ่มป่วย)</option>
+                                    <option value="กลุ่มเสี่ยง">กลุ่มเสี่ยง</option>
+                                    <option value="กลุ่มป่วย">กลุ่มป่วย</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                            </div>
+                        </div>
+                        <div class="w-full sm:w-1/2 lg:w-1/4">
+                            <label for="filter-disease" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">โรค/ภาวะเสี่ยง</label>
+                            <div class="relative">
+                                <select id="filter-disease" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                    <option value="all">โรคทั้งหมด</option>
+                                    <option value="DM">เบาหวาน (DM)</option>
+                                    <option value="HT">ความดัน (HT)</option>
+                                    <option value="Obesity">โรคอ้วน (BMI >= 25)</option>
+                                    <option value="Dyslipidemia">ไขมันในเลือดสูง (Dyslipidemia)</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                            </div>
+                        </div>
+                        <div class="w-full lg:w-auto shrink-0">
+                            <button class="w-full lg:w-auto bg-primary text-on-primary px-6 py-2.5 rounded-xl font-semibold shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all flex items-center justify-center gap-2" id="btn-add-target">
+                                <span class="material-symbols-outlined text-[20px]">person_add</span>
+                                <span>เพิ่มเป้าหมายใหม่</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Targets Grid Container (Bento layout) -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="targets-cards-container">
+                        <!-- Dynamic cards will be rendered here by app.js -->
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="flex justify-between items-center bg-white/50 border border-white/60 rounded-2xl p-4 shadow-sm" id="targets-pagination">
+                        <button class="bg-white border border-outline-variant/60 rounded-xl px-4 py-2 text-sm font-semibold text-on-surface hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1" id="prev-page-btn">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span> 
+                            <span>ย้อนกลับ</span>
+                        </button>
+                        <span id="page-indicator" class="text-sm font-bold text-on-surface-variant">หน้า 1 / 1</span>
+                        <button class="bg-white border border-outline-variant/60 rounded-xl px-4 py-2 text-sm font-semibold text-on-surface hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none active:scale-95 transition-all flex items-center gap-1" id="next-page-btn">
+                            <span>ถัดไป</span>
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- VIEW 3: Target Profile & Timeline View -->
+                <section id="profile-view" class="view-section space-y-6 hidden">
+                    <div class="flex justify-start">
+                        <button class="bg-white border border-outline-variant/60 rounded-xl px-4 py-2 text-sm font-semibold text-on-surface hover:bg-slate-50 active:scale-95 transition-all flex items-center gap-1.5" id="back-to-list-btn">
+                            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                            <span>กลับไปหน้ารายชื่อ</span>
+                        </button>
+                    </div>
+
+                    <!-- Personal Profile Header Card -->
+                    <div class="glass-card rounded-2xl p-6 relative overflow-hidden flex flex-col lg:flex-row gap-6 items-start lg:items-center">
+                        <div class="vital-bar bg-primary" id="profile-vital-bar"></div>
+                        <div class="shrink-0 w-20 h-20 rounded-full bg-primary/10 border-4 border-white flex items-center justify-center text-primary shadow-sm" id="profile-avatar-icon">
+                            <span class="material-symbols-outlined text-4xl">account_circle</span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-baseline gap-3 mb-2">
+                                <h2 class="font-headline text-2xl font-bold text-primary" id="profile-name">-</h2>
+                                <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-[11px]" id="profile-type-badge">-</span>
+                            </div>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mt-3 border-t border-slate-100 pt-3">
+                                <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">อายุ</strong> <span id="profile-age" class="font-semibold">-</span> ปี</div>
+                                <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">ส่วนสูง</strong> <span id="profile-height" class="font-semibold">-</span> ซม.</div>
+                                <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">บ้านเลขที่</strong> <span id="profile-address" class="font-semibold">-</span></div>
+                                <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">โรคประจำตัว</strong> <span id="profile-diseases" class="text-rose-500 font-semibold">-</span></div>
+                            </div>
+                            <div class="text-sm mt-2 border-t border-slate-50 pt-2 text-on-surface-variant">
+                                <strong>ยาที่รับประทานประจำ:</strong> <span id="profile-medicines" class="font-medium">-</span>
+                            </div>
+                        </div>
+                        <div class="w-full lg:w-48 shrink-0 flex flex-col gap-2">
+                            <button class="w-full bg-white border border-outline-variant/60 hover:bg-slate-50 text-on-surface font-semibold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-1.5" id="btn-edit-target">
+                                <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
+                                <span>แก้ไขข้อมูลส่วนตัว</span>
+                            </button>
+                            <button class="w-full bg-primary text-on-primary font-semibold py-2.5 rounded-xl text-sm shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container transition-all flex items-center justify-center gap-1.5" id="btn-add-quarterly">
+                                <span class="material-symbols-outlined text-[18px]">calendar_add_on</span>
+                                <span>บันทึกผล 3 เดือน</span>
+                            </button>
+                            <button class="w-full bg-tertiary-container text-white font-semibold py-2.5 rounded-xl text-sm shadow-[0_4px_12px_rgba(0,177,123,0.2)] hover:opacity-95 transition-all flex items-center justify-center gap-1.5" id="btn-add-daily">
+                                <span class="material-symbols-outlined text-[18px]">event_available</span>
+                                <span>บันทึกพฤติกรรมรายวัน</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tabs Navigation -->
+                    <div class="flex gap-2 border-b border-slate-200">
+                        <button class="tab-btn active px-5 py-3 font-semibold text-sm border-b-2 border-primary text-primary transition-all" data-tab="tab-timeline">
+                            ประวัติค่าน้ำตาล / ความดัน / ดัชนีมวลกาย (3 เดือน)
+                        </button>
+                        <button class="tab-btn px-5 py-3 font-semibold text-sm text-outline-variant hover:text-primary transition-all" data-tab="tab-daily">
+                            บันทึกพฤติกรรมสุขภาพรายวัน (Daily Logs)
+                        </button>
+                    </div>
+
+                    <!-- Tab 1: Timeline & Trends -->
+                    <div class="tab-content space-y-6" id="tab-timeline">
+                        <!-- Quarterly Progress Columns (M0, M3, M6, M9) -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" id="quarterly-timeline">
+                            <!-- Dynamic quarterly cards will be rendered here by app.js -->
+                        </div>
+
+                        <!-- Trend Charts -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="glass-card rounded-2xl p-6">
+                                <h3 class="font-headline text-base font-bold text-on-surface mb-4 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary">monitoring</span>
+                                    แนวโน้มน้ำหนัก และดัชนีมวลกาย (BMI)
+                                </h3>
+                                <div class="h-64 relative">
+                                    <canvas id="chart-weight-bmi"></canvas>
+                                </div>
+                            </div>
+                            <div class="glass-card rounded-2xl p-6">
+                                <h3 class="font-headline text-base font-bold text-on-surface mb-4 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-rose-500">bloodpressure</span>
+                                    แนวโน้มความดันโลหิต และค่าน้ำตาล (DTX)
+                                </h3>
+                                <div class="h-64 relative">
+                                    <canvas id="chart-bp-dtx"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Body composition full chart -->
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="font-headline text-base font-bold text-on-surface mb-4 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">query_stats</span>
+                                สัดส่วนไขมันและมวลกล้ามเนื้อ (%) จากประวัติองค์ประกอบร่างกาย
+                            </h3>
+                            <div class="h-80 relative">
+                                <canvas id="chart-body-composition"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Daily Logs -->
+                    <div class="tab-content hidden" id="tab-daily">
+                        <div class="glass-card rounded-2xl p-6">
+                            <h3 class="font-headline text-base font-bold text-on-surface mb-4">ประวัติการบันทึกพฤติกรรมสุขภาพรายวัน</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-sm">
+                                    <thead class="bg-slate-100 text-slate-600 font-semibold border-b border-slate-200">
+                                        <tr>
+                                            <th class="py-3 px-4 rounded-l-lg">วันที่บันทึก</th>
+                                            <th class="py-3 px-3">สัปดาห์</th>
+                                            <th class="py-3 px-3">วัน</th>
+                                            <th class="py-3 px-2 text-center">เลี่ยงหวาน</th>
+                                            <th class="py-3 px-2 text-center">เลี่ยงมัน</th>
+                                            <th class="py-3 px-2 text-center">เลี่ยงเค็ม</th>
+                                            <th class="py-3 px-3">เมนูสุขภาพประจำวัน</th>
+                                            <th class="py-3 px-3">ออกกำลังกาย</th>
+                                            <th class="py-3 px-2 text-center">เวลา (นาที)</th>
+                                            <th class="py-3 px-2 text-center">น้ำ (แก้ว)</th>
+                                            <th class="py-3 px-2 rounded-r-lg text-center">นอน (ชม.)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="daily-logs-table-body" class="divide-y divide-slate-100">
+                                        <!-- Dynamic daily log rows will be rendered here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 4: Settings View -->
+                <section id="settings-view" class="view-section hidden">
+                    <div class="glass-card rounded-2xl p-6 max-w-lg mx-auto">
+                        <h3 class="font-headline text-base font-bold text-on-surface mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">cloud_sync</span>
+                            ตั้งค่าการเชื่อมต่อ Google Sheets API
+                        </h3>
+                        <form id="settings-form" class="space-y-4">
+                            <div>
+                                <label for="setting-gas-url" class="block font-body-sm text-sm font-semibold text-slate-700 mb-1.5">Google Apps Script Web App URL</label>
+                                <input type="url" id="setting-gas-url" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="https://script.google.com/macros/s/.../exec" required>
+                                <span class="text-[10px] text-on-surface-variant block mt-1">กรอกลิงก์ Web App URL ที่ได้จากการ Deploy Google Apps Script ในขั้นตอนที่ 3 ของคู่มือ</span>
+                            </div>
+                            <div>
+                                <label for="setting-passcode" class="block font-body-sm text-sm font-semibold text-slate-700 mb-1.5">รหัสผ่าน API (Passcode)</label>
+                                <input type="password" id="setting-passcode" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="กรอกรหัสผ่านเพื่อเขียนข้อมูล (เริ่มต้น: 123456)" required>
+                                <span class="text-[10px] text-on-surface-variant block mt-1">ต้องตรงกับตัวแปร `API_PASSCODE` ที่คุณกำหนดไว้ใน Google Apps Script เพื่อใช้ในการส่งฟอร์มข้อมูล</span>
+                            </div>
+                            
+                            <div class="bg-sky-50 border border-sky-100 rounded-xl p-4 text-xs text-sky-800 flex items-start gap-2">
+                                <span class="material-symbols-outlined text-sky-500 text-[18px]">info</span>
+                                <div>
+                                    <strong>คำแนะนำ:</strong> หากคุณยังไม่ได้ตั้งค่า API ระบบจะใช้ <strong>Demo Mode</strong> ที่จัดเตรียมข้อมูลกลุ่มเป้าหมายตัวอย่างไว้ให้ทดลองเล่นโดยอัตโนมัติ
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3 pt-2">
+                                <button type="submit" class="bg-primary text-on-primary px-5 py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[18px]">save</span>
+                                    <span>บันทึกการเชื่อมต่อ</span>
+                                </button>
+                                <button type="button" class="bg-white border border-outline-variant/60 hover:bg-slate-50 text-on-surface px-5 py-2.5 rounded-xl font-semibold text-sm active:scale-98 transition-all flex items-center gap-1.5" id="btn-reset-demo">
+                                    <span class="material-symbols-outlined text-[18px]">restart_alt</span>
+                                    <span>กลับสู่โหมดทดลอง (Demo)</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- VIEW 5: Body Composition Interpreter View -->
+                <section id="interpreter-view" class="view-section hidden space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left Side: Inputs -->
+                        <div class="lg:col-span-1 glass-card rounded-2xl p-6 space-y-4">
+                            <h3 class="font-headline text-base font-bold text-primary flex items-center gap-2 border-b border-slate-100 pb-3">
+                                <span class="material-symbols-outlined">calculate</span>
+                                ป้อนข้อมูลดิบจากเครื่องชั่ง
+                            </h3>
+                            
+                            <!-- Select target link optionally -->
+                            <div class="space-y-1.5">
+                                <label for="interp-target-select" class="block font-body-sm text-xs font-semibold text-slate-700">เลือกกลุ่มเป้าหมาย (ทางเลือก - เพื่อดึงส่วนสูง/เพศ)</label>
+                                <div class="relative">
+                                    <select id="interp-target-select" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                        <option value="">-- ป้อนแบบอิสระ --</option>
+                                        <!-- Dynamic options will be inserted -->
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+
+                            <hr class="border-slate-100 my-2">
+
+                            <!-- Direct inputs -->
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1.5">
+                                    <label for="interp-gender" class="block font-body-sm text-xs font-semibold text-slate-700">เพศ *</label>
+                                    <div class="relative">
+                                        <select id="interp-gender" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                            <option value="ชาย">ชาย</option>
+                                            <option value="หญิง">หญิง</option>
+                                        </select>
+                                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label for="interp-age" class="block font-body-sm text-xs font-semibold text-slate-700">อายุ (ปี)</label>
+                                    <input type="number" id="interp-age" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="45">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1.5">
+                                    <label for="interp-height" class="block font-body-sm text-xs font-semibold text-slate-700">ส่วนสูง (ซม.) *</label>
+                                    <input type="number" id="interp-height" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="160">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label for="interp-weight" class="block font-body-sm text-xs font-semibold text-slate-700">น้ำหนัก (กก.) *</label>
+                                    <input type="number" id="interp-weight" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="ป้อนตัวเลข">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1.5">
+                                    <label for="interp-bodyfat" class="block font-body-sm text-xs font-semibold text-slate-700">ไขมันในร่างกาย (%)</label>
+                                    <input type="number" id="interp-bodyfat" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 24.5">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label for="interp-visceral" class="block font-body-sm text-xs font-semibold text-slate-700">ไขมันช่องท้อง (ระดับ)</label>
+                                    <input type="number" id="interp-visceral" step="1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="ระดับ 1 - 30">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1.5">
+                                    <label for="interp-muscle" class="block font-body-sm text-xs font-semibold text-slate-700">มวลกล้ามเนื้อ (%)</label>
+                                    <input type="number" id="interp-muscle" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 31.2">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label for="interp-bodyage" class="block font-body-sm text-xs font-semibold text-slate-700">อายุร่างกาย (ปี)</label>
+                                    <input type="number" id="interp-bodyage" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 40">
+                                </div>
+                            </div>
+                            
+                            <div class="pt-3">
+                                <button type="button" id="interp-reset-btn" class="w-full bg-white border border-outline-variant/60 hover:bg-slate-50 text-on-surface font-semibold py-2.5 rounded-xl text-sm transition-all flex items-center justify-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[18px]">clear_all</span>
+                                    <span>ล้างข้อมูลทั้งหมด</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right Side: Real-time Reports & Visual Indicators -->
+                        <div class="lg:col-span-2 space-y-6">
+                            
+                            <!-- Overall Health Vibe Card -->
+                            <div class="glass-card rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row gap-5 items-center bg-gradient-to-br from-white/80 to-slate-50/50">
+                                <div class="vital-bar bg-slate-300" id="interp-overall-bar"></div>
+                                <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shrink-0" id="interp-overall-badge">
+                                    <span class="material-symbols-outlined text-4xl">monitor_weight</span>
+                                </div>
+                                <div class="flex-1 text-center md:text-left">
+                                    <h4 class="font-headline text-lg font-bold text-on-surface mb-1">ผลวิเคราะห์องค์ประกอบร่างกาย</h4>
+                                    <p id="interp-overall-desc" class="text-sm text-on-surface-variant font-medium">โปรดป้อน น้ำหนัก และข้อมูลตัวเลขจากหน้าจอเครื่องชั่ง เพื่อตรวจสอบการประเมินผลอย่างครอบคลุม</p>
+                                </div>
+                                <button id="interp-import-btn" class="hidden shrink-0 bg-primary text-on-primary px-5 py-2.5 rounded-xl text-xs font-bold hover:bg-primary-container active:scale-98 transition-all flex items-center gap-1 shadow-sm">
+                                    <span class="material-symbols-outlined text-[16px]">file_upload</span>
+                                    <span>นำไปบันทึกผล 3 เดือน</span>
+                                </button>
+                            </div>
+
+                            <!-- Bento Grid Reports -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <!-- Card 1: BMI -->
+                                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between border border-white/50 min-h-[140px]" id="interp-card-bmi">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="font-label-caps text-xs text-outline font-bold uppercase tracking-wider">ดัชนีมวลกาย (BMI)</span>
+                                        <span id="interp-badge-bmi" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">-</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-stat-display text-2xl font-extrabold text-slate-400 mb-1" id="interp-val-bmi">-</div>
+                                        <p class="text-xs text-on-surface-variant font-medium" id="interp-desc-bmi">วิเคราะห์จากส่วนสูงและน้ำหนัก (เกณฑ์ WHO)</p>
+                                    </div>
+                                </div>
+
+                                <!-- Card 2: Body Fat % -->
+                                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between border border-white/50 min-h-[140px]" id="interp-card-bodyfat">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="font-label-caps text-xs text-outline font-bold uppercase tracking-wider">ไขมันในร่างกาย (%)</span>
+                                        <span id="interp-badge-bodyfat" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">-</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-stat-display text-2xl font-extrabold text-slate-400 mb-1" id="interp-val-bodyfat">-</div>
+                                        <p class="text-xs text-on-surface-variant font-medium" id="interp-desc-bodyfat">เทียบเปอร์เซ็นต์ไขมันกับไขมันส่วนเกินแยกเพศ</p>
+                                    </div>
+                                </div>
+
+                                <!-- Card 3: Visceral Fat -->
+                                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between border border-white/50 min-h-[140px]" id="interp-card-visceral">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="font-label-caps text-xs text-outline font-bold uppercase tracking-wider">ไขมันในช่องท้อง (ระดับ)</span>
+                                        <span id="interp-badge-visceral" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">-</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-stat-display text-2xl font-extrabold text-slate-400 mb-1" id="interp-val-visceral">-</div>
+                                        <p class="text-xs text-on-surface-variant font-medium" id="interp-desc-visceral">ระดับของไขมันอันตรายรอบอวัยวะภายในช่องท้อง</p>
+                                    </div>
+                                </div>
+
+                                <!-- Card 4: Skeletal Muscle % -->
+                                <div class="glass-card rounded-2xl p-5 flex flex-col justify-between border border-white/50 min-h-[140px]" id="interp-card-muscle">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="font-label-caps text-xs text-outline font-bold uppercase tracking-wider">มวลกล้ามเนื้อลาย (%)</span>
+                                        <span id="interp-badge-muscle" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">-</span>
+                                    </div>
+                                    <div>
+                                        <div class="font-stat-display text-2xl font-extrabold text-slate-400 mb-1" id="interp-val-muscle">-</div>
+                                        <p class="text-xs text-on-surface-variant font-medium" id="interp-desc-muscle">มวลกล้ามเนื้อหลักที่มีบทบาทต่อระบบเผาผลาญ</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- ==================== MODAL OVERLAYS ==================== -->
+
+    <!-- MODAL 1: Add/Edit Target Profile -->
+    <div id="target-modal" class="modal-overlay hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-floating rounded-2xl max-w-lg w-full border border-white/50 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 id="target-modal-title" class="font-headline font-bold text-primary">เพิ่มข้อมูลกลุ่มเป้าหมายใหม่</h3>
+                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <form id="target-form" class="flex flex-col flex-1 overflow-hidden">
+                <input type="hidden" id="form-target-id">
+                <div class="px-6 py-4 overflow-y-auto space-y-4 flex-1">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label for="form-target-name" class="block text-xs font-semibold text-slate-700">ชื่อ-สกุล *</label>
+                            <input type="text" id="form-target-name" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="นาย/นาง/นางสาว สมจิต มั่นคง" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="form-target-type" class="block text-xs font-semibold text-slate-700">ประเภทกลุ่ม *</label>
+                            <div class="relative">
+                                <select id="form-target-type" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                    <option value="กลุ่มเสี่ยง">กลุ่มเสี่ยง</option>
+                                    <option value="กลุ่มป่วย">กลุ่มป่วย</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="space-y-1">
+                            <label for="form-target-age" class="block text-xs font-semibold text-slate-700">อายุ (ปี) *</label>
+                            <input type="number" id="form-target-age" min="1" max="120" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="form-target-height" class="block text-xs font-semibold text-slate-700">ส่วนสูง (ซม.) *</label>
+                            <input type="number" id="form-target-height" step="0.1" min="100" max="220" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="form-target-address" class="block text-xs font-semibold text-slate-700">บ้านเลขที่ *</label>
+                            <input type="text" id="form-target-address" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="12/3 ม.1" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label for="form-target-chronic" class="block text-xs font-semibold text-slate-700">โรคประจำตัว</label>
+                            <input type="text" id="form-target-chronic" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="ไม่มี">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="form-target-comorbidity" class="block text-xs font-semibold text-slate-700">โรคร่วม</label>
+                            <input type="text" id="form-target-comorbidity" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="ไม่มี">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label for="form-target-onset" class="block text-xs font-semibold text-slate-700">ปีที่เริ่มป่วย</label>
+                            <input type="text" id="form-target-onset" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="-">
+                        </div>
+                        <div class="space-y-1">
+                            <label for="form-target-medicines" class="block text-xs font-semibold text-slate-700">รายการยาที่ทาน</label>
+                            <input type="text" id="form-target-medicines" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="-">
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 shrink-0">
+                    <button type="button" class="close-modal-btn bg-white border border-outline-variant/60 hover:bg-slate-50 text-on-surface font-semibold px-5 py-2 rounded-xl text-sm transition-all">ยกเลิก</button>
+                    <button type="submit" class="bg-primary text-on-primary font-semibold px-5 py-2 rounded-xl text-sm shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Add/Edit Quarterly Data -->
+    <div id="quarterly-modal" class="modal-overlay hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-floating rounded-2xl max-w-3xl w-full border border-white/50 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3 class="font-headline font-bold text-primary">บันทึกผลการตรวจสุขภาพ (ราย 3 เดือน)</h3>
+                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <form id="quarterly-form" class="flex flex-col flex-1 overflow-hidden">
+                <input type="hidden" id="form-q-target-id">
+                <div class="px-6 py-4 overflow-y-auto space-y-5 flex-1 text-sm text-slate-700">
+                    
+                    <div>
+                        <h4 class="font-bold text-primary border-l-4 border-primary pl-2 mb-3">ข้อมูลพื้นฐานประจำรอบ</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label for="form-q-round" class="block text-xs font-semibold text-slate-700">รอบประเมิน *</label>
+                                <div class="relative">
+                                    <select id="form-q-round" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                        <option value="M0">Month 0 (เริ่มแรก)</option>
+                                        <option value="M3">Month 3 (3 เดือน)</option>
+                                        <option value="M6">Month 6 (6 เดือน)</option>
+                                        <option value="M9">Month 9 (9 เดือน)</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-date" class="block text-xs font-semibold text-slate-700">วันที่เก็บข้อมูล *</label>
+                                <input type="text" id="form-q-date" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 26/06/2026" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-height" class="block text-xs font-semibold text-slate-700">ส่วนสูง ณ วันเก็บข้อมูล (ซม.)</label>
+                                <input type="number" id="form-q-height" class="w-full bg-slate-100 border border-outline-variant/40 rounded-xl px-4 py-2 text-slate-500 cursor-not-allowed outline-none" readonly>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-primary border-l-4 border-primary pl-2 mb-3">การวัดทางกายภาพและระดับทางชีวเคมี</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div class="space-y-1">
+                                <label for="form-q-weight" class="block text-xs font-semibold text-slate-700">น้ำหนัก (กก.) *</label>
+                                <input type="number" id="form-q-weight" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <div id="form-q-badge-bmi" class="text-[10px] font-bold mt-1 text-slate-400">BMI: -</div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-waist" class="block text-xs font-semibold text-slate-700">รอบเอว (ซม.) *</label>
+                                <input type="number" id="form-q-waist" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-bp" class="block text-xs font-semibold text-slate-700">ความดัน (เช่น 120/80) *</label>
+                                <input type="text" id="form-q-bp" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="SYS/DIA" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-dtx" class="block text-xs font-semibold text-slate-700">ระดับน้ำตาล DTX (มก./ดล.) *</label>
+                                <input type="number" id="form-q-dtx" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Body Composition Measurements with Real-time Interpretation Badge -->
+                    <div>
+                        <h4 class="font-bold text-primary border-l-4 border-primary pl-2 mb-3">องค์ประกอบร่างกาย (Body Composition จากเครื่องชั่ง)</h4>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            <div class="space-y-1">
+                                <label for="form-q-fat" class="block text-xs font-semibold text-slate-700">ไขมันในร่างกาย (%)</label>
+                                <input type="number" id="form-q-fat" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <div id="form-q-badge-fat" class="text-[10px] font-bold mt-1 text-slate-400">ไขมัน: -</div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-muscle" class="block text-xs font-semibold text-slate-700">มวลกล้ามเนื้อ (%)</label>
+                                <input type="number" id="form-q-muscle" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <div id="form-q-badge-muscle" class="text-[10px] font-bold mt-1 text-slate-400">กล้ามเนื้อ: -</div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-visceral" class="block text-xs font-semibold text-slate-700">ไขมันช่องท้อง (ระดับ)</label>
+                                <input type="number" id="form-q-visceral" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <div id="form-q-badge-visceral" class="text-[10px] font-bold mt-1 text-slate-400">ช่องท้อง: -</div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-bodyage" class="block text-xs font-semibold text-slate-700">อายุร่างกาย (ปี)</label>
+                                <input type="number" id="form-q-bodyage" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-primary border-l-4 border-primary pl-2 mb-3">แบบประเมินและพฤติกรรมหลัก</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label for="form-q-pa" class="block text-xs font-semibold text-slate-700">กิจกรรมทางกายต่อสัปดาห์</label>
+                                <div class="relative">
+                                    <select id="form-q-pa" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                        <option value=">= 150 นาที">สะสมอย่างน้อย 150 นาที</option>
+                                        <option value="< 150 นาที">ออกกำลังกาย แต่น้อยกว่า 150 นาที</option>
+                                        <option value="ไม่ออกเลย">ไม่ออกกำลังกายเลย</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-fruit" class="block text-xs font-semibold text-slate-700">บริโภคผักผลไม้ (ส่วน/วัน)</label>
+                                <input type="number" id="form-q-fruit" min="0" max="20" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="จำนวนส่วนต่อวัน">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-sleep" class="block text-xs font-semibold text-slate-700">การนอนหลับพักผ่อน</label>
+                                <div class="relative">
+                                    <select id="form-q-sleep" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                        <option value="≥ 7-8 ชม.">พักผ่อนเพียงพอ (>= 7-8 ชม.)</option>
+                                        <option value="≤ 7-8 ชม.">นอนน้อย/พักไม่พอ (< 7 ชม.)</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3">
+                            <div class="space-y-1">
+                                <label for="form-q-overeat" class="block text-xs font-semibold text-slate-700">ทานเยอะ/กินเกินความจำเป็น</label>
+                                <div class="relative">
+                                    <select id="form-q-overeat" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                        <option value="N">ไม่เกิน (ปกติ)</option>
+                                        <option value="Y">กินเยอะ/กินเกินเป็นประจำ</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-unhealthy" class="block text-xs font-semibold text-slate-700">กินอาหารไม่เหมาะสม (หวาน/มัน/เค็ม)</label>
+                                <div class="relative">
+                                    <select id="form-q-unhealthy" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                        <option value="N">กินเหมาะสม</option>
+                                        <option value="Y">กินรสจัด/หวานมันเค็มบ่อย</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-smoke" class="block text-xs font-semibold text-slate-700">พฤติกรรมการสูบบุหรี่</label>
+                                <div class="relative">
+                                    <select id="form-q-smoke" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                        <option value="ไม่สูบ">ไม่สูบ</option>
+                                        <option value="สูบ">สูบ</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-alcohol" class="block text-xs font-semibold text-slate-700">การดื่มแอลกอฮอล์</label>
+                                <div class="relative">
+                                    <select id="form-q-alcohol" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                        <option value="ไม่ดื่ม">ไม่ดื่ม</option>
+                                        <option value="ดื่ม">ดื่ม</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
+                            <div class="space-y-1">
+                                <label for="form-q-depress" class="block text-xs font-semibold text-slate-700">ประเมินภาวะซึมเศร้า (2 Q)</label>
+                                <div class="relative">
+                                    <select id="form-q-depress" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                        <option value="ไม่มี">ไม่มีความเสี่ยงภาวะซึมเศร้า</option>
+                                        <option value="มี">มีความเสี่ยงภาวะซึมเศร้า</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-habit" class="block text-xs font-semibold text-slate-700">อธิบายพฤติกรรมการทานในแต่ละวัน</label>
+                                <input type="text" id="form-q-habit" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น ทานข้าวกล้องเลี่ยงน้ำหวาน ทานน้ำปั่นตอนบ่าย...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Laboratory results for patient type -->
+                    <div class="patient-field hidden">
+                        <h4 class="font-bold text-rose-500 border-l-4 border-rose-500 pl-2 mb-3">ผลการตรวจทางห้องปฏิบัติการ (สำหรับกลุ่มป่วย)</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label for="form-q-hba1c" class="block text-xs font-semibold text-slate-700">HbA1C (%)</label>
+                                <input type="number" id="form-q-hba1c" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-egfr" class="block text-xs font-semibold text-slate-700">eGFR (มล./นาที/1.73 ตร.ม.)</label>
+                                <input type="number" id="form-q-egfr" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-creatinine" class="block text-xs font-semibold text-slate-700">Creatinine (มก./ดล.)</label>
+                                <input type="number" id="form-q-creatinine" step="0.01" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
+                            <div class="space-y-1">
+                                <label for="form-q-trigly" class="block text-xs font-semibold text-slate-700">Triglyceride (มก./ดล.)</label>
+                                <input type="number" id="form-q-trigly" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-ldl" class="block text-xs font-semibold text-slate-700">LDL-C (มก./ดล.)</label>
+                                <input type="number" id="form-q-ldl" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-q-chol" class="block text-xs font-semibold text-slate-700">Cholesterol ทั้งหมด (มก./ดล.)</label>
+                                <input type="number" id="form-q-chol" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="form-q-remark" class="block text-xs font-semibold text-slate-700">หมายเหตุ / ความคิดเห็นเพิ่มเติม</label>
+                        <input type="text" id="form-q-remark" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="หมายเหตุทั่วไปสำหรับการประเมินรอบนี้">
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 shrink-0">
+                    <button type="button" class="close-modal-btn bg-white border border-outline-variant/60 hover:bg-slate-50 text-on-surface font-semibold px-5 py-2 rounded-xl text-sm transition-all">ยกเลิก</button>
+                    <button type="submit" class="bg-primary text-on-primary font-semibold px-5 py-2 rounded-xl text-sm shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all">บันทึกผลการตรวจ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Add Daily Log -->
+    <div id="daily-modal" class="modal-overlay hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass-floating rounded-2xl max-w-md w-full border border-white/50 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                <h3>บันทึกพฤติกรรมสุขภาพรายวัน</h3>
+                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <form id="daily-form" class="flex flex-col flex-1 overflow-hidden">
+                <input type="hidden" id="form-d-target-id">
+                <div class="px-6 py-4 overflow-y-auto space-y-4 flex-1 text-sm text-slate-700">
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="space-y-1">
+                            <label for="form-d-week" class="block text-xs font-semibold text-slate-700">สัปดาห์ที่ *</label>
+                            <input type="text" id="form-d-week" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น สัปดาห์ที่ 1" required>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="form-d-day" class="block text-xs font-semibold text-slate-700">วัน *</label>
+                            <div class="relative">
+                                <select id="form-d-day" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                    <option value="จันทร์">จันทร์</option>
+                                    <option value="อังคาร">อังคาร</option>
+                                    <option value="พุธ">พุธ</option>
+                                    <option value="พฤหัสบดี">พฤหัสบดี</option>
+                                    <option value="ศุกร์">ศุกร์</option>
+                                    <option value="เสาร์">เสาร์</option>
+                                    <option value="อาทิตย์">อาทิตย์</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                            </div>
+                        </div>
+                        <div class="space-y-1">
+                            <label for="form-d-date" class="block text-xs font-semibold text-slate-700">วันที่ *</label>
+                            <input type="text" id="form-d-date" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 26/06/2026" required>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-primary border-l-4 border-primary pl-2 mb-3">คะแนนพฤติกรรมลดความเสี่ยง (1-5 คะแนน)</h4>
+                        <div class="grid grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label for="form-d-sweet" class="block text-xs font-semibold text-slate-700">เลี่ยงหวาน *</label>
+                                <input type="number" id="form-d-sweet" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-d-oil" class="block text-xs font-semibold text-slate-700">เลี่ยงมัน *</label>
+                                <input type="number" id="form-d-oil" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" required>
+                            </div>
+                            <div class="space-y-1">
+                                <label for="form-d-salt" class="block text-xs font-semibold text-slate-700">เลี่ยงเค็ม *</label>
+                                <input type="number" id="form-d-salt" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h4 class="font-bold text-primary border-l-4 border-primary pl-2 mb-3">กิจกรรมและอาหาร</h4>
+                        <div class="space-y-3">
+                            <div class="space-y-1">
+                                <label for="form-d-menu" class="block text-xs font-semibold text-slate-700">เมนูสุขภาพประจำวัน (ที่ทาน)</label>
+                                <input type="text" id="form-d-menu" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น ปลานึ่งผักลวก แกงจืดเต้าหู้">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label for="form-d-extype" class="block text-xs font-semibold text-slate-700">ออกกำลังกาย (ชนิดกิจกรรม)</label>
+                                    <input type="text" id="form-d-extype" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น เดินเร็ว, ปั่นจักรยาน">
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="form-d-exduration" class="block text-xs font-semibold text-slate-700">ระยะเวลา (นาที)</label>
+                                    <input type="number" id="form-d-exduration" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="0">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label for="form-d-water" class="block text-xs font-semibold text-slate-700">ดื่มน้ำสะอาด (แก้ว)</label>
+                                    <input type="number" id="form-d-water" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="8">
+                                </div>
+                                <div class="space-y-1">
+                                    <label for="form-d-sleep" class="block text-xs font-semibold text-slate-700">นอนหลับพักผ่อน (ชั่วโมง)</label>
+                                    <input type="number" id="form-d-sleep" step="0.5" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="7">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-3 shrink-0">
+                    <button type="button" class="close-modal-btn bg-white border border-outline-variant/60 hover:bg-slate-50 text-on-surface font-semibold px-5 py-2 rounded-xl text-sm transition-all">ยกเลิก</button>
+                    <button type="submit" class="bg-primary text-on-primary font-semibold px-5 py-2 rounded-xl text-sm shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all">บันทึกพฤติกรรม</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- UI Overlay for Loading indicator -->
+    <div id="loading-spinner" class="loading-overlay hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="glass-floating rounded-2xl p-6 flex flex-col items-center gap-3 border border-white/50 shadow-xl max-w-xs w-full">
+            <div class="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p class="font-body-sm text-sm font-semibold text-on-surface text-center">กำลังประมวลผลข้อมูล...</p>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script src="app.js"></script>
+</body>
+</html>

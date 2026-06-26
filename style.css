@@ -1,0 +1,202 @@
+/* ==========================================
+   CSS DESIGN SYSTEM: NCDs Focus (มุ่งเป้าปัตตานี)
+   Premium Glassmorphism & High-End Aesthetics
+   ========================================== */
+
+/* --- Base Body Background with Radial Gradients --- */
+body {
+    background-color: #f4f6fa;
+    background-image: 
+        radial-gradient(at 0% 0%, hsla(200, 100%, 94%, 1) 0px, transparent 50%), 
+        radial-gradient(at 100% 0%, hsla(190, 100%, 90%, 1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(210, 100%, 96%, 1) 0px, transparent 50%);
+    background-attachment: fixed;
+    transition: background-color 0.3s ease;
+}
+
+body.dark {
+    background-color: #0b1329;
+    background-image: 
+        radial-gradient(at 0% 0%, hsla(220, 50%, 15%, 1) 0px, transparent 50%), 
+        radial-gradient(at 100% 0%, hsla(230, 50%, 12%, 1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(240, 50%, 18%, 1) 0px, transparent 50%);
+    background-attachment: fixed;
+}
+
+/* --- Scrollbars --- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #bec8d2;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #6e7881;
+}
+
+/* --- Glassmorphism Cards --- */
+.glass-card {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+    transition: transform 0.25s ease, box-shadow 0.25s ease, background-color 0.3s ease;
+}
+.glass-card:hover {
+    box-shadow: 0 12px 38px 0 rgba(31, 38, 135, 0.07);
+}
+
+.glass-floating {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
+}
+
+.dark .glass-card {
+    background: rgba(17, 26, 54, 0.65);
+    border-color: rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+}
+.dark .glass-floating {
+    background: rgba(17, 26, 54, 0.9);
+    border-color: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* --- Status and Vital Borders --- */
+.vital-bar {
+    width: 4px;
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+}
+
+.status-bar-danger { border-left: 4px solid #ef4444; }
+.status-bar-warning { border-left: 4px solid #f59e0b; }
+.status-bar-success { border-left: 4px solid #00b17b; }
+
+/* --- Sidebar Nav Item Styling --- */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+    color: #3e4850; /* text-on-surface-variant */
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-item:hover {
+    color: #006591; /* text-primary */
+    background-color: rgba(14, 101, 145, 0.05);
+}
+.nav-item.active {
+    color: #006591; /* text-primary */
+    font-weight: 700;
+    border-right: 4px solid #006591;
+    background-color: rgba(14, 101, 145, 0.12);
+    transform: scale(0.97);
+}
+
+.dark .nav-item {
+    color: #bec8d2; /* text-outline-variant */
+}
+.dark .nav-item:hover {
+    color: #89ceff; /* text-primary-fixed-dim */
+    background-color: rgba(137, 206, 255, 0.08);
+}
+.dark .nav-item.active {
+    color: #89ceff;
+    border-color: #89ceff;
+    background-color: rgba(137, 206, 255, 0.15);
+}
+
+/* --- Tab Buttons --- */
+.tab-btn {
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #6e7881; /* text-outline */
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+}
+.tab-btn:hover {
+    color: #006591;
+}
+.tab-btn.active {
+    color: #006591;
+    border-color: #006591;
+}
+.dark .tab-btn {
+    color: #bec8d2;
+}
+.dark .tab-btn:hover {
+    color: #89ceff;
+}
+.dark .tab-btn.active {
+    color: #89ceff;
+    border-color: #89ceff;
+}
+
+/* --- Modals and Overlays --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* --- Connection dot pulsing effect --- */
+.dot-pulse {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #10b981;
+}
+.dot-pulse::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: inherit;
+    animation: pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(2.8);
+        opacity: 0;
+    }
+}

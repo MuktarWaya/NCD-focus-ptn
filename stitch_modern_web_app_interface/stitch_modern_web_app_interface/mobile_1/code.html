@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>HealthTracker - NCDs Focus Target List</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Sarabun:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-container": "#003b26",
+                        "on-secondary-fixed": "#07006c",
+                        "risk-warning": "#f59e0b",
+                        "on-secondary": "#ffffff",
+                        "on-secondary-fixed-variant": "#2f2ebe",
+                        "on-error": "#ffffff",
+                        "on-secondary-container": "#fffbff",
+                        "on-primary-fixed": "#001e2f",
+                        "background-base": "#f4f6fa",
+                        "inverse-primary": "#89ceff",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-high": "#dce9ff",
+                        "on-surface-variant": "#3e4850",
+                        "outline-variant": "#bec8d2",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#003751",
+                        "surface-dim": "#cbdbf5",
+                        "surface-tint": "#006591",
+                        "surface-container-highest": "#d3e4fe",
+                        "background": "#f8f9ff",
+                        "primary-fixed-dim": "#89ceff",
+                        "surface-variant": "#d3e4fe",
+                        "secondary-container": "#6063ee",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-glass": "rgba(255, 255, 255, 0.7)",
+                        "outline": "#6e7881",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-container": "#e5eeff",
+                        "on-background": "#0b1c30",
+                        "tertiary": "#006c49",
+                        "primary": "#006591",
+                        "risk-danger": "#ef4444",
+                        "surface-container-lowest": "#ffffff",
+                        "on-surface": "#0b1c30",
+                        "surface": "#f8f9ff",
+                        "text-slate": "#0f172a",
+                        "primary-container": "#0ea5e9",
+                        "surface-bright": "#f8f9ff",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "secondary": "#4648d4",
+                        "surface-container-low": "#eff4ff",
+                        "inverse-surface": "#213145",
+                        "primary-fixed": "#c9e6ff",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#e1e0ff",
+                        "secondary-fixed-dim": "#c0c1ff",
+                        "tertiary-container": "#00b17b"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "1.5rem",
+                        "stack-lg": "2rem",
+                        "container-max": "1280px",
+                        "stack-sm": "0.5rem",
+                        "margin-desktop": "2.5rem",
+                        "margin-mobile": "1rem",
+                        "stack-md": "1rem"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Sarabun"],
+                        "label-caps": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "body-md": ["Sarabun"],
+                        "stat-display": ["Outfit"],
+                        "headline-sm": ["Outfit"],
+                        "body-sm": ["Sarabun"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "headline-lg": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "stat-display": ["32px", { "lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-sm": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["30px", { "lineHeight": "1.2", "fontWeight": "600" }],
+                        "headline-lg": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: #f4f6fa; }
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+        .status-bar-danger { border-left: 4px solid #ef4444; }
+        .status-bar-warning { border-left: 4px solid #f59e0b; }
+        .status-bar-normal { border-left: 4px solid #00b17b; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-body-md text-on-surface antialiased flex flex-col min-h-screen relative pb-24 md:pb-0 pt-16">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-md bg-surface-glass dark:bg-inverse-surface/90 border-b border-outline-variant/30 dark:border-outline/20 shadow-sm dark:shadow-none hidden md:block">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-container-max mx-auto">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-inverse-primary text-3xl">medical_services</span>
+<span class="font-headline-sm text-headline-sm font-bold text-primary dark:text-inverse-primary tracking-tight">HealthTracker</span>
+</div>
+<nav class="hidden md:flex gap-8">
+<a class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span> Dashboard
+                </a>
+<a class="font-label-caps text-label-caps text-primary dark:text-inverse-primary font-bold flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span> Targets
+                </a>
+<a class="font-label-caps text-label-caps text-on-surface-variant dark:text-surface-variant hover:text-primary transition-colors flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-xl">settings</span> Settings
+                </a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:bg-primary-container/10 p-2 rounded-full transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<img alt="User Avatar" class="w-10 h-10 rounded-full object-cover border-2 border-surface-container" data-alt="A professional medical avatar portrait of a modern healthcare worker in a brightly lit clinical setting. High quality, soft light, light mode aesthetic, realistic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmbT-H7sER-wN99I_1azyS87cAsXf_ngzIduDU4TtUGD80VjUauxeFj0sxmIrKKNLbViNTxNkKJ5ClHthuPoJocGLuaIpGLm3rYwJORSfqywWwHB47uCu6B3-Mvb2QSzdl4NqUF_XTcL2AJ5C2B_YYS91Kd6iUepuYikBMsLePQRhVQ8Hv5awjUcrTO23r-cG81e0CwCcuU80kIqlzDVW6887mek_42PcCjEG5s9a6ENLiQBc-j65tjg"/>
+</div>
+</div>
+</header>
+<!-- Mobile Top Header (Specific to this screen) -->
+<header class="md:hidden fixed top-0 w-full z-40 glass-card pt-safe">
+<div class="px-margin-mobile h-16 flex items-center justify-between">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-bold">NCDs Focus</h1>
+<button class="text-primary hover:bg-primary/10 p-2 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+<!-- Search & Filter Bar -->
+<div class="px-margin-mobile pb-4 pt-2">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-full py-3 pl-10 pr-4 text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all shadow-inner" placeholder="Search patients..." type="text"/>
+</div>
+<div class="flex gap-3 mt-4 overflow-x-auto hide-scrollbar pb-1">
+<button class="flex-shrink-0 flex items-center gap-1 bg-surface-container-high px-4 py-1.5 rounded-full border border-outline-variant/30 text-body-sm font-medium hover:bg-surface-variant transition-colors">
+                    Type <span class="material-symbols-outlined text-[18px]">arrow_drop_down</span>
+</button>
+<button class="flex-shrink-0 flex items-center gap-1 bg-primary text-on-primary px-4 py-1.5 rounded-full shadow-sm text-body-sm font-medium hover:bg-primary/90 transition-colors">
+                    Disease: HTN <span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+<button class="flex-shrink-0 flex items-center gap-1 bg-surface-container-high px-4 py-1.5 rounded-full border border-outline-variant/30 text-body-sm font-medium hover:bg-surface-variant transition-colors">
+                    Risk Level <span class="material-symbols-outlined text-[18px]">arrow_drop_down</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 w-full max-w-container-max mx-auto px-margin-mobile md:px-margin-desktop pt-[160px] md:pt-stack-lg flex flex-col gap-stack-md">
+<!-- Desktop Header (Hidden on Mobile) -->
+<div class="hidden md:flex justify-between items-end mb-4">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary font-bold">NCDs Focus Targets</h1>
+<p class="text-on-surface-variant mt-2">Manage and monitor high-priority non-communicable disease patients.</p>
+</div>
+<div class="flex gap-4">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant/50 rounded-full py-2 pl-10 pr-4 text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all" placeholder="Search patients..." type="text"/>
+</div>
+</div>
+</div>
+<!-- Target List (Vertical Stack) -->
+<div class="flex flex-col gap-4 w-full">
+<!-- Patient Card 1 - High Risk -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 status-bar-danger relative overflow-hidden group cursor-pointer hover:bg-surface-glass/90 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 items-center">
+<img alt="Patient Photo" class="w-14 h-14 rounded-full object-cover shadow-sm border border-surface-variant" data-alt="Portrait of an elderly woman looking slightly concerned but calm, wearing a casual shirt. High quality photography, clinical light mode aesthetic, soft focus background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJEYZo-CkvL8dqY7cFahoLjYw0kX8p1JFSO1e7CkIs83pLcQ-DkVfU4NugFSpvrmSa9DKnDOcpxFvZmoLtEMwcfXPlhfGYNVj01mU1UePuwGpR3l4MsH6mJbMjXF5SXXaMOXS8UauCBnvDNNTsjsQZROfmvQVlNttE-nWRfruIVCtaJ8bP-Gj-PHFGXq5ALVNc1W56I55bmiDBJHw1oKl8JcipC_35mtGl_dmQEiZ7x9iPhRBdX7Tjpw"/>
+<div>
+<h3 class="font-headline-sm text-headline-sm font-semibold text-on-surface">Maria S. Garcia</h3>
+<p class="text-body-sm text-on-surface-variant flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">location_on</span> 142 Maple St, Apt 4B
+                            </p>
+</div>
+</div>
+<span class="bg-risk-danger text-on-error font-label-caps text-label-caps px-3 py-1 rounded-full shadow-sm">HIGH RISK</span>
+</div>
+<div class="grid grid-cols-2 gap-4 bg-surface/50 rounded-lg p-3 border border-outline-variant/20">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">LATEST BMI</p>
+<div class="flex items-end gap-2">
+<span class="font-stat-display text-stat-display text-on-surface">32.4</span>
+<span class="text-body-sm text-risk-danger mb-1 font-medium flex items-center"><span class="material-symbols-outlined text-[16px]">trending_up</span></span>
+</div>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">LATEST DTX</p>
+<div class="flex items-end gap-2">
+<span class="font-stat-display text-stat-display text-on-surface">185</span>
+<span class="text-body-sm text-on-surface-variant mb-1">mg/dL</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Patient Card 2 - At Risk -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 status-bar-warning relative overflow-hidden group cursor-pointer hover:bg-surface-glass/90 transition-colors">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 items-center">
+<div class="w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-md font-bold shadow-sm border border-surface-variant">
+                            RJ
+                        </div>
+<div>
+<h3 class="font-headline-sm text-headline-sm font-semibold text-on-surface">Robert Johnson</h3>
+<p class="text-body-sm text-on-surface-variant flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">location_on</span> 88 Oak Avenue, Northside
+                            </p>
+</div>
+</div>
+<span class="bg-risk-warning text-white font-label-caps text-label-caps px-3 py-1 rounded-full shadow-sm">AT RISK</span>
+</div>
+<div class="grid grid-cols-2 gap-4 bg-surface/50 rounded-lg p-3 border border-outline-variant/20">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">LATEST BMI</p>
+<div class="flex items-end gap-2">
+<span class="font-stat-display text-stat-display text-on-surface">28.1</span>
+<span class="text-body-sm text-on-surface-variant mb-1 font-medium flex items-center"><span class="material-symbols-outlined text-[16px]">trending_flat</span></span>
+</div>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">LATEST DTX</p>
+<div class="flex items-end gap-2">
+<span class="font-stat-display text-stat-display text-on-surface">142</span>
+<span class="text-body-sm text-on-surface-variant mb-1">mg/dL</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Patient Card 3 - Normal -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-4 status-bar-normal relative overflow-hidden group cursor-pointer hover:bg-surface-glass/90 transition-colors opacity-75">
+<div class="flex justify-between items-start">
+<div class="flex gap-4 items-center">
+<img alt="Patient Photo" class="w-14 h-14 rounded-full object-cover shadow-sm border border-surface-variant" data-alt="Portrait of a middle aged man looking relaxed and healthy in a clean environment. High quality photography, clinical light mode aesthetic, soft focus background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdKGFD8mHHrRNvNPXshz_fmcVB0Uq3HQ1c0vQVy3-irZXiBmUF3p9oXlnHOfqkH8vKgGVRfjYObIUbWjEb1sPnmTtlLRn5OnYgAEv7tJ9AOkqiUV_VKZv_Chhm9aANxO-WhHEmXsb5xQ2KbrkDAxGzTr1AW5y_n42V4ZYqGm2ceor0rhm5Q0G3raP8MA1n7_5fOt2A7eV9twN9TQgPWBeIz3BlloNtqyt1Pb7JR3bELtOYX-nVcayplA"/>
+<div>
+<h3 class="font-headline-sm text-headline-sm font-semibold text-on-surface">David Chen</h3>
+<p class="text-body-sm text-on-surface-variant flex items-center gap-1 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">location_on</span> 231 Pine Lane, Unit 12
+                            </p>
+</div>
+</div>
+<span class="bg-tertiary-container text-on-tertiary-container font-label-caps text-label-caps px-3 py-1 rounded-full shadow-sm">STABLE</span>
+</div>
+<div class="grid grid-cols-2 gap-4 bg-surface/50 rounded-lg p-3 border border-outline-variant/20">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">LATEST BMI</p>
+<div class="flex items-end gap-2">
+<span class="font-stat-display text-stat-display text-on-surface">24.5</span>
+<span class="text-body-sm text-tertiary mb-1 font-medium flex items-center"><span class="material-symbols-outlined text-[16px]">trending_down</span></span>
+</div>
+</div>
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">LATEST DTX</p>
+<div class="flex items-end gap-2">
+<span class="font-stat-display text-stat-display text-on-surface">98</span>
+<span class="text-body-sm text-on-surface-variant mb-1">mg/dL</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 backdrop-blur-lg rounded-t-xl bg-surface-glass dark:bg-inverse-surface/90 border-t border-outline-variant/30 dark:border-outline/20 shadow-[0_-8px_32px_0_rgba(31,38,135,0.05)]">
+<div class="flex justify-around items-center h-20 pb-safe px-4 w-full">
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-5 py-1.5 hover:bg-surface-container-highest/50 dark:hover:bg-surface-variant/20 rounded-full active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined text-2xl mb-1">dashboard</span>
+<span class="font-label-caps text-label-caps">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-5 py-1.5 transition-all duration-300 active:scale-90 shadow-sm">
+<span class="material-symbols-outlined text-2xl mb-1" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
+<span class="font-label-caps text-label-caps font-bold">Targets</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-5 py-1.5 hover:bg-surface-container-highest/50 dark:hover:bg-surface-variant/20 rounded-full active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined text-2xl mb-1">settings</span>
+<span class="font-label-caps text-label-caps">Settings</span>
+</button>
+</div>
+</nav>
+</body></html>

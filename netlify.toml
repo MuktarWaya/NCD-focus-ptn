@@ -1,0 +1,12 @@
+# Netlify configuration for NCDs Focus Web App
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer-when-downgrade"
+    Cache-Control = "public, max-age=0, must-revalidate"

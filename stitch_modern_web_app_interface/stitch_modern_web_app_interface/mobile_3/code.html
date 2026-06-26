@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>NCDs Focus Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Sarabun:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-container": "#003b26",
+                    "on-secondary-fixed": "#07006c",
+                    "risk-warning": "#f59e0b",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed-variant": "#2f2ebe",
+                    "on-error": "#ffffff",
+                    "on-secondary-container": "#fffbff",
+                    "on-primary-fixed": "#001e2f",
+                    "background-base": "#f4f6fa",
+                    "inverse-primary": "#89ceff",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-high": "#dce9ff",
+                    "on-surface-variant": "#3e4850",
+                    "outline-variant": "#bec8d2",
+                    "error": "#ba1a1a",
+                    "on-primary-container": "#003751",
+                    "surface-dim": "#cbdbf5",
+                    "surface-tint": "#006591",
+                    "surface-container-highest": "#d3e4fe",
+                    "background": "#f8f9ff",
+                    "primary-fixed-dim": "#89ceff",
+                    "surface-variant": "#d3e4fe",
+                    "secondary-container": "#6063ee",
+                    "on-primary-fixed-variant": "#004c6e",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-glass": "rgba(255, 255, 255, 0.7)",
+                    "outline": "#6e7881",
+                    "tertiary-fixed": "#6ffbbe",
+                    "on-tertiary-fixed": "#002113",
+                    "surface-container": "#e5eeff",
+                    "on-background": "#0b1c30",
+                    "tertiary": "#006c49",
+                    "primary": "#006591",
+                    "risk-danger": "#ef4444",
+                    "surface-container-lowest": "#ffffff",
+                    "on-surface": "#0b1c30",
+                    "surface": "#f8f9ff",
+                    "text-slate": "#0f172a",
+                    "primary-container": "#0ea5e9",
+                    "surface-bright": "#f8f9ff",
+                    "tertiary-fixed-dim": "#4edea3",
+                    "on-tertiary-fixed-variant": "#005236",
+                    "secondary": "#4648d4",
+                    "surface-container-low": "#eff4ff",
+                    "inverse-surface": "#213145",
+                    "primary-fixed": "#c9e6ff",
+                    "on-primary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "error-container": "#ffdad6",
+                    "secondary-fixed": "#e1e0ff",
+                    "secondary-fixed-dim": "#c0c1ff",
+                    "tertiary-container": "#00b17b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "1.5rem",
+                    "stack-lg": "2rem",
+                    "container-max": "1280px",
+                    "stack-sm": "0.5rem",
+                    "margin-desktop": "2.5rem",
+                    "stack-md": "1rem",
+                    "margin-mobile": "1rem"
+            },
+            "fontFamily": {
+                    "body-lg": [
+                            "Sarabun"
+                    ],
+                    "label-caps": [
+                            "Outfit"
+                    ],
+                    "headline-md": [
+                            "Outfit"
+                    ],
+                    "body-md": [
+                            "Sarabun"
+                    ],
+                    "stat-display": [
+                            "Outfit"
+                    ],
+                    "headline-sm": [
+                            "Outfit"
+                    ],
+                    "body-sm": [
+                            "Sarabun"
+                    ],
+                    "headline-lg-mobile": [
+                            "Outfit"
+                    ],
+                    "headline-lg": [
+                            "Outfit"
+                    ]
+            },
+            "fontSize": {
+                    "body-lg": [
+                            "18px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-caps": [
+                            "12px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-md": [
+                            "24px",
+                            {
+                                    "lineHeight": "1.3",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-md": [
+                            "16px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "stat-display": [
+                            "32px",
+                            {
+                                    "lineHeight": "1",
+                                    "letterSpacing": "-0.01em",
+                                    "fontWeight": "700"
+                            }
+                    ],
+                    "headline-sm": [
+                            "20px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-sm": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.5",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "30px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "40px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background-base');
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .glass-card {
+            background: theme('colors.surface-glass');
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .glass-modal {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 12px 48px 0 rgba(31, 38, 135, 0.1);
+        }
+        
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+        .pt-safe { padding-top: env(safe-area-inset-top); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-background font-body-md antialiased min-h-screen flex flex-col pt-safe pb-safe relative">
+<!-- TopAppBar Component -->
+<header class="fixed top-0 w-full z-50 backdrop-blur-md bg-surface-glass dark:bg-inverse-surface/90 border-b border-outline-variant/30 dark:border-outline/20 shadow-sm dark:shadow-none transition-transform duration-300" id="top-app-bar">
+<div class="flex justify-between items-center px-margin-mobile h-16 w-full max-w-container-max mx-auto">
+<div class="flex items-center gap-3 active:scale-95 transition-transform duration-150 cursor-pointer">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img class="w-full h-full object-cover" data-alt="A close-up portrait of a professional female medical doctor in a modern, brightly lit clinic. She is wearing a white coat and a light blue stethoscope. The lighting is soft and airy, fitting a high-end corporate medical aesthetic. Her expression is warm and confident." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBUTF6NRRZd8eDMiE18DorbzyOsBDLBxL67_iPripbO8ShlgG0zrR2weUweBnxnbkJpN-60zkRxbnpOE35hKjURT6_Zp1MAF_TKMqIKt3szrIks_FF5SRkvf4peneU6UkWm2J2PGpEZV8sJVirkQO7RT5KPSMW8cKvHxKyXD3IoHxsilzEide3el905C94I_KGDzFXg9Ng3YnVk2GgNq2iqqn_2EhTqtm0fPsf30cqaU57xz7kr0GyDOw"/>
+</div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary dark:text-inverse-primary tracking-tight">NCDs Focus</h1>
+</div>
+<button class="w-10 h-10 flex items-center justify-center hover:bg-primary-container/10 dark:hover:bg-primary-fixed-dim/10 rounded-full transition-colors active:scale-95 duration-150 relative">
+<span class="material-symbols-outlined text-primary dark:text-inverse-primary" data-icon="notifications" style="font-variation-settings: 'FILL' 0;">notifications</span>
+<span class="absolute top-2 right-2 w-2.5 h-2.5 bg-risk-danger rounded-full border-2 border-surface-glass"></span>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow pt-24 pb-28 px-margin-mobile flex flex-col gap-stack-lg max-w-container-max mx-auto w-full md:grid md:grid-cols-12 md:gap-gutter">
+<!-- Welcome Section (Mobile Span full, Desktop Span 12) -->
+<section class="col-span-12 flex flex-col gap-1">
+<h2 class="font-headline-md text-headline-md text-on-surface">Welcome back, Dr. Sarah</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Here is your daily overview for NCDs patients.</p>
+</section>
+<!-- Metrics Grid (Mobile 2x2, Desktop 4 cols) -->
+<section class="col-span-12 grid grid-cols-2 md:grid-cols-4 gap-4">
+<!-- Total Targets -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group hover:-translate-y-1 transition-transform cursor-pointer">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary/70 text-lg" data-icon="groups">groups</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Total Targets</span>
+</div>
+<div class="flex items-end gap-1 mt-1">
+<span class="font-stat-display text-stat-display text-on-surface">1,248</span>
+</div>
+</div>
+<!-- Risk Group -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group hover:-translate-y-1 transition-transform cursor-pointer">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-risk-warning"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-risk-warning/70 text-lg" data-icon="warning">warning</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Risk Group</span>
+</div>
+<div class="flex items-end gap-1 mt-1">
+<span class="font-stat-display text-stat-display text-on-surface">342</span>
+<span class="font-body-sm text-body-sm text-risk-warning font-medium mb-1">↑ 12</span>
+</div>
+</div>
+<!-- Patient Group -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group hover:-translate-y-1 transition-transform cursor-pointer">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-tertiary-container"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary-container/70 text-lg" data-icon="personal_injury">personal_injury</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Patient Group</span>
+</div>
+<div class="flex items-end gap-1 mt-1">
+<span class="font-stat-display text-stat-display text-on-surface">890</span>
+</div>
+</div>
+<!-- Improvement Rate -->
+<div class="glass-card rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group hover:-translate-y-1 transition-transform cursor-pointer">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-primary-container"></div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary-container/70 text-lg" data-icon="trending_up">trending_up</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase">Improvement</span>
+</div>
+<div class="flex items-end gap-1 mt-1">
+<span class="font-stat-display text-stat-display text-on-surface">68%</span>
+<span class="font-body-sm text-body-sm text-tertiary-container font-medium mb-1">+5%</span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 bg-surface-container-high rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-primary-container rounded-full w-[68%]"></div>
+</div>
+</div>
+</section>
+<!-- Urgent Alerts Section -->
+<section class="col-span-12 md:col-span-8 flex flex-col gap-stack-sm">
+<div class="flex justify-between items-center mb-2">
+<h3 class="font-headline-sm text-headline-sm text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-risk-danger" data-icon="emergency">emergency</span>
+                    Urgent Alerts
+                </h3>
+<button class="font-label-caps text-label-caps text-primary uppercase hover:underline">View All</button>
+</div>
+<div class="flex flex-col gap-3">
+<!-- Alert Item 1 -->
+<div class="glass-card rounded-xl p-4 flex items-center justify-between cursor-pointer hover:bg-surface-container-highest/30 transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-error-container" data-icon="blood_pressure" style="font-variation-settings: 'FILL' 1;">blood_pressure</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Mr. Somchai K.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">High Blood Pressure (180/110)</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-risk-danger bg-error-container px-2 py-1 rounded-full">Critical</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1 text-[10px]">10 min ago</span>
+</div>
+</div>
+<!-- Alert Item 2 -->
+<div class="glass-card rounded-xl p-4 flex items-center justify-between cursor-pointer hover:bg-surface-container-highest/30 transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-error-container" data-icon="water_drop" style="font-variation-settings: 'FILL' 1;">water_drop</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Mrs. Wipa T.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">High Blood Sugar (250 mg/dL)</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-risk-warning bg-orange-100 px-2 py-1 rounded-full text-orange-800">Warning</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1 text-[10px]">45 min ago</span>
+</div>
+</div>
+<!-- Alert Item 3 -->
+<div class="glass-card rounded-xl p-4 flex items-center justify-between cursor-pointer hover:bg-surface-container-highest/30 transition-colors active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-error-container" data-icon="favorite" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Mr. Pricha N.</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Irregular Heartbeat</span>
+</div>
+</div>
+<div class="flex flex-col items-end">
+<span class="font-label-caps text-label-caps text-risk-danger bg-error-container px-2 py-1 rounded-full">Critical</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-1 text-[10px]">1 hr ago</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Decorative Area (Desktop only for balance) -->
+<section class="hidden md:flex md:col-span-4 glass-card rounded-xl flex-col items-center justify-center p-6 text-center">
+<span class="material-symbols-outlined text-surface-tint text-6xl opacity-20 mb-4" data-icon="ecg">ecg</span>
+<h4 class="font-headline-sm text-headline-sm text-on-surface mb-2">System Optimal</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">All tracking systems are currently online and syncing data from community volunteers.</p>
+</section>
+</main>
+<!-- BottomNavBar Component (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 backdrop-blur-lg rounded-t-xl bg-surface-glass dark:bg-inverse-surface/90 border-t border-outline-variant/30 dark:border-outline/20 shadow-[0_-8px_32px_0_rgba(31,38,135,0.05)]">
+<div class="flex justify-around items-center h-20 pb-safe px-4 w-full">
+<!-- Dashboard (Active) -->
+<button class="active:scale-90 transition-all duration-200 flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-5 py-1.5 hover:bg-surface-container-highest/50 dark:hover:bg-surface-variant/20 group">
+<span class="material-symbols-outlined mb-1" data-icon="dashboard" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-caps text-label-caps">Dashboard</span>
+</button>
+<!-- Targets (Inactive) -->
+<button class="active:scale-90 transition-all duration-200 flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-5 py-1.5 hover:bg-surface-container-highest/50 dark:hover:bg-surface-variant/20 rounded-full group">
+<span class="material-symbols-outlined mb-1 group-hover:text-primary transition-colors" data-icon="assignment_turned_in" style="font-variation-settings: 'FILL' 0;">assignment_turned_in</span>
+<span class="font-label-caps text-label-caps group-hover:text-primary transition-colors">Targets</span>
+</button>
+<!-- Settings (Inactive) -->
+<button class="active:scale-90 transition-all duration-200 flex flex-col items-center justify-center text-on-surface-variant dark:text-surface-variant px-5 py-1.5 hover:bg-surface-container-highest/50 dark:hover:bg-surface-variant/20 rounded-full group">
+<span class="material-symbols-outlined mb-1 group-hover:text-primary transition-colors" data-icon="settings" style="font-variation-settings: 'FILL' 0;">settings</span>
+<span class="font-label-caps text-label-caps group-hover:text-primary transition-colors">Settings</span>
+</button>
+</div>
+</nav>
+<!-- Scroll behavior script for TopAppBar -->
+<script>
+        let lastScrollY = window.scrollY;
+        const topAppBar = document.getElementById('top-app-bar');
+        
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                topAppBar.classList.add('shadow-md');
+                topAppBar.classList.remove('shadow-sm');
+            } else {
+                topAppBar.classList.remove('shadow-md');
+                topAppBar.classList.add('shadow-sm');
+            }
+            
+            // Optional: Hide on scroll down, show on scroll up (disabled for now to keep it pinned, but logic is here)
+            /*
+            if (window.scrollY > lastScrollY && window.scrollY > 100) {
+                topAppBar.style.transform = 'translateY(-100%)';
+            } else {
+                topAppBar.style.transform = 'translateY(0)';
+            }
+            lastScrollY = window.scrollY;
+            */
+        });
+    </script>
+</body></html>

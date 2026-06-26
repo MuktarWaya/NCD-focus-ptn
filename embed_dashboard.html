@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Embedded Health Dashboard - NCDs Focus</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome & Chart.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- DESIGN SYSTEM TOKENS (From DESIGN.md) --- */
+        :root {
+            --primary: #0ea5e9;
+            --primary-light: #f0f9ff;
+            --secondary: #6366f1;
+            --success: #10b981;
+            --success-light: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-light: #fef3c7;
+            --danger: #ef4444;
+            --danger-light: #fef2f2;
+            --surface: rgba(255, 255, 255, 0.8);
+            --background: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-card: rgba(255, 255, 255, 0.5);
+            --border-line: rgba(226, 232, 240, 0.8);
+            --shadow-card: 0 8px 32px 0 rgba(31, 38, 135, 0.04);
+            --glass-blur: blur(12px);
+            --radius-card: 20px;
+            --radius-btn: 12px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* --- Theme Styling --- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', 'Sarabun', sans-serif;
+        }
+
+        body {
+            background-color: var(--background);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-x: hidden;
+        }
+
+        /* --- Header --- */
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-card);
+            padding: 20px 24px;
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+        }
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .logo-icon {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(135deg, var(--primary), #0284c7);
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+        }
+        .logo-text h1 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+        .logo-text span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .header-badge {
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+
+        /* --- Stats Grid --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+        .stat-card {
+            background: var(--surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-card);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: var(--transition);
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.4rem;
+        }
+        .stat-icon.primary { background-color: var(--primary-light); color: var(--primary); }
+        .stat-icon.warning { background-color: var(--warning-light); color: var(--warning); }
+        .stat-icon.danger { background-color: var(--danger-light); color: var(--danger); }
+        .stat-icon.success { background-color: var(--success-light); color: var(--success); }
+        
+        .stat-content h3 {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 2px;
+        }
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        /* --- Main Workspace --- */
+        .workspace {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 20px;
+            flex: 1;
+        }
+        @media (max-width: 992px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--surface);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--border-card);
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow: hidden;
+        }
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-line);
+            padding-bottom: 12px;
+        }
+        .panel-header h2 {
+            font-size: 1rem;
+            font-weight: 700;
+        }
+
+        /* Search & Filters */
+        .filter-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .search-box {
+            position: relative;
+        }
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+        .search-box input {
+            width: 100%;
+            padding: 10px 14px 10px 38px;
+            border: 1px solid var(--border-line);
+            border-radius: var(--radius-btn);
+            font-size: 0.85rem;
+            outline: none;
+            transition: var(--transition);
+        }
+        .search-box input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+        }
+        .filter-dropdowns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .filter-dropdowns select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-line);
+            border-radius: var(--radius-btn);
+            font-size: 0.8rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Targets List */
+        .targets-list-container {
+            overflow-y: auto;
+            flex: 1;
+            max-height: 520px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding-right: 4px;
+        }
+        .target-card {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .target-card:hover, .target-card.active {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            transform: translateX(4px);
+        }
+        .target-card-info h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .target-card-info p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        .badge {
+            font-size: 0.65rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+        .badge-risk { background-color: var(--warning-light); color: var(--warning); }
+        .badge-patient { background-color: var(--danger-light); color: var(--danger); }
+
+        /* Detail Panel Layout */
+        .profile-view {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Profile Header */
+        .profile-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 16px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .profile-details h3 {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .profile-details p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .profile-tags {
+            display: flex;
+            gap: 6px;
+        }
+        .tag-pill {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 8px;
+        }
+
+        /* Timeline grid */
+        .timeline-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        @media (max-width: 768px) {
+            .timeline-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .timeline-card {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 12px;
+            border-top: 4px solid var(--text-muted);
+        }
+        .timeline-card.m0 { border-top-color: var(--secondary); }
+        .timeline-card.m3 { border-top-color: var(--primary); }
+        .timeline-card.m6 { border-top-color: var(--warning); }
+        .timeline-card.m9 { border-top-color: var(--success); }
+        
+        .timeline-card-title {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            border-bottom: 1px solid var(--border-line);
+            padding-bottom: 4px;
+        }
+        .timeline-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 0.75rem;
+        }
+        .timeline-row {
+            display: flex;
+            justify-content: space-between;
+        }
+        .timeline-row span:last-child {
+            font-weight: 700;
+        }
+
+        /* Charts */
+        .charts-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 768px) {
+            .charts-grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+        .chart-box {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 16px;
+            height: 220px;
+            position: relative;
+        }
+
+        /* Daily logs preview */
+        .logs-preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+        .logs-preview-table th, .logs-preview-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-line);
+        }
+        .logs-preview-table th {
+            font-weight: 700;
+            color: var(--text-muted);
+            background: var(--primary-light);
+        }
+
+        /* Urgent warning banner widget */
+        .urgent-widget {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .urgent-item {
+            background: var(--danger-light);
+            border: 1px solid rgba(239, 68, 68, 0.15);
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+        .urgent-item h5 {
+            font-weight: 700;
+            color: var(--danger);
+        }
+        .urgent-item span {
+            font-weight: 800;
+        }
+
+        /* Placeholder */
+        .select-prompt {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            min-height: 400px;
+            color: var(--text-muted);
+            gap: 14px;
+            text-align: center;
+        }
+        .select-prompt i {
+            font-size: 3.5rem;
+            color: rgba(14, 165, 233, 0.2);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="dash-header">
+        <div class="header-logo">
+            <div class="logo-icon">
+                <i class="fa-solid fa-heart-pulse"></i>
+            </div>
+            <div class="logo-text">
+                <h1>ระบบติดตามพฤติกรรมสุขภาพ มุ่งเป้าปัตตานี</h1>
+                <span>บอร์ดแสดงผลการติดตามรายบุคคล 3 เดือน (สำหรับฝังใน Google Sites)</span>
+            </div>
+        </div>
+        <div class="header-badge">
+            <i class="fa-solid fa-code"></i> Stitch Embed
+        </div>
+    </header>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon primary">
+                <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="stat-content">
+                <h3>เป้าหมายติดตาม</h3>
+                <div class="stat-value" id="stats-total">200 คน</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon warning">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="stat-content">
+                <h3>กลุ่มเสี่ยง</h3>
+                <div class="stat-value" id="stats-risk">110 คน</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon danger">
+                <i class="fa-solid fa-bed-pulse"></i>
+            </div>
+            <div class="stat-content">
+                <h3>กลุ่มป่วย</h3>
+                <div class="stat-value" id="stats-patient">90 คน</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon success">
+                <i class="fa-solid fa-arrow-trend-up"></i>
+            </div>
+            <div class="stat-content">
+                <h3>อัตราการดีขึ้น (BMI/BP)</h3>
+                <div class="stat-value" id="stats-improve">72.4%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workspace -->
+    <div class="workspace">
+        
+        <!-- Left Panel: Lists & Filters -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>รายชื่อกลุ่มเป้าหมาย</h2>
+                <i class="fa-solid fa-filter text-muted"></i>
+            </div>
+            
+            <div class="filter-section">
+                <div class="search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-input" placeholder="ค้นหา ชื่อ-สกุล หรือ บ้านเลขที่...">
+                </div>
+                <div class="filter-dropdowns">
+                    <select id="filter-type">
+                        <option value="all">ทุกกลุ่ม</option>
+                        <option value="กลุ่มเสี่ยง">กลุ่มเสี่ยง</option>
+                        <option value="กลุ่มป่วย">กลุ่มป่วย</option>
+                    </select>
+                    <select id="filter-disease">
+                        <option value="all">ทุกโรคเสี่ยง</option>
+                        <option value="DM">เบาหวาน (DM)</option>
+                        <option value="HT">ความดัน (HT)</option>
+                        <option value="Obesity">ดัชนีมวลกายเกิน</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Targets cards listing -->
+            <div class="targets-list-container" id="cards-list">
+                <!-- Dynamic cards -->
+            </div>
+
+            <!-- Urgent Alerts Widget inside left panel -->
+            <div class="panel-header" style="border-top: 1px solid var(--border-line); padding-top: 14px; margin-top: 10px;">
+                <h2>ต้องการการเฝ้าระวังด่วน (ค่าน้ำตาล/ความดันสูง)</h2>
+                <i class="fa-solid fa-triangle-exclamation text-danger"></i>
+            </div>
+            <div class="urgent-widget" id="urgent-container">
+                <!-- Urgent warning rows -->
+            </div>
+        </div>
+
+        <!-- Right Panel: Profile details -->
+        <div class="panel" style="flex: 1;" id="detail-panel">
+            <div class="select-prompt">
+                <i class="fa-solid fa-address-card"></i>
+                <div>
+                    <h2>กรุณาเลือกรายชื่อกลุ่มเป้าหมาย</h2>
+                    <p class="text-muted" style="font-size: 0.85rem; margin-top: 4px;">เลือกรายชื่อในเมนูด้านซ้ายเพื่อเปิดดูโปรไฟล์ ไทม์ไลน์ และกราฟวิเคราะห์แนวโน้มรายบุคคล</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script database & logic -->
+    <script>
+        // Mock dataset of 10 targets with quarterly trends (Month 0 to Month 9)
+        const mockTargets = [
+            {
+                id: 1,
+                name: "นายสมชาย รักดี",
+                age: 54,
+                address: "45/2 ม.1 ต.มายอ",
+                type: "กลุ่มเสี่ยง",
+                chronic_disease: "ไม่มี",
+                co_morbidity: "โรคอ้วน (BMI 27.2)",
+                medicines: "-",
+                quarterly: [
+                    { quarter: "M0", date: "01/06/2025", weight: 78, bmi: 28.3, bp: "135/85", dtx: 112, fat: 32, muscle: 28 },
+                    { quarter: "M3", date: "01/09/2025", weight: 76.5, bmi: 27.8, bp: "130/82", dtx: 108, fat: 31, muscle: 28.5 },
+                    { quarter: "M6", date: "01/12/2025", weight: 75, bmi: 27.2, bp: "128/80", dtx: 102, fat: 29.8, muscle: 29 },
+                    { quarter: "M9", date: "01/03/2026", weight: 73.8, bmi: 26.8, bp: "124/78", dtx: 98, fat: 28.5, muscle: 29.8 }
+                ],
+                dailyLogs: [
+                    { date: "15/06/2025", week: "สัปดาห์ที่ 1", day: "จันทร์", avoid_sweet: 4, avoid_oil: 3, avoid_salt: 4, menu: "ปลาช่อนนึ่งแจ่ว", exercise_type: "เดินเร็ว", exercise_duration: 30, water: 8, sleep_hours: 8 },
+                    { date: "16/06/2025", week: "สัปดาห์ที่ 1", day: "อังคาร", avoid_sweet: 5, avoid_oil: 4, avoid_salt: 3, menu: "แกงจืดเต้าหู้ผักกาดขาว", exercise_type: "-", exercise_duration: 0, water: 7, sleep_hours: 7 }
+                ]
+            },
+            {
+                id: 2,
+                name: "นางวิภา ใจดี",
+                age: 62,
+                address: "12/1 ม.3 ต.มายอ",
+                type: "กลุ่มป่วย",
+                chronic_disease: "DM (เบาหวาน)",
+                co_morbidity: "Dyslipidemia (ไขมันสูง)",
+                medicines: "Metformin (500mg) 1x2 pc",
+                quarterly: [
+                    { quarter: "M0", date: "02/06/2025", weight: 64, bmi: 25.6, bp: "138/88", dtx: 165, fat: 36, muscle: 24 },
+                    { quarter: "M3", date: "02/09/2025", weight: 63.2, bmi: 25.3, bp: "132/84", dtx: 148, fat: 35.2, muscle: 24.2 },
+                    { quarter: "M6", date: "02/12/2025", weight: 62.1, bmi: 24.8, bp: "128/82", dtx: 132, fat: 34.1, muscle: 24.6 },
+                    { quarter: "M9", date: "02/03/2026", weight: 61.0, bmi: 24.4, bp: "124/80", dtx: 118, fat: 33.0, muscle: 25.2 }
+                ],
+                dailyLogs: [
+                    { date: "15/06/2025", week: "สัปดาห์ที่ 1", day: "จันทร์", avoid_sweet: 4, avoid_oil: 4, avoid_salt: 4, menu: "ต้มยำปลานิลน้ำใส", exercise_type: "ปั่นจักรยาน", exercise_duration: 25, water: 8, sleep_hours: 7.5 }
+                ]
+            },
+            {
+                id: 3,
+                name: "นายประเสริฐ ดีเลิศ",
+                age: 68,
+                address: "99/4 ม.2 ต.มายอ",
+                type: "กลุ่มป่วย",
+                chronic_disease: "DM + HT",
+                co_morbidity: "โรคอ้วน",
+                medicines: "Metformin (500mg) 1x2 pc + Amlodipine (5mg) 1x1 pc",
+                quarterly: [
+                    { quarter: "M0", date: "10/06/2025", weight: 85, bmi: 30.1, bp: "152/95", dtx: 188, fat: 38, muscle: 25 },
+                    { quarter: "M3", date: "10/09/2025", weight: 84.1, bmi: 29.8, bp: "146/92", dtx: 172, fat: 37.4, muscle: 25.2 },
+                    { quarter: "M6", date: "10/12/2025", weight: 82.5, bmi: 29.2, bp: "138/88", dtx: 154, fat: 36.1, muscle: 25.8 },
+                    { quarter: "M9", date: "10/03/2026", weight: 81.0, bmi: 28.7, bp: "134/86", dtx: 142, fat: 35.0, muscle: 26.4 }
+                ],
+                dailyLogs: [
+                    { date: "15/06/2025", week: "สัปดาห์ที่ 1", day: "จันทร์", avoid_sweet: 5, avoid_oil: 5, avoid_salt: 4, menu: "น้ำพริกผักลวก อกไก่ฉีก", exercise_type: "เดินเร็ว", exercise_duration: 40, water: 9, sleep_hours: 8 }
+                ]
+            },
+            {
+                id: 4,
+                name: "นางสาวสมศรี เจริญสุข",
+                age: 48,
+                address: "102/1 ม.1 ต.มายอ",
+                type: "กลุ่มเสี่ยง",
+                chronic_disease: "ไม่มี",
+                co_morbidity: "ไขมันสะสมช่องท้องสูง",
+                medicines: "-",
+                quarterly: [
+                    { quarter: "M0", date: "12/06/2025", weight: 59, bmi: 23.6, bp: "128/82", dtx: 104, fat: 28, muscle: 29 },
+                    { quarter: "M3", date: "12/09/2025", weight: 58.2, bmi: 23.3, bp: "124/80", dtx: 100, fat: 27.5, muscle: 29.3 },
+                    { quarter: "M6", date: "12/12/2025", weight: 57.5, bmi: 23.0, bp: "120/78", dtx: 96, fat: 26.8, muscle: 29.8 },
+                    { quarter: "M9", date: "12/03/2026", weight: 56.8, bmi: 22.7, bp: "118/76", dtx: 92, fat: 26.0, muscle: 30.2 }
+                ],
+                dailyLogs: []
+            },
+            {
+                id: 5,
+                name: "นายวิชัย รุ่งเรือง",
+                age: 71,
+                address: "3/3 ม.4 ต.มายอ",
+                type: "กลุ่มป่วย",
+                chronic_disease: "HT (ความดันสูง)",
+                co_morbidity: "โรคไตระยะ 2",
+                medicines: "Losartan (50mg) 1x1 od pc",
+                quarterly: [
+                    { quarter: "M0", date: "15/06/2025", weight: 68, bmi: 24.1, bp: "148/90", dtx: 110, fat: 30, muscle: 27 },
+                    { quarter: "M3", date: "15/09/2025", weight: 68.2, bmi: 24.2, bp: "145/88", dtx: 114, fat: 30.2, muscle: 26.8 },
+                    { quarter: "M6", date: "15/12/2025", weight: 67.8, bmi: 24.0, bp: "142/86", dtx: 108, fat: 29.8, muscle: 27.1 },
+                    { quarter: "M9", date: "15/03/2026", weight: 67.0, bmi: 23.7, bp: "138/84", dtx: 104, fat: 29.0, muscle: 27.5 }
+                ],
+                dailyLogs: []
+            },
+            {
+                id: 6,
+                name: "นางดวงใจ ชูจิตต์",
+                age: 59,
+                address: "71/2 ม.2 ต.มายอ",
+                type: "กลุ่มป่วย",
+                chronic_disease: "DM (เบาหวาน)",
+                co_morbidity: "ไม่มี",
+                medicines: "Metformin (500mg) 1x1 pc",
+                quarterly: [
+                    { quarter: "M0", date: "18/06/2025", weight: 70, bmi: 26.7, bp: "130/80", dtx: 185, fat: 33, muscle: 26 },
+                    { quarter: "M3", date: "18/09/2025", weight: 71.5, bmi: 27.3, bp: "134/82", dtx: 196, fat: 34.1, muscle: 25.5 },
+                    { quarter: "M6", date: "18/12/2025", weight: 72.8, bmi: 27.8, bp: "138/85", dtx: 210, fat: 35.2, muscle: 25.0 },
+                    { quarter: "M9", date: "18/03/2026", weight: 73.5, bmi: 28.0, bp: "140/88", dtx: 224, fat: 36.0, muscle: 24.5 }
+                ],
+                dailyLogs: [
+                    { date: "15/06/2025", week: "สัปดาห์ที่ 1", day: "จันทร์", avoid_sweet: 1, avoid_oil: 2, avoid_salt: 3, menu: "ชาเย็น + ข้าวมันไก่", exercise_type: "-", exercise_duration: 0, water: 4, sleep_hours: 6.0 }
+                ]
+            }
+        ];
+
+        // --- App state ---
+        let currentTargetId = null;
+        let chartInstances = {};
+
+        // --- DOM Elements ---
+        const cardsList = document.getElementById('cards-list');
+        const detailPanel = document.getElementById('detail-panel');
+        const searchInput = document.getElementById('search-input');
+        const filterType = document.getElementById('filter-type');
+        const filterDisease = document.getElementById('filter-disease');
+        const urgentContainer = document.getElementById('urgent-container');
+
+        // --- Init ---
+        renderList();
+        renderUrgentAlerts();
+
+        // --- Event Listeners ---
+        searchInput.addEventListener('input', renderList);
+        filterType.addEventListener('change', renderList);
+        filterDisease.addEventListener('change', renderList);
+
+        // --- Render List of Cards ---
+        function renderList() {
+            cardsList.innerHTML = '';
+            const search = searchInput.value.toLowerCase();
+            const type = filterType.value;
+            const disease = filterDisease.value;
+
+            const filtered = mockTargets.filter(t => {
+                const matchSearch = t.name.toLowerCase().includes(search) || t.address.toLowerCase().includes(search);
+                const matchType = type === 'all' || t.type === type;
+                
+                let matchDisease = true;
+                if (disease !== 'all') {
+                    const latest = t.quarterly[t.quarterly.length - 1];
+                    if (disease === 'DM') matchDisease = t.chronic_disease.includes('DM') || latest.dtx >= 126;
+                    else if (disease === 'HT') matchDisease = t.chronic_disease.includes('HT') || parseInt(latest.bp.split('/')[0]) >= 130;
+                    else if (disease === 'Obesity') matchDisease = latest.bmi >= 25;
+                }
+
+                return matchSearch && matchType && matchDisease;
+            });
+
+            if (filtered.length === 0) {
+                cardsList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 20px;">ไม่พบข้อมูลกลุ่มเป้าหมาย</div>`;
+                return;
+            }
+
+            filtered.forEach(t => {
+                const latest = t.quarterly[t.quarterly.length - 1];
+                const card = document.createElement('div');
+                card.className = `target-card ${t.id === currentTargetId ? 'active' : ''}`;
+                
+                const badgeClass = t.type === 'กลุ่มเสี่ยง' ? 'badge-risk' : 'badge-patient';
+                
+                card.innerHTML = `
+                    <div class="target-card-info">
+                        <h4>${t.name}</h4>
+                        <p><i class="fa-solid fa-location-dot"></i> ${t.address} (อายุ ${t.age} ปี)</p>
+                        <p style="margin-top: 3px; font-weight: 600;">BMI: ${latest.bmi.toFixed(1)} | DTX: ${latest.dtx} มก.</p>
+                    </div>
+                    <span class="badge ${badgeClass}">${t.type}</span>
+                `;
+                
+                card.addEventListener('click', () => selectTarget(t.id));
+                cardsList.appendChild(card);
+            });
+        }
+
+        // --- Render Urgent Warnings Widget ---
+        function renderUrgentAlerts() {
+            urgentContainer.innerHTML = '';
+            
+            const urgentList = [];
+            mockTargets.forEach(t => {
+                const latest = t.quarterly[t.quarterly.length - 1];
+                let sys = parseInt(latest.bp.split('/')[0]);
+                
+                if (latest.dtx >= 160 || sys >= 140) {
+                    urgentList.push({
+                        id: t.id,
+                        name: t.name,
+                        bp: latest.bp,
+                        dtx: latest.dtx,
+                        sys: sys
+                    });
+                }
+            });
+
+            // Sort by DTX descending
+            urgentList.sort((a, b) => b.dtx - a.dtx);
+
+            if (urgentList.length === 0) {
+                urgentContainer.innerHTML = `<div style="text-align: center; font-size: 0.75rem; color: var(--text-muted);">ไม่มีกลุ่มเป้าหมายเฝ้าระวังวิกฤต</div>`;
+                return;
+            }
+
+            urgentList.forEach(item => {
+                const row = document.createElement('div');
+                row.className = 'urgent-item';
+                row.style.cursor = 'pointer';
+                row.innerHTML = `
+                    <div>
+                        <h5>${item.name}</h5>
+                        <p style="color: var(--text-muted); font-size: 0.7rem; margin-top: 2px;">ความดัน: <span>${item.bp}</span> | น้ำตาล: <span>${item.dtx}</span></p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-danger"></i>
+                `;
+                row.addEventListener('click', () => selectTarget(item.id));
+                urgentContainer.appendChild(row);
+            });
+        }
+
+        // --- Select and display Target Details ---
+        function selectTarget(targetId) {
+            currentTargetId = targetId;
+            
+            // Mark active class in list cards
+            const cards = cardsList.querySelectorAll('.target-card');
+            renderList(); // Refresh highlighting
+
+            const t = mockTargets.find(item => item.id === targetId);
+            if (!t) return;
+
+            // Render profile detail panel template
+            const latest = t.quarterly[t.quarterly.length - 1];
+            
+            const badgeClass = t.type === 'กลุ่มเสี่ยง' ? 'badge-risk' : 'badge-patient';
+            
+            detailPanel.innerHTML = `
+                <div class="profile-view">
+                    <!-- Profile Info -->
+                    <div class="profile-info-header">
+                        <div class="profile-details">
+                            <h3>${t.name} (อายุ ${t.age} ปี)</h3>
+                            <p><i class="fa-solid fa-house"></i> ${t.address} | ส่วนสูง ${t.quarterly[0].height || 165} ซม.</p>
+                            <p style="margin-top: 4px;"><strong>โรคประจำตัว:</strong> ${t.chronic_disease} | <strong>โรคร่วม:</strong> ${t.co_morbidity}</p>
+                            <p><strong>ยารับประทานประจำ:</strong> ${t.medicines}</p>
+                        </div>
+                        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                            <span class="badge ${badgeClass}" style="font-size: 0.8rem; padding: 6px 14px;">${t.type}</span>
+                            <div class="profile-tags">
+                                <span class="tag-pill">BMI: ${latest.bmi.toFixed(1)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Cards Grid (Month 0 to Month 9) -->
+                    <div class="timeline-grid">
+                        ${renderTimelineCardsHTML(t.quarterly)}
+                    </div>
+
+                    <!-- Chart Views -->
+                    <div class="charts-grid-2">
+                        <div class="chart-box">
+                            <canvas id="weight-bmi-canvas"></canvas>
+                        </div>
+                        <div class="chart-box">
+                            <canvas id="bp-dtx-canvas"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Daily Logs Preview Table -->
+                    <div style="border-top: 1px solid var(--border-line); padding-top: 16px;">
+                        <h4 style="font-size: 0.85rem; font-weight: 700; margin-bottom: 10px;"><i class="fa-solid fa-calendar-check text-secondary"></i> ตัวอย่างบันทึกพฤติกรรมรายสัปดาห์</h4>
+                        <div style="overflow-x: auto;">
+                            <table class="logs-preview-table">
+                                <thead>
+                                    <tr>
+                                        <th>วันที่</th>
+                                        <th>สัปดาห์</th>
+                                        <th>เลี่ยงหวาน</th>
+                                        <th>เลี่ยงมัน</th>
+                                        <th>เลี่ยงเค็ม</th>
+                                        <th>เมนูสุขภาพประจำวัน</th>
+                                        <th>ออกกำลังกาย (นาที)</th>
+                                        <th>ดื่มน้ำ (แก้ว)</th>
+                                        <th>นอน (ชม.)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${renderDailyLogsHTML(t.dailyLogs)}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Draw Charts dynamically
+            drawProfileCharts(t.quarterly);
+        }
+
+        // Timeline Cards HTML Builder
+        function renderTimelineCardsHTML(quarterly) {
+            const qNames = { "M0": "Month 0", "M3": "Month 3", "M6": "Month 6", "M9": "Month 9" };
+            const qClasses = { "M0": "m0", "M3": "m3", "M6": "m6", "M9": "m9" };
+            
+            return quarterly.map(q => {
+                let bpClass = parseInt(q.bp.split('/')[0]) >= 140 ? 'text-danger' : 'text-success';
+                let dtxClass = q.dtx >= 126 ? 'text-danger' : 'text-success';
+                let bmiClass = q.bmi >= 25 ? 'text-danger' : 'text-success';
+
+                return `
+                    <div class="timeline-card ${qClasses[q.quarter]}">
+                        <div class="timeline-card-title">
+                            <span>${qNames[q.quarter]}</span>
+                            <span style="font-size: 0.65rem; color: var(--text-muted);">${q.date}</span>
+                        </div>
+                        <div class="timeline-metrics">
+                            <div class="timeline-row">
+                                <span>นน.:</span>
+                                <span>${q.weight} กก.</span>
+                            </div>
+                            <div class="timeline-row">
+                                <span>BMI:</span>
+                                <span class="${bmiClass}">${q.bmi.toFixed(1)}</span>
+                            </div>
+                            <div class="timeline-row">
+                                <span>BP:</span>
+                                <span class="${bpClass}">${q.bp}</span>
+                            </div>
+                            <div class="timeline-row">
+                                <span>DTX:</span>
+                                <span class="${dtxClass}">${q.dtx}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Daily Logs HTML Builder
+        function renderDailyLogsHTML(dailyLogs) {
+            if (!dailyLogs || dailyLogs.length === 0) {
+                return `<tr><td colspan="9" style="text-align: center; color: var(--text-muted);">ไม่มีข้อมูลบันทึกพฤติกรรมรายวัน</td></tr>`;
+            }
+            return dailyLogs.map(d => {
+                return `
+                    <tr>
+                        <td><strong>${d.date}</strong></td>
+                        <td>${d.week} (${d.day})</td>
+                        <td>${d.avoid_sweet}/5</td>
+                        <td>${d.avoid_oil}/5</td>
+                        <td>${d.avoid_salt}/5</td>
+                        <td>${d.menu}</td>
+                        <td>${d.exercise_type} (${d.exercise_duration} น.)</td>
+                        <td>${d.water} แก้ว</td>
+                        <td>${d.sleep_hours} ชม.</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Draw Profile Charts
+        function drawProfileCharts(quarterly) {
+            const labels = quarterly.map(q => q.quarter);
+            
+            // 1. Weight & BMI Chart
+            const ctx1 = document.getElementById('weight-bmi-canvas').getContext('2d');
+            if (chartInstances.weightBmi) chartInstances.weightBmi.destroy();
+            
+            chartInstances.weightBmi = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'น้ำหนัก (กก.)',
+                            data: quarterly.map(q => q.weight),
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                            yAxisID: 'y-weight',
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: 'BMI',
+                            data: quarterly.map(q => q.bmi),
+                            borderColor: '#10b981',
+                            backgroundColor: 'transparent',
+                            yAxisID: 'y-bmi',
+                            tension: 0.3,
+                            borderDash: [4, 4]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        'y-weight': { position: 'left', ticks: { font: { size: 10 } } },
+                        'y-bmi': { position: 'right', grid: { display: false }, ticks: { font: { size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { labels: { font: { family: 'Sarabun', size: 10 } } }
+                    }
+                }
+            });
+
+            // 2. BP & DTX Chart
+            const ctx2 = document.getElementById('bp-dtx-canvas').getContext('2d');
+            if (chartInstances.bpDtx) chartInstances.bpDtx.destroy();
+
+            const sys = quarterly.map(q => parseInt(q.bp.split('/')[0]));
+            const dia = quarterly.map(q => parseInt(q.bp.split('/')[1]));
+
+            chartInstances.bpDtx = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Systolic (บน)',
+                            data: sys,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'transparent',
+                            tension: 0.2,
+                            yAxisID: 'y-bp'
+                        },
+                        {
+                            label: 'Diastolic (ล่าง)',
+                            data: dia,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'transparent',
+                            tension: 0.2,
+                            yAxisID: 'y-bp'
+                        },
+                        {
+                            label: 'DTX น้ำตาล',
+                            data: quarterly.map(q => q.dtx),
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'rgba(6, 182, 212, 0.05)',
+                            tension: 0.2,
+                            yAxisID: 'y-dtx',
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        'y-bp': { position: 'left', ticks: { font: { size: 10 } } },
+                        'y-dtx': { position: 'right', grid: { display: false }, ticks: { font: { size: 10 } } }
+                    },
+                    plugins: {
+                        legend: { labels: { font: { family: 'Sarabun', size: 10 } } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

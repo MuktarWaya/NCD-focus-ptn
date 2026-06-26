@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+
+<html lang="th"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Individual Health Profile &amp; Timeline View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=Sarabun:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-primary": "#89ceff",
+                        "primary-fixed": "#c9e6ff",
+                        "on-primary": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "surface": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "tertiary-fixed-dim": "#4edea3",
+                        "on-error": "#ffffff",
+                        "surface-glass": "rgba(255, 255, 255, 0.7)",
+                        "surface-dim": "#cbdbf5",
+                        "on-secondary-container": "#fffbff",
+                        "secondary-fixed-dim": "#c0c1ff",
+                        "secondary-fixed": "#e1e0ff",
+                        "outline": "#6e7881",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#dce9ff",
+                        "inverse-on-surface": "#eaf1ff",
+                        "background-base": "#f4f6fa",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-fixed": "#002113",
+                        "surface-container-low": "#eff4ff",
+                        "surface-bright": "#f8f9ff",
+                        "surface-tint": "#006591",
+                        "primary-fixed-dim": "#89ceff",
+                        "primary-container": "#0ea5e9",
+                        "on-primary-fixed": "#001e2f",
+                        "on-secondary-fixed-variant": "#2f2ebe",
+                        "on-tertiary-container": "#003b26",
+                        "secondary-container": "#6063ee",
+                        "secondary": "#4648d4",
+                        "tertiary-fixed": "#6ffbbe",
+                        "on-surface-variant": "#3e4850",
+                        "error-container": "#ffdad6",
+                        "on-background": "#0b1c30",
+                        "text-slate": "#0f172a",
+                        "risk-danger": "#ef4444",
+                        "primary": "#006591",
+                        "on-tertiary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "on-primary-container": "#003751",
+                        "on-secondary-fixed": "#07006c",
+                        "on-tertiary-fixed-variant": "#005236",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#d3e4fe",
+                        "risk-warning": "#f59e0b",
+                        "background": "#f8f9ff",
+                        "outline-variant": "#bec8d2",
+                        "on-primary-fixed-variant": "#004c6e",
+                        "inverse-surface": "#213145",
+                        "tertiary-container": "#00b17b",
+                        "tertiary": "#006c49",
+                        "surface-container": "#e5eeff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "1rem",
+                        "margin-desktop": "2.5rem",
+                        "margin-mobile": "1rem",
+                        "stack-sm": "0.5rem",
+                        "gutter": "1.5rem",
+                        "container-max": "1280px",
+                        "stack-lg": "2rem"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Outfit"],
+                        "body-md": ["Sarabun"],
+                        "body-sm": ["Sarabun"],
+                        "headline-sm": ["Outfit"],
+                        "label-caps": ["Outfit"],
+                        "stat-display": ["Outfit"],
+                        "headline-lg": ["Outfit"],
+                        "body-lg": ["Sarabun"],
+                        "headline-md": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["30px", { "lineHeight": "1.2", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "stat-display": ["32px", { "lineHeight": "1", "letterSpacing": "-0.01em", "fontWeight": "700" }],
+                        "headline-lg": ["40px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "500" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #f4f6fa;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(200,100%,94%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(190,100%,90%,1) 0, transparent 50%),
+                radial-gradient(at 100% 100%, hsla(210,100%,96%,1) 0, transparent 50%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+        .glass-floating {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.08);
+        }
+        .vital-bar {
+            width: 4px;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            border-top-left-radius: inherit;
+            border-bottom-left-radius: inherit;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface antialiased min-h-screen flex text-body-md">
+<!-- SideNavBar (Shared Component) -->
+<nav class="hidden md:flex h-screen w-64 fixed left-0 top-0 border-r border-white/40 bg-surface-glass dark:bg-inverse-surface/80 backdrop-blur-xl shadow-[0_8px_32px_0_rgba(31,38,135,0.05)] z-50 flex-col py-stack-lg px-gutter">
+<div class="mb-stack-lg flex flex-col gap-2">
+<h1 class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">NCDs Focus</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Pattani Region</p>
+</div>
+<div class="flex-1 flex flex-col gap-2">
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-active:scale-95 transition-transform" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<!-- Active (Target / Patient View implies Targets context) -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-primary dark:text-primary-fixed font-bold border-r-4 border-primary dark:border-primary-fixed bg-primary-container/20 hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-active:scale-95 transition-transform" data-icon="groups">groups</span>
+<span class="font-body-md text-body-md">Targets</span>
+</a>
+<!-- Inactive -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-surface-variant dark:text-outline-variant hover:text-primary hover:bg-surface-container-low dark:hover:bg-surface-container-high transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined group-active:scale-95 transition-transform" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</div>
+<button class="w-full mt-4 bg-primary text-on-primary py-3 rounded-xl font-headline-sm text-headline-sm shadow-[0_0_15px_rgba(14,165,233,0.2)] hover:opacity-90 transition-opacity active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add</span>
+            Add New Patient
+        </button>
+<div class="mt-stack-lg border-t border-white/40 pt-4 flex flex-col gap-2">
+<a class="flex items-center gap-3 px-4 py-2 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span class="font-body-sm text-body-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-2 rounded-xl text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-sm text-body-sm">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<div class="flex-1 ml-0 md:ml-64 flex flex-col min-h-screen">
+<!-- TopNavBar (Shared Component) -->
+<header class="docked full-width top-0 sticky z-40 border-b border-white/40 bg-surface-glass dark:bg-inverse-surface/80 backdrop-blur-md shadow-[0_4px_12px_0_rgba(0,0,0,0.03)] flex justify-between items-center h-16 px-margin-desktop">
+<div class="flex items-center gap-4">
+<!-- Mobile Menu Toggle (Decorative) -->
+<button class="md:hidden text-on-surface-variant p-2 -ml-2 rounded-lg hover:bg-surface-container-low">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h2 class="font-headline-sm text-headline-sm font-semibold text-primary dark:text-primary-fixed hidden md:block">
+                    NCDs Focus (มุ่งเป้าปัตตานี)
+                </h2>
+</div>
+<div class="flex items-center gap-6">
+<!-- Search -->
+<div class="relative hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
+<input class="pl-10 pr-4 py-2 rounded-full bg-white/50 border border-white/40 focus-within:ring-2 focus-within:ring-primary/50 transition-all font-body-sm text-body-sm outline-none text-on-surface w-48 lg:w-64" placeholder="Search..." type="text"/>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-3">
+<button class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-all p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-all p-2 rounded-full hover:bg-surface-container-low">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+</button>
+<button class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-all p-2 rounded-full hover:bg-surface-container-low overflow-hidden w-9 h-9 border border-white/50">
+<img alt="Health officer profile" class="w-full h-full object-cover rounded-full" data-alt="A professional medical health officer or nurse in a light, sterile clinical environment, looking directly at the camera with a reassuring expression, captured in bright, natural light, high key photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuClHCZHbkRtZaIh7u-IoELa1xm8jdoSpI0wsp7q8ZVDoaIdnswahfAom9fgKdbU3quz6RyqHxsmfkT7OrjsVyzElswRFwpSFIOlF21jck5X_f663aovXDnZ8UKtAN9lAXbe3hxHLV5U1ppFJ-Us4kiKE8evZMaKYW9QLygoq5s0oLvgjPHtfgV2AZ4YOCOJgj9qqIVr183gE6Gmo0n53jP_u6jQTcO20b1etJM4rYZ2cZXcektQO1LMzw"/>
+</button>
+</div>
+</div>
+</header>
+<!-- Canvas -->
+<main class="flex-1 p-margin-mobile md:p-margin-desktop overflow-x-hidden">
+<div class="max-w-container-max mx-auto flex flex-col gap-stack-lg">
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-outline font-body-sm text-body-sm">
+<a class="hover:text-primary transition-colors" href="#">Targets</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="text-on-surface font-medium">สมชาย ใจดี (Somchai Jaidee)</span>
+</div>
+<!-- 1. Profile Header -->
+<section class="glass-card rounded-2xl p-6 relative overflow-hidden flex flex-col md:flex-row gap-6 items-start md:items-center">
+<div class="vital-bar bg-tertiary-container"></div>
+<div class="flex-shrink-0 w-24 h-24 rounded-full overflow-hidden border-4 border-white/80 shadow-sm relative">
+<img class="w-full h-full object-cover" data-alt="A portrait of an elderly Thai man, roughly 65 years old, looking dignified but slightly fatigued, seated in a well-lit modern clinic with soft blue and white background tones, bright high key lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDx9czlhpjSP08gQAyJZyFbQY81S73gouCfYm7SUC608BL_m4cz-IVpw-MqViZLfxJEQjrUFdPW34KjLhExGl7UP9FCXgBJGnZ79M12XOVsQahJz-zvbencjYZKu3j48Uy4oKu15p-6XsmV9xg5XSHP6Jh6PSlt0NCifvZXNhbOlC5CcGokN0-aFX5R6vE_Cl9xR-QS4AQgwNsHOlVXcxDnPpxjxCtVXlgwlxVol2LrA4w3wi8XCy2LFw"/>
+</div>
+<div class="flex-1">
+<div class="flex flex-wrap items-baseline gap-3 mb-2">
+<h2 class="font-headline-lg text-headline-lg font-bold text-primary">นายสมชาย ใจดี</h2>
+<span class="font-body-md text-body-md text-outline">อายุ 65 ปี • เพศชาย • HN: 882910</span>
+</div>
+<div class="flex flex-wrap gap-2 mt-4">
+<div class="bg-error/10 text-error px-3 py-1 rounded-full font-label-caps text-label-caps flex items-center gap-1 border border-error/20">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                                โรคความดันโลหิตสูง (HT)
+                            </div>
+<div class="bg-risk-warning/10 text-risk-warning px-3 py-1 rounded-full font-label-caps text-label-caps flex items-center gap-1 border border-risk-warning/20">
+<span class="material-symbols-outlined text-[14px]">blood_pressure</span>
+                                เบาหวาน (DM) - ระยะเสี่ยง
+                            </div>
+</div>
+</div>
+<div class="md:w-1/3 bg-white/40 p-4 rounded-xl border border-white/50 w-full">
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">pill</span> ยาที่ใช้ประจำ
+                        </h3>
+<ul class="font-body-sm text-body-sm text-on-surface-variant space-y-1">
+<li>• Amlodipine (5mg) - 1 เม็ด เช้า</li>
+<li>• Metformin (500mg) - 1 เม็ด หลังอาหาร</li>
+</ul>
+</div>
+</section>
+<!-- 2. Quarterly Timeline -->
+<section>
+<h3 class="font-headline-md text-headline-md font-semibold text-on-surface mb-stack-md flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">calendar_month</span> การประเมินรายไตรมาส
+                    </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- M0 -->
+<div class="glass-card rounded-xl p-5 relative overflow-hidden">
+<div class="vital-bar bg-outline-variant"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-caps text-label-caps bg-surface-container-highest text-on-surface-variant px-2 py-1 rounded">M0 (เริ่มต้น)</span>
+<span class="font-body-sm text-body-sm text-outline">15 ม.ค. 66</span>
+</div>
+<div class="space-y-3 font-stat-display text-stat-display text-on-surface">
+<div class="flex justify-between items-baseline border-b border-white/30 pb-1">
+<span class="font-body-sm text-body-sm text-outline">น้ำหนัก/BMI</span>
+<div>75<span class="font-body-sm text-body-sm text-outline ml-1">kg</span> <span class="text-[18px] text-risk-warning ml-2">26.5</span></div>
+</div>
+<div class="flex justify-between items-baseline border-b border-white/30 pb-1">
+<span class="font-body-sm text-body-sm text-outline">ความดัน (BP)</span>
+<div><span class="text-error">145</span><span class="font-body-sm text-body-sm text-outline mx-1">/</span>90</div>
+</div>
+<div class="flex justify-between items-baseline">
+<span class="font-body-sm text-body-sm text-outline">น้ำตาล (DTX)</span>
+<div><span class="text-risk-warning">120</span><span class="font-body-sm text-body-sm text-outline ml-1">mg/dL</span></div>
+</div>
+</div>
+</div>
+<!-- M3 -->
+<div class="glass-card rounded-xl p-5 relative overflow-hidden">
+<div class="vital-bar bg-risk-warning"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-caps text-label-caps bg-risk-warning/20 text-risk-warning px-2 py-1 rounded">M3</span>
+<span class="font-body-sm text-body-sm text-outline">15 เม.ย. 66</span>
+</div>
+<div class="space-y-3 font-stat-display text-stat-display text-on-surface">
+<div class="flex justify-between items-baseline border-b border-white/30 pb-1">
+<span class="font-body-sm text-body-sm text-outline">น้ำหนัก/BMI</span>
+<div>74<span class="font-body-sm text-body-sm text-outline ml-1">kg</span> <span class="text-[18px] text-risk-warning ml-2">26.2</span></div>
+</div>
+<div class="flex justify-between items-baseline border-b border-white/30 pb-1">
+<span class="font-body-sm text-body-sm text-outline">ความดัน (BP)</span>
+<div><span class="text-risk-warning">138</span><span class="font-body-sm text-body-sm text-outline mx-1">/</span>88</div>
+</div>
+<div class="flex justify-between items-baseline">
+<span class="font-body-sm text-body-sm text-outline">น้ำตาล (DTX)</span>
+<div><span class="text-risk-warning">115</span><span class="font-body-sm text-body-sm text-outline ml-1">mg/dL</span></div>
+</div>
+</div>
+</div>
+<!-- M6 -->
+<div class="glass-card rounded-xl p-5 relative overflow-hidden">
+<div class="vital-bar bg-tertiary-container"></div>
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-caps text-label-caps bg-tertiary-container/20 text-tertiary px-2 py-1 rounded">M6</span>
+<span class="font-body-sm text-body-sm text-outline">15 ก.ค. 66</span>
+</div>
+<div class="space-y-3 font-stat-display text-stat-display text-on-surface">
+<div class="flex justify-between items-baseline border-b border-white/30 pb-1">
+<span class="font-body-sm text-body-sm text-outline">น้ำหนัก/BMI</span>
+<div>72<span class="font-body-sm text-body-sm text-outline ml-1">kg</span> <span class="text-[18px] text-tertiary ml-2">25.5</span></div>
+</div>
+<div class="flex justify-between items-baseline border-b border-white/30 pb-1">
+<span class="font-body-sm text-body-sm text-outline">ความดัน (BP)</span>
+<div><span class="text-tertiary">130</span><span class="font-body-sm text-body-sm text-outline mx-1">/</span>85</div>
+</div>
+<div class="flex justify-between items-baseline">
+<span class="font-body-sm text-body-sm text-outline">น้ำตาล (DTX)</span>
+<div><span class="text-tertiary">105</span><span class="font-body-sm text-body-sm text-outline ml-1">mg/dL</span></div>
+</div>
+</div>
+</div>
+<!-- M9 (Pending) -->
+<div class="glass-card rounded-xl p-5 relative overflow-hidden opacity-60 border-dashed border-2 border-outline-variant/50">
+<div class="flex justify-between items-start mb-4">
+<span class="font-label-caps text-label-caps bg-surface-container-highest text-outline px-2 py-1 rounded">M9 (รอดำเนินการ)</span>
+<span class="font-body-sm text-body-sm text-outline">15 ต.ค. 66</span>
+</div>
+<div class="flex h-32 items-center justify-center">
+<span class="material-symbols-outlined text-[32px] text-outline-variant">pending_actions</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Charts -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-stack-lg">
+<!-- Chart 1: Weight / BMI -->
+<div class="glass-card rounded-xl p-6">
+<h4 class="font-headline-sm text-headline-sm text-on-surface mb-4">แนวโน้มน้ำหนัก และ BMI</h4>
+<div class="w-full h-64 bg-white/30 rounded-lg flex items-end p-4 gap-4 relative border border-white/50">
+<!-- Faux Chart Lines for Visual -->
+<div class="absolute bottom-4 left-4 right-4 top-4 border-b border-l border-outline/20"></div>
+<!-- Data Points (Mock) -->
+<div class="flex-1 flex justify-between items-end h-full relative z-10 px-4">
+<div class="w-4 bg-primary/20 rounded-t h-[80%] relative group">
+<div class="absolute -top-6 -left-2 text-primary font-label-caps text-label-caps">75kg</div>
+</div>
+<div class="w-4 bg-primary/40 rounded-t h-[75%] relative">
+<div class="absolute -top-6 -left-2 text-primary font-label-caps text-label-caps">74kg</div>
+</div>
+<div class="w-4 bg-primary/60 rounded-t h-[60%] relative">
+<div class="absolute -top-6 -left-2 text-primary font-label-caps text-label-caps">72kg</div>
+</div>
+<div class="w-4 border-2 border-dashed border-outline-variant/50 rounded-t h-[10%] relative"></div>
+</div>
+</div>
+<div class="flex justify-between mt-2 px-8 font-label-caps text-label-caps text-outline">
+<span>M0</span>
+<span>M3</span>
+<span>M6</span>
+<span>M9</span>
+</div>
+</div>
+<!-- Chart 2: BP -->
+<div class="glass-card rounded-xl p-6">
+<h4 class="font-headline-sm text-headline-sm text-on-surface mb-4">แนวโน้มความดันโลหิต (BP)</h4>
+<div class="w-full h-64 bg-white/30 rounded-lg flex items-end p-4 gap-4 relative border border-white/50 overflow-hidden">
+<!-- Faux Target Band -->
+<div class="absolute left-0 right-0 h-16 bottom-[30%] bg-tertiary/10 border-y border-tertiary/20"></div>
+<div class="absolute bottom-4 left-4 right-4 top-4 border-b border-l border-outline/20"></div>
+<div class="flex-1 flex justify-between h-full relative z-10 px-8">
+<div class="relative h-full flex flex-col justify-end pb-[70%]">
+<div class="w-3 h-3 bg-error rounded-full relative z-20"></div>
+<div class="w-0.5 h-[40%] bg-outline/30 absolute left-1.5 top-[30%]"></div>
+<div class="w-3 h-3 bg-error/50 rounded-full absolute bottom-[45%]"></div>
+</div>
+<div class="relative h-full flex flex-col justify-end pb-[60%]">
+<div class="w-3 h-3 bg-risk-warning rounded-full relative z-20"></div>
+<div class="w-0.5 h-[30%] bg-outline/30 absolute left-1.5 top-[40%]"></div>
+<div class="w-3 h-3 bg-risk-warning/50 rounded-full absolute bottom-[50%]"></div>
+</div>
+<div class="relative h-full flex flex-col justify-end pb-[45%]">
+<div class="w-3 h-3 bg-tertiary rounded-full relative z-20"></div>
+<div class="w-0.5 h-[20%] bg-outline/30 absolute left-1.5 top-[55%]"></div>
+<div class="w-3 h-3 bg-tertiary/50 rounded-full absolute bottom-[40%]"></div>
+</div>
+<div class="relative h-full flex flex-col justify-end pb-[10%]">
+<div class="w-3 h-3 border-2 border-outline-variant rounded-full border-dashed"></div>
+</div>
+</div>
+</div>
+<div class="flex justify-between mt-2 px-12 font-label-caps text-label-caps text-outline">
+<span>M0</span>
+<span>M3</span>
+<span>M6</span>
+<span>M9</span>
+</div>
+</div>
+</section>
+<!-- 4. Daily Logs Table -->
+<section class="glass-card rounded-xl p-6">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-headline-md text-headline-md font-semibold text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">list_alt</span> บันทึกประจำวันล่าสุด (7 วัน)
+                        </h3>
+<button class="text-primary font-body-sm text-body-sm hover:underline">ดูทั้งหมด</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/30 font-label-caps text-label-caps text-outline">
+<th class="py-3 px-4 font-semibold">วันที่</th>
+<th class="py-3 px-4 font-semibold">การออกกำลังกาย</th>
+<th class="py-3 px-4 font-semibold">อาหาร (ควบคุม)</th>
+<th class="py-3 px-4 font-semibold">ดื่มน้ำ</th>
+<th class="py-3 px-4 font-semibold">การนอนหลับ</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm text-on-surface">
+<tr class="border-b border-white/40 hover:bg-white/20 transition-colors">
+<td class="py-3 px-4">12 ก.ค. 66</td>
+<td class="py-3 px-4 flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span> เดิน 30 นาที</td>
+<td class="py-3 px-4"><span class="bg-tertiary/10 text-tertiary px-2 py-0.5 rounded text-xs">ดีมาก</span></td>
+<td class="py-3 px-4">8 แก้ว</td>
+<td class="py-3 px-4">7 ชม.</td>
+</tr>
+<tr class="border-b border-white/40 hover:bg-white/20 transition-colors">
+<td class="py-3 px-4">11 ก.ค. 66</td>
+<td class="py-3 px-4 flex items-center gap-2"><span class="material-symbols-outlined text-outline text-[18px]">cancel</span> ไม่ได้ทำ</td>
+<td class="py-3 px-4"><span class="bg-risk-warning/10 text-risk-warning px-2 py-0.5 rounded text-xs">ปานกลาง</span></td>
+<td class="py-3 px-4">6 แก้ว</td>
+<td class="py-3 px-4">6 ชม.</td>
+</tr>
+<tr class="border-b border-white/40 hover:bg-white/20 transition-colors">
+<td class="py-3 px-4">10 ก.ค. 66</td>
+<td class="py-3 px-4 flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span> แกว่งแขน 20 นาที</td>
+<td class="py-3 px-4"><span class="bg-tertiary/10 text-tertiary px-2 py-0.5 rounded text-xs">ดี</span></td>
+<td class="py-3 px-4">8 แก้ว</td>
+<td class="py-3 px-4">8 ชม.</td>
+</tr>
+<tr class="hover:bg-white/20 transition-colors">
+<td class="py-3 px-4">09 ก.ค. 66</td>
+<td class="py-3 px-4 flex items-center gap-2"><span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span> เดิน 40 นาที</td>
+<td class="py-3 px-4"><span class="bg-error/10 text-error px-2 py-0.5 rounded text-xs">กินของหวาน</span></td>
+<td class="py-3 px-4">7 แก้ว</td>
+<td class="py-3 px-4">5 ชม.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</div>
+</main>
+</div>
+</body></html>
