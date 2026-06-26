@@ -40,9 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     initTheme();
     setupEventListeners();
-    
-    // Start by loading data
-    refreshData();
+    checkAuthentication();
 });
 
 // --- Settings & Theme Management ---
@@ -103,6 +101,26 @@ function updateConnectionIndicator() {
         indicator.className = 'connection-status offline';
         indicator.querySelector('.status-text').textContent = 'Demo Mode';
         demoBanner.classList.remove('hidden');
+    }
+}
+
+function checkAuthentication() {
+    const loginScreen = document.getElementById('login-screen');
+    if (!loginScreen) return;
+
+    const isAuthenticated = sessionStorage.getItem('ncd_authenticated') === 'true';
+    if (isAuthenticated) {
+        loginScreen.classList.add('hidden');
+        refreshData();
+    } else {
+        loginScreen.classList.remove('hidden');
+        const loginPasscode = document.getElementById('login-passcode');
+        if (loginPasscode) {
+            loginPasscode.value = '';
+            loginPasscode.focus();
+        }
+        const errorDiv = document.getElementById('login-error');
+        if (errorDiv) errorDiv.classList.add('hidden');
     }
 }
 
@@ -1219,6 +1237,32 @@ function setupEventListeners() {
             switchView(viewId);
         });
     });
+
+    // Login form submission
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const inputPasscode = document.getElementById('login-passcode').value.trim();
+            const errorDiv = document.getElementById('login-error');
+            
+            if (inputPasscode === state.apiPasscode) {
+                sessionStorage.setItem('ncd_authenticated', 'true');
+                const loginScreen = document.getElementById('login-screen');
+                if (loginScreen) loginScreen.classList.add('hidden');
+                errorDiv.classList.add('hidden');
+                refreshData();
+                showToast("เข้าสู่ระบบสำเร็จ!");
+            } else {
+                errorDiv.classList.remove('hidden');
+                const passcodeField = document.getElementById('login-passcode');
+                if (passcodeField) {
+                    passcodeField.value = '';
+                    passcodeField.focus();
+                }
+            }
+        });
+    }
 
     // Theme toggle
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
