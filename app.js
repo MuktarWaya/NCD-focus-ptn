@@ -402,6 +402,22 @@ function switchView(viewId) {
     }
 }
 
+function setMobileNavOpen(isOpen) {
+    const sidebar = document.getElementById('app-sidebar');
+    const overlay = document.getElementById('mobile-nav-overlay');
+    const toggle = document.getElementById('mobile-nav-toggle');
+    if (!sidebar || !overlay) return;
+
+    sidebar.classList.toggle('-translate-x-full', !isOpen);
+    overlay.classList.toggle('hidden', !isOpen);
+    document.body.classList.toggle('overflow-hidden', isOpen);
+    if (toggle) toggle.setAttribute('aria-expanded', String(isOpen));
+}
+
+function closeMobileNav() {
+    setMobileNavOpen(false);
+}
+
 function updateHeaderTitles(viewId) {
     const title = document.getElementById('view-title');
     const subtitle = document.getElementById('view-subtitle');
@@ -1423,12 +1439,27 @@ function setupProfileActionFallbacks() {
 }
 
 function setupEventListeners() {
+    const mobileNavToggle = document.getElementById('mobile-nav-toggle');
+    const mobileNavClose = document.getElementById('mobile-nav-close');
+    const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
+
+    if (mobileNavToggle) {
+        mobileNavToggle.addEventListener('click', () => setMobileNavOpen(true));
+    }
+    if (mobileNavClose) {
+        mobileNavClose.addEventListener('click', closeMobileNav);
+    }
+    if (mobileNavOverlay) {
+        mobileNavOverlay.addEventListener('click', closeMobileNav);
+    }
+
     // Nav Items switching
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
             const viewId = e.currentTarget.getAttribute('data-view');
             switchView(viewId);
+            closeMobileNav();
         });
     });
 
