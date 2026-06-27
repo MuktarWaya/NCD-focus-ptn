@@ -40,6 +40,13 @@ function doPost(e) {
       return getTargetDetail(ss, parseInt(requestData.data.id));
     } else if (action === "getDashboardStats") {
       return getDashboardStats(ss);
+    } else if (action === "setupSheets") {
+      setupSheetsForSpreadsheet(ss);
+      return successResponse({ message: "ตรวจสอบและเติมหัวตารางชีตเรียบร้อยแล้ว" });
+    } else if (action === "migrateMockVillages") {
+      return migrateMockVillages(ss);
+    } else if (action === "bulkUpdateTargetLocations") {
+      return bulkUpdateTargetLocations(ss, requestData.data.locations || []);
     } else if (action === "addTarget") {
       return addTarget(ss, requestData.data);
     } else if (action === "updateTarget") {
@@ -255,6 +262,95 @@ function updateTarget(ss, data) {
   return errorResponse("ไม่พบข้อมูล ID: " + id + " ในระบบ");
 }
 
+function migrateMockVillages(ss) {
+  setupSheetsForSpreadsheet(ss);
+
+  var sheet = ss.getSheetByName("Targets");
+  if (!sheet) return errorResponse("ไม่พบแผ่นงาน 'Targets'");
+
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return successResponse({ message: "ไม่มีข้อมูลกลุ่มเป้าหมายให้ปรับ", updated: 0 });
+
+  var headers = rows[0];
+  var addressColIdx = headers.indexOf("address");
+  var villageColIdx = headers.indexOf("village");
+  if (addressColIdx === -1 || villageColIdx === -1) {
+    return errorResponse("ไม่พบคอลัมน์ address หรือ village ในแผ่นงาน Targets");
+  }
+
+  var activeVillages = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
+  var updatedRows = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var address = rows[i][addressColIdx] ? rows[i][addressColIdx].toString() : "";
+    var addressOnly = address.split(/\s+/)[0];
+    var village = activeVillages[(i - 1) % activeVillages.length];
+    updatedRows.push([addressOnly, village]);
+  }
+
+  sheet.getRange(2, addressColIdx + 1, updatedRows.length, 1).setValues(updatedRows.map(function(row) { return [row[0]]; }));
+  sheet.getRange(2, villageColIdx + 1, updatedRows.length, 1).setValues(updatedRows.map(function(row) { return [row[1]]; }));
+
+  return successResponse({
+    message: "ปรับข้อมูล mock บ้านเลขที่และหมู่บ้านเรียบร้อยแล้ว",
+    updated: updatedRows.length
+  });
+}
+
+function bulkUpdateTargetLocations(ss, locations) {
+  setupSheetsForSpreadsheet(ss);
+
+  var sheet = ss.getSheetByName("Targets");
+  if (!sheet) return errorResponse("ไม่พบแผ่นงาน 'Targets'");
+  if (!locations || locations.length === 0) return errorResponse("ไม่มีข้อมูล locations สำหรับอัปเดต");
+
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0];
+  var idColIdx = headers.indexOf("id");
+  var addressColIdx = headers.indexOf("address");
+  var villageColIdx = headers.indexOf("village");
+  if (idColIdx === -1 || addressColIdx === -1 || villageColIdx === -1) {
+    return errorResponse("ไม่พบคอลัมน์ id, address หรือ village ในแผ่นงาน Targets");
+  }
+
+  var locationById = {};
+  locations.forEach(function(item) {
+    locationById[parseInt(item.id)] = {
+      address: item.address || "",
+      village: item.village || ""
+    };
+  });
+
+  var updated = 0;
+  var addressValues = [];
+  var villageValues = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var id = parseInt(rows[i][idColIdx]);
+    var location = locationById[id];
+    if (location) {
+      addressValues.push([location.address]);
+      villageValues.push([location.village]);
+      updated++;
+    } else {
+      addressValues.push([rows[i][addressColIdx]]);
+      villageValues.push([rows[i][villageColIdx]]);
+    }
+  }
+
+  var addressRange = sheet.getRange(2, addressColIdx + 1, addressValues.length, 1);
+  var villageRange = sheet.getRange(2, villageColIdx + 1, villageValues.length, 1);
+  addressRange.setNumberFormat("@");
+  villageRange.setNumberFormat("@");
+  addressRange.setValues(addressValues);
+  villageRange.setValues(villageValues);
+
+  return successResponse({
+    message: "อัปเดตบ้านเลขที่และหมู่บ้านตาม ID เรียบร้อยแล้ว",
+    updated: updated
+  });
+}
+
 // 6. เพิ่มประวัติผลสุขภาพ 3 เดือน (Quarterly Tracking)
 function addQuarterly(ss, data) {
   var sheet = ss.getSheetByName("QuarterlyData");
@@ -408,7 +504,11 @@ function setupSheets() {
     Logger.log("ไม่พบ Google Sheets");
     return;
   }
-  
+
+  setupSheetsForSpreadsheet(ss);
+}
+
+function setupSheetsForSpreadsheet(ss) {
   var sheetsConfig = {
     "Targets": ["id", "name", "address", "village", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
     "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"],
