@@ -304,6 +304,31 @@
                         </div>
                     </div>
 
+                    <!-- Worker Progress Summary -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-5">
+                            <div>
+                                <h3 class="font-headline text-base font-bold text-on-surface flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary">groups</span>
+                                    ความก้าวหน้าตามคณะทำงานที่รับผิดชอบ
+                                </h3>
+                                <p class="text-xs text-on-surface-variant mt-1">ใช้รายชื่อ mock ชั่วคราว สามารถเปลี่ยนเป็นรายชื่อจริงภายหลังได้</p>
+                            </div>
+                            <div class="w-full lg:w-72">
+                                <label for="dashboard-worker-filter" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">กรองคณะทำงาน</label>
+                                <div class="relative">
+                                    <select id="dashboard-worker-filter" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                        <option value="all">ทุกคณะทำงาน</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 max-h-[520px] overflow-y-auto pr-1" id="worker-progress-container">
+                            <!-- Dynamic worker cards will be rendered here -->
+                        </div>
+                    </div>
+
                     <!-- Dashboard Charts Section -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <!-- Left bar chart (Spans 2 cols on Desktop) -->
@@ -420,11 +445,11 @@
                 <section id="targets-view" class="view-section space-y-6 hidden">
                     <!-- Advanced Filters (Glassmorphism Bar) -->
                     <div class="glass-card rounded-2xl p-5 flex flex-col lg:flex-row gap-4 items-end">
-                        <div class="w-full lg:w-1/4 relative flex items-center">
+                        <div class="w-full lg:w-1/5 relative flex items-center">
                             <span class="material-symbols-outlined absolute left-3 text-outline">search</span>
-                            <input type="text" id="target-search-input" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-4 py-2.5 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="ค้นหา ชื่อ บ้านเลขที่ หรือหมู่บ้าน...">
+                            <input type="text" id="target-search-input" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-4 py-2.5 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="ค้นหา ชื่อ บ้านเลขที่ หมู่บ้าน หรือคณะทำงาน...">
                         </div>
-                        <div class="w-full sm:w-1/2 lg:w-1/5">
+                        <div class="w-full sm:w-1/2 lg:w-1/6">
                             <label for="filter-type" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">ประเภทกลุ่ม</label>
                             <div class="relative">
                                 <select id="filter-type" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
@@ -435,7 +460,7 @@
                                 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
                             </div>
                         </div>
-                        <div class="w-full sm:w-1/2 lg:w-1/5">
+                        <div class="w-full sm:w-1/2 lg:w-1/6">
                             <label for="filter-village" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">หมู่บ้าน</label>
                             <div class="relative">
                                 <select id="filter-village" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
@@ -448,7 +473,16 @@
                                 <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
                             </div>
                         </div>
-                        <div class="w-full sm:w-1/2 lg:w-1/5">
+                        <div class="w-full sm:w-1/2 lg:w-1/6">
+                            <label for="filter-worker" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">คณะทำงาน</label>
+                            <div class="relative">
+                                <select id="filter-worker" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                    <option value="all">ทุกคณะทำงาน</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                            </div>
+                        </div>
+                        <div class="w-full sm:w-1/2 lg:w-1/6">
                             <label for="filter-disease" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">โรค/ภาวะเสี่ยง</label>
                             <div class="relative">
                                 <select id="filter-disease" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
@@ -508,11 +542,12 @@
                                 <h2 class="font-headline text-2xl font-bold text-primary" id="profile-name">-</h2>
                                 <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-bold text-[11px]" id="profile-type-badge">-</span>
                             </div>
-                            <div class="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm mt-3 border-t border-slate-100 pt-3">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4 text-sm mt-3 border-t border-slate-100 pt-3">
                                 <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">อายุ</strong> <span id="profile-age" class="font-semibold">-</span> ปี</div>
                                 <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">ส่วนสูง</strong> <span id="profile-height" class="font-semibold">-</span> ซม.</div>
                                 <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">บ้านเลขที่</strong> <span id="profile-address" class="font-semibold">-</span></div>
                                 <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">หมู่บ้าน</strong> <span id="profile-village" class="font-semibold">-</span></div>
+                                <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">คณะทำงาน</strong> <span id="profile-worker" class="font-semibold">-</span></div>
                                 <div><strong class="text-outline-variant block text-[10px] uppercase font-bold tracking-wider">โรคประจำตัว</strong> <span id="profile-diseases" class="text-rose-500 font-semibold">-</span></div>
                             </div>
                             <div class="text-sm mt-2 border-t border-slate-50 pt-2 text-on-surface-variant">
@@ -891,6 +926,16 @@
                         </div>
                     </div>
 
+                    <div class="space-y-1">
+                        <label for="form-target-worker" class="block text-xs font-semibold text-slate-700">คณะทำงานที่รับผิดชอบ *</label>
+                        <div class="relative">
+                            <select id="form-target-worker" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <option value="">เลือกคณะทำงาน</option>
+                            </select>
+                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label for="form-target-chronic" class="block text-xs font-semibold text-slate-700">โรคประจำตัว</label>
@@ -1249,6 +1294,6 @@
     </div>
 
     <!-- Script Application Logic -->
-    <script src="app.js?v=20260627-interpreter-village-filter"></script>
+    <script src="app.js?v=20260628-worker-assignment"></script>
 </body>
 </html>

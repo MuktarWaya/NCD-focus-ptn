@@ -8,6 +8,49 @@ const DEFAULT_API_PASSCODE = '009941';
 const ACTIVE_VILLAGES = ['หมู่ 2 บ้านตรัง', 'หมู่ 3 บ้านเขาวัง', 'หมู่ 4 บ้านม่วงเงิน'];
 const FUTURE_VILLAGES = ['หมู่ 1 บ้านบองอ'];
 const ALL_VILLAGES = [...ACTIVE_VILLAGES, ...FUTURE_VILLAGES];
+const UNASSIGNED_WORKER = 'ยังไม่ระบุคณะทำงาน';
+const MOCK_WORKERS = [
+    'อสม.นูรอัยนี มะ',
+    'อสม.ฟาตีเมาะ สาและ',
+    'อสม.ไซนับ ดอเลาะ',
+    'อสม.อามีนะห์ มะลี',
+    'อสม.รอกีเยาะ เจ๊ะมะ',
+    'อสม.ซูไรดา ดือราแม',
+    'อสม.ปาตีเมาะ มามะ',
+    'อสม.มารียัม สะแลแม',
+    'อสม.อาอีเสาะ ยะโกะ',
+    'อสม.นูรีซัน มะสาและ',
+    'อสม.ซารีนา ดือเร๊ะ',
+    'อสม.รอฮานี สะมะแอ',
+    'อสม.นูรฮายาตี เจ๊ะหะ',
+    'อสม.ฮัสนะห์ มะแซ',
+    'อสม.อัสมา สาและ',
+    'อสม.ซูไฮลา มะลี',
+    'อสม.มะยีดา ดอเลาะ',
+    'อสม.รอซีดะห์ เจ๊ะเลาะ',
+    'อสม.นูรอามีเนาะ ดือราแม',
+    'อสม.ซัลมา มามะ',
+    'อสม.อับดุลเลาะ สาและ',
+    'อสม.มูฮัมหมัดอารีฟ ดอเลาะ',
+    'อสม.อับดุลรอฮีม มะแซ',
+    'อสม.มูฮัมหมัดซากี มะลี',
+    'อสม.ซุลกิฟลี เจ๊ะมะ',
+    'อสม.รอซาลี สะแลแม',
+    'อสม.อับดุลฮากิม ดือเร๊ะ',
+    'อสม.มูฮัมหมัดฟิตรี ยะโกะ',
+    'อสม.ซาการียา มามะ',
+    'อสม.อิสมาแอ สาและ',
+    'อสม.นูรอาซีกีน เจ๊ะหะ',
+    'อสม.ฟารีดา มะแซ',
+    'อสม.ฮานีฟะห์ ดอเลาะ',
+    'อสม.ซูไบดะห์ มะลี',
+    'อสม.อาลีฟะห์ เจ๊ะเลาะ',
+    'อสม.นูรฟารีซา ดือราแม',
+    'อสม.ซาฟีนะห์ มามะ',
+    'อสม.รอฮีมะห์ สาและ',
+    'อสม.นูรอีมาน สะมะแอ',
+    'อสม.ฮาซานะห์ ยะโกะ'
+];
 
 const state = {
     currentView: 'dashboard-view',
@@ -134,6 +177,11 @@ function getTargetVillage(target) {
     return target.village;
 }
 
+function getTargetWorker(target) {
+    if (!target || !target.responsible_worker) return UNASSIGNED_WORKER;
+    return target.responsible_worker;
+}
+
 function calculateVillageSummary() {
     const quarterlyByTarget = {};
     state.quarterlyData.forEach(row => {
@@ -160,6 +208,40 @@ function calculateVillageSummary() {
             progressRate
         };
     });
+}
+
+function calculateWorkerSummary() {
+    const quarterlyByTarget = {};
+    state.quarterlyData.forEach(row => {
+        if (!quarterlyByTarget[row.target_id]) quarterlyByTarget[row.target_id] = [];
+        quarterlyByTarget[row.target_id].push(row);
+    });
+
+    const workers = [...MOCK_WORKERS];
+    state.targets.forEach(t => {
+        const worker = getTargetWorker(t);
+        if (!workers.includes(worker)) workers.push(worker);
+    });
+
+    return workers.map(worker => {
+        const targets = state.targets.filter(t => getTargetWorker(t) === worker);
+        const followed = targets.filter(t => (quarterlyByTarget[t.id] || []).length > 0).length;
+        const followUp = targets.filter(t => (quarterlyByTarget[t.id] || []).length > 1).length;
+        const risk = targets.filter(t => t.type === 'กลุ่มเสี่ยง').length;
+        const patient = targets.filter(t => t.type === 'กลุ่มป่วย').length;
+        const progressRate = targets.length > 0 ? Math.round((followed / targets.length) * 100) : 0;
+
+        return {
+            worker,
+            total: targets.length,
+            followed,
+            followUp,
+            risk,
+            patient,
+            remaining: Math.max(targets.length - followed, 0),
+            progressRate
+        };
+    }).filter(item => item.total > 0 || item.worker !== UNASSIGNED_WORKER);
 }
 
 function checkAuthentication() {
@@ -246,6 +328,7 @@ async function fetchFromAPI() {
         t.age = parseInt(t.age);
         t.height = parseFloat(t.height);
         t.village = t.village || '';
+        t.responsible_worker = t.responsible_worker || '';
     });
     
     // 2. Fetch stats and other tables by fetching details when needed,
@@ -276,6 +359,7 @@ async function fetchFromLocalCSVs() {
         t.age = parseInt(t.age);
         t.height = parseFloat(t.height);
         t.village = t.village || '';
+        t.responsible_worker = t.responsible_worker || '';
     });
     
     state.quarterlyData.forEach(q => {
@@ -361,6 +445,36 @@ function escapeHTML(value) {
 function displayValue(value, fallback = '-') {
     if (value === undefined || value === null || value === '') return fallback;
     return escapeHTML(value);
+}
+
+function populateWorkerSelect(selectId, options = {}) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const currentValue = select.value;
+    const defaultValue = options.defaultValue ?? 'all';
+    const defaultLabel = options.defaultLabel ?? 'ทุกคณะทำงาน';
+
+    select.innerHTML = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = defaultValue;
+    defaultOption.textContent = defaultLabel;
+    select.appendChild(defaultOption);
+
+    MOCK_WORKERS.forEach(worker => {
+        const option = document.createElement('option');
+        option.value = worker;
+        option.textContent = worker;
+        select.appendChild(option);
+    });
+
+    select.value = [...select.options].some(option => option.value === currentValue) ? currentValue : defaultValue;
+}
+
+function populateWorkerControls() {
+    populateWorkerSelect('filter-worker');
+    populateWorkerSelect('dashboard-worker-filter');
+    populateWorkerSelect('form-target-worker', { defaultValue: '', defaultLabel: 'เลือกคณะทำงาน' });
 }
 
 // --- Navigation / Routing ---
@@ -524,6 +638,7 @@ function renderDashboard() {
 
     // Render village-level progress cards
     renderVillageProgress(stats);
+    renderWorkerProgress(stats);
     
     // Render Urgent targets table
     renderUrgentTargetsTable();
@@ -553,6 +668,60 @@ function renderVillageProgress(stats = {}) {
                 </div>
                 <div class="w-full h-2.5 bg-outline-variant/30 rounded-full overflow-hidden mb-3">
                     <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: ${progressWidth}%"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">ติดตามแล้ว</span>
+                        <strong class="text-on-surface">${item.followed} คน</strong>
+                    </div>
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">ยังไม่ครบ</span>
+                        <strong class="text-risk-warning">${item.remaining} คน</strong>
+                    </div>
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">กลุ่มเสี่ยง</span>
+                        <strong class="text-risk-warning">${item.risk} คน</strong>
+                    </div>
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">กลุ่มป่วย</span>
+                        <strong class="text-risk-danger">${item.patient} คน</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderWorkerProgress(stats = {}) {
+    const container = document.getElementById('worker-progress-container');
+    if (!container) return;
+
+    const workerFilter = document.getElementById('dashboard-worker-filter');
+    const selectedWorker = workerFilter ? workerFilter.value : 'all';
+    const summary = Array.isArray(stats.workerSummary) ? stats.workerSummary : calculateWorkerSummary();
+    const filteredSummary = summary.filter(item => selectedWorker === 'all' || item.worker === selectedWorker);
+
+    if (filteredSummary.length === 0) {
+        container.innerHTML = `<div class="col-span-full rounded-xl bg-white/50 border border-white/60 p-6 text-center text-on-surface-variant font-semibold">ไม่พบข้อมูลคณะทำงานตามตัวกรอง</div>`;
+        return;
+    }
+
+    container.innerHTML = filteredSummary.map(item => {
+        const progressWidth = Math.min(Math.max(item.progressRate || 0, 0), 100);
+        return `
+            <div class="bg-white/50 border border-white/60 rounded-xl p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="min-w-0">
+                        <h4 class="font-headline font-bold text-primary text-sm leading-snug">${displayValue(item.worker)}</h4>
+                        <p class="text-xs text-on-surface-variant">รับผิดชอบ ${item.total} คน</p>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <div class="font-stat-display text-xl font-extrabold text-on-surface">${item.progressRate}%</div>
+                        <span class="text-[10px] text-on-surface-variant font-semibold">ติดตามแล้ว</span>
+                    </div>
+                </div>
+                <div class="w-full h-2.5 bg-outline-variant/30 rounded-full overflow-hidden mb-3">
+                    <div class="h-full bg-tertiary-container rounded-full transition-all duration-500" style="width: ${progressWidth}%"></div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 text-xs">
                     <div class="rounded-lg bg-slate-50/80 p-2">
@@ -788,6 +957,7 @@ function renderTargetsList() {
     const searchVal = document.getElementById('target-search-input').value.toLowerCase();
     const filterType = document.getElementById('filter-type').value;
     const filterVillage = document.getElementById('filter-village').value;
+    const filterWorker = document.getElementById('filter-worker').value;
     const filterDisease = document.getElementById('filter-disease').value;
     
     // Group latest quarterly logs for disease checking
@@ -804,15 +974,20 @@ function renderTargetsList() {
     let filtered = state.targets.filter(t => {
         // Search Name & Address
         const village = getTargetVillage(t);
+        const worker = getTargetWorker(t);
         const matchSearch = (t.name || '').toLowerCase().includes(searchVal)
             || (t.address || '').toLowerCase().includes(searchVal)
-            || village.toLowerCase().includes(searchVal);
+            || village.toLowerCase().includes(searchVal)
+            || worker.toLowerCase().includes(searchVal);
         
         // Filter Type (Risk vs Patient)
         const matchType = filterType === 'all' || t.type === filterType;
 
         // Filter Village
         const matchVillage = filterVillage === 'all' || village === filterVillage;
+
+        // Filter responsible worker
+        const matchWorker = filterWorker === 'all' || worker === filterWorker;
         
         // Filter Disease
         let matchDisease = true;
@@ -832,7 +1007,7 @@ function renderTargetsList() {
             }
         }
         
-        return matchSearch && matchType && matchVillage && matchDisease;
+        return matchSearch && matchType && matchVillage && matchWorker && matchDisease;
     });
     
     // Pagination logic
@@ -872,6 +1047,7 @@ function renderTargetsList() {
         const bmiVal = log.bmi ? log.bmi.toFixed(1) : '-';
         const dtxVal = log.dtx ? log.dtx : '-';
         const village = getTargetVillage(t);
+        const worker = getTargetWorker(t);
         
         // Calculate progress percents for bars
         const bmiPercent = log.bmi ? Math.min(Math.max((log.bmi - 15) / 20 * 100, 5), 100) : 0;
@@ -903,6 +1079,10 @@ function renderTargetsList() {
                 <p class="text-xs text-on-surface-variant flex items-center gap-1 mb-4">
                     <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
                     <span>บ้านเลขที่ ${displayValue(t.address)} &bull; ${displayValue(village)} &bull; อายุ ${displayValue(t.age)} ปี</span>
+                </p>
+                <p class="text-xs text-on-surface-variant flex items-center gap-1 mb-4 -mt-2">
+                    <span class="material-symbols-outlined text-[16px] text-tertiary-container">supervisor_account</span>
+                    <span>${displayValue(worker)}</span>
                 </p>
                 <div class="space-y-3">
                     <div class="bg-white/40 rounded-lg p-3">
@@ -964,6 +1144,7 @@ async function viewTargetProfile(targetId) {
             state.selectedTargetProfile.id = parseInt(state.selectedTargetProfile.id);
             state.selectedTargetProfile.age = parseInt(state.selectedTargetProfile.age);
             state.selectedTargetProfile.height = parseFloat(state.selectedTargetProfile.height);
+            state.selectedTargetProfile.responsible_worker = state.selectedTargetProfile.responsible_worker || '';
             
             state.selectedTargetQuarterly.forEach(q => {
                 q.id = parseInt(q.id);
@@ -1019,6 +1200,7 @@ function renderProfileDetail() {
     document.getElementById('profile-height').textContent = t.height;
     document.getElementById('profile-address').textContent = t.address;
     document.getElementById('profile-village').textContent = getTargetVillage(t);
+    document.getElementById('profile-worker').textContent = getTargetWorker(t);
     
     const diseasesText = (t.chronic_disease === 'ไม่มี' || !t.chronic_disease) ? 'ไม่มีโรคประจำตัว' : t.chronic_disease;
     document.getElementById('profile-diseases').textContent = diseasesText;
@@ -1409,6 +1591,7 @@ function setupProfileActionFallbacks() {
             document.getElementById('form-target-height').value = t.height || '';
             document.getElementById('form-target-address').value = t.address || '';
             document.getElementById('form-target-village').value = t.village || '';
+            document.getElementById('form-target-worker').value = t.responsible_worker || '';
             document.getElementById('form-target-chronic').value = t.chronic_disease || '';
             document.getElementById('form-target-comorbidity').value = t.co_morbidity || '';
             document.getElementById('form-target-onset').value = t.onset_year || '';
@@ -1439,6 +1622,8 @@ function setupProfileActionFallbacks() {
 }
 
 function setupEventListeners() {
+    populateWorkerControls();
+
     const mobileNavToggle = document.getElementById('mobile-nav-toggle');
     const mobileNavClose = document.getElementById('mobile-nav-close');
     const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
@@ -1528,10 +1713,22 @@ function setupEventListeners() {
         state.currentPage = 1;
         renderTargetsList();
     });
+    document.getElementById('filter-worker').addEventListener('change', () => {
+        state.currentPage = 1;
+        renderTargetsList();
+    });
     document.getElementById('filter-disease').addEventListener('change', () => {
         state.currentPage = 1;
         renderTargetsList();
     });
+
+    const dashboardWorkerFilter = document.getElementById('dashboard-worker-filter');
+    if (dashboardWorkerFilter) {
+        dashboardWorkerFilter.addEventListener('change', () => {
+            const stats = state.connectionMode === 'online' ? (state.apiDashboardStats || {}) : {};
+            renderWorkerProgress(stats);
+        });
+    }
 
     // Targets list Pagination
     document.getElementById('prev-page-btn').addEventListener('click', () => {
@@ -1681,6 +1878,7 @@ function setupEventListeners() {
         document.getElementById('form-target-height').value = t.height;
         document.getElementById('form-target-address').value = t.address;
         document.getElementById('form-target-village').value = t.village || '';
+        document.getElementById('form-target-worker').value = t.responsible_worker || '';
         document.getElementById('form-target-chronic').value = t.chronic_disease;
         document.getElementById('form-target-comorbidity').value = t.co_morbidity;
         document.getElementById('form-target-onset').value = t.onset_year;
@@ -1703,6 +1901,7 @@ function setupEventListeners() {
             height: parseFloat(document.getElementById('form-target-height').value),
             address: document.getElementById('form-target-address').value.trim(),
             village: document.getElementById('form-target-village').value,
+            responsible_worker: document.getElementById('form-target-worker').value,
             chronic_disease: document.getElementById('form-target-chronic').value.trim(),
             co_morbidity: document.getElementById('form-target-comorbidity').value.trim(),
             onset_year: document.getElementById('form-target-onset').value.trim(),
@@ -1711,6 +1910,11 @@ function setupEventListeners() {
 
         if (!ALL_VILLAGES.includes(formData.village)) {
             showToast("กรุณาเลือกหมู่บ้านจากรายการที่กำหนด", "warning");
+            return;
+        }
+
+        if (!MOCK_WORKERS.includes(formData.responsible_worker)) {
+            showToast("กรุณาเลือกคณะทำงานที่รับผิดชอบจากรายการที่กำหนด", "warning");
             return;
         }
         

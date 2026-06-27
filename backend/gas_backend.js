@@ -180,6 +180,18 @@ function getDashboardStats(ss) {
   }
 
   var activeVillages = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
+  var mockWorkers = [
+    "อสม.นูรอัยนี มะ", "อสม.ฟาตีเมาะ สาและ", "อสม.ไซนับ ดอเลาะ", "อสม.อามีนะห์ มะลี",
+    "อสม.รอกีเยาะ เจ๊ะมะ", "อสม.ซูไรดา ดือราแม", "อสม.ปาตีเมาะ มามะ", "อสม.มารียัม สะแลแม",
+    "อสม.อาอีเสาะ ยะโกะ", "อสม.นูรีซัน มะสาและ", "อสม.ซารีนา ดือเร๊ะ", "อสม.รอฮานี สะมะแอ",
+    "อสม.นูรฮายาตี เจ๊ะหะ", "อสม.ฮัสนะห์ มะแซ", "อสม.อัสมา สาและ", "อสม.ซูไฮลา มะลี",
+    "อสม.มะยีดา ดอเลาะ", "อสม.รอซีดะห์ เจ๊ะเลาะ", "อสม.นูรอามีเนาะ ดือราแม", "อสม.ซัลมา มามะ",
+    "อสม.อับดุลเลาะ สาและ", "อสม.มูฮัมหมัดอารีฟ ดอเลาะ", "อสม.อับดุลรอฮีม มะแซ", "อสม.มูฮัมหมัดซากี มะลี",
+    "อสม.ซุลกิฟลี เจ๊ะมะ", "อสม.รอซาลี สะแลแม", "อสม.อับดุลฮากิม ดือเร๊ะ", "อสม.มูฮัมหมัดฟิตรี ยะโกะ",
+    "อสม.ซาการียา มามะ", "อสม.อิสมาแอ สาและ", "อสม.นูรอาซีกีน เจ๊ะหะ", "อสม.ฟารีดา มะแซ",
+    "อสม.ฮานีฟะห์ ดอเลาะ", "อสม.ซูไบดะห์ มะลี", "อสม.อาลีฟะห์ เจ๊ะเลาะ", "อสม.นูรฟารีซา ดือราแม",
+    "อสม.ซาฟีนะห์ มามะ", "อสม.รอฮีมะห์ สาและ", "อสม.นูรอีมาน สะมะแอ", "อสม.ฮาซานะห์ ยะโกะ"
+  ];
   var villageSummary = activeVillages.map(function(village) {
     var villageTargets = targets.filter(function(t) { return t.village === village; });
     var followed = villageTargets.filter(function(t) {
@@ -203,6 +215,40 @@ function getDashboardStats(ss) {
       progressRate: progressRate
     };
   });
+
+  var workers = mockWorkers.slice();
+  targets.forEach(function(t) {
+    var worker = t.responsible_worker || "ยังไม่ระบุคณะทำงาน";
+    if (workers.indexOf(worker) === -1) workers.push(worker);
+  });
+
+  var workerSummary = workers.map(function(worker) {
+    var workerTargets = targets.filter(function(t) {
+      return (t.responsible_worker || "ยังไม่ระบุคณะทำงาน") === worker;
+    });
+    var followed = workerTargets.filter(function(t) {
+      return (targetGroups[t.id] || []).length > 0;
+    }).length;
+    var followUp = workerTargets.filter(function(t) {
+      return (targetGroups[t.id] || []).length > 1;
+    }).length;
+    var risk = workerTargets.filter(function(t) { return t.type === "กลุ่มเสี่ยง"; }).length;
+    var patient = workerTargets.filter(function(t) { return t.type === "กลุ่มป่วย"; }).length;
+    var progressRate = workerTargets.length > 0 ? Math.round((followed / workerTargets.length) * 100) : 0;
+
+    return {
+      worker: worker,
+      total: workerTargets.length,
+      followed: followed,
+      followUp: followUp,
+      risk: risk,
+      patient: patient,
+      remaining: Math.max(workerTargets.length - followed, 0),
+      progressRate: progressRate
+    };
+  }).filter(function(item) {
+    return item.total > 0 || item.worker !== "ยังไม่ระบุคณะทำงาน";
+  });
   
   return successResponse({
     totalTargets: total,
@@ -215,7 +261,8 @@ function getDashboardStats(ss) {
     improvedBpRate: totalWithFollowUp > 0 ? ((improvedBpCount / totalWithFollowUp) * 100).toFixed(1) : "0",
     improvedDtxCount: improvedDtxCount,
     improvedDtxRate: totalWithFollowUp > 0 ? ((improvedDtxCount / totalWithFollowUp) * 100).toFixed(1) : "0",
-    villageSummary: villageSummary
+    villageSummary: villageSummary,
+    workerSummary: workerSummary
   });
 }
 
@@ -309,6 +356,7 @@ function bulkUpdateTargetLocations(ss, locations) {
   var idColIdx = headers.indexOf("id");
   var addressColIdx = headers.indexOf("address");
   var villageColIdx = headers.indexOf("village");
+  var workerColIdx = headers.indexOf("responsible_worker");
   if (idColIdx === -1 || addressColIdx === -1 || villageColIdx === -1) {
     return errorResponse("ไม่พบคอลัมน์ id, address หรือ village ในแผ่นงาน Targets");
   }
@@ -317,13 +365,15 @@ function bulkUpdateTargetLocations(ss, locations) {
   locations.forEach(function(item) {
     locationById[parseInt(item.id)] = {
       address: item.address || "",
-      village: item.village || ""
+      village: item.village || "",
+      responsible_worker: item.responsible_worker || ""
     };
   });
 
   var updated = 0;
   var addressValues = [];
   var villageValues = [];
+  var workerValues = [];
 
   for (var i = 1; i < rows.length; i++) {
     var id = parseInt(rows[i][idColIdx]);
@@ -331,10 +381,12 @@ function bulkUpdateTargetLocations(ss, locations) {
     if (location) {
       addressValues.push([location.address]);
       villageValues.push([location.village]);
+      if (workerColIdx !== -1) workerValues.push([location.responsible_worker]);
       updated++;
     } else {
       addressValues.push([rows[i][addressColIdx]]);
       villageValues.push([rows[i][villageColIdx]]);
+      if (workerColIdx !== -1) workerValues.push([rows[i][workerColIdx]]);
     }
   }
 
@@ -344,9 +396,14 @@ function bulkUpdateTargetLocations(ss, locations) {
   villageRange.setNumberFormat("@");
   addressRange.setValues(addressValues);
   villageRange.setValues(villageValues);
+  if (workerColIdx !== -1 && workerValues.length > 0) {
+    var workerRange = sheet.getRange(2, workerColIdx + 1, workerValues.length, 1);
+    workerRange.setNumberFormat("@");
+    workerRange.setValues(workerValues);
+  }
 
   return successResponse({
-    message: "อัปเดตบ้านเลขที่และหมู่บ้านตาม ID เรียบร้อยแล้ว",
+    message: "อัปเดตบ้านเลขที่ หมู่บ้าน และคณะทำงานตาม ID เรียบร้อยแล้ว",
     updated: updated
   });
 }
@@ -510,7 +567,7 @@ function setupSheets() {
 
 function setupSheetsForSpreadsheet(ss) {
   var sheetsConfig = {
-    "Targets": ["id", "name", "address", "village", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
+    "Targets": ["id", "name", "address", "village", "responsible_worker", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
     "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"],
     "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"]
   };
