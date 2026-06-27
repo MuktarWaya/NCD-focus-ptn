@@ -4,11 +4,13 @@
    ========================================== */
 
 // --- Global Application State ---
+const DEFAULT_API_PASSCODE = '009941';
+
 const state = {
     currentView: 'dashboard-view',
     connectionMode: 'demo', // 'demo' or 'online'
     gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
-    apiPasscode: '009941',
+    apiPasscode: DEFAULT_API_PASSCODE,
     
     // In-memory data (loaded from CSV or API)
     targets: [],
@@ -57,7 +59,9 @@ function loadSettings() {
         document.getElementById('setting-gas-url').value = state.gasUrl;
     }
     
-    if (savedPasscode) {
+    if (savedPasscode === '123456') {
+        localStorage.setItem('ncd_api_passcode', DEFAULT_API_PASSCODE);
+    } else if (savedPasscode) {
         state.apiPasscode = savedPasscode;
     }
     if (state.apiPasscode) {
@@ -1335,7 +1339,7 @@ function setupEventListeners() {
             const inputPasscode = document.getElementById('login-passcode').value.trim();
             const errorDiv = document.getElementById('login-error');
             
-            const expectedPasscode = state.apiPasscode || '123456';
+            const expectedPasscode = state.apiPasscode || DEFAULT_API_PASSCODE;
             if (inputPasscode === expectedPasscode) {
                 sessionStorage.setItem('ncd_authenticated', 'true');
                 const loginScreen = document.getElementById('login-screen');
