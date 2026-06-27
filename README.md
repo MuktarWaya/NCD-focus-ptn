@@ -56,8 +56,9 @@
 ทำตามคู่มือใน [backend/README_SETUP.md](file:///g:/My%20Drive/%E0%B8%AA%E0%B8%98%E0%B8%99.%E0%B8%A1%E0%B8%B2%E0%B8%A2%E0%B8%AD/%E0%B8%81%E0%B8%A5%E0%B8%B8%E0%B9%88%E0%B8%A1%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%9E%E0%B8%B1%E0%B8%92%E0%B8%99%E0%B8%B2%E0%B8%9A%E0%B8%A3%E0%B8%B4%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3/webapp/%E0%B8%A3%E0%B8%B0%E0%B8%9A%E0%B8%9A%E0%B8%95%E0%B8%B4%E0%B8%94%E0%B8%95%E0%B8%B2%E0%B8%A1%E0%B8%9E%E0%B8%A4%E0%B8%95%E0%B8%B4%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1%20%E0%B8%A1%E0%B8%B8%E0%B9%88%E0%B8%87%E0%B9%80%E0%B8%9B%E0%B9%89%E0%B8%B2%E0%B8%9B%E0%B8%B1%E0%B8%95%E0%B8%95%E0%B8%B2%E0%B8%99%E0%B8%B5/backend/README_SETUP.md) เพื่อเซ็ตอัป Google Sheets และสร้าง Google Apps Script Web App ให้เรียบร้อย จากนั้นทำตามขั้นตอนการ Deploy เว็บไซต์ดังนี้:
 
 ### การทดสอบระบบในเครื่อง (Local Testing)
-1. ดับเบิ้ลคลิกเปิดไฟล์ `index.html` บนเบราว์เซอร์ได้ทันที ระบบจะเปิดเข้าสู่ **โหมดทดลอง (Demo Mode)** พร้อมข้อมูลจำลองเพื่อศึกษาการทำงานของแดชบอร์ด กราฟ และแบบฟอร์มต่างๆ
-2. ไปที่แถบ **"ตั้งค่า API"** นำลิงก์ Web App URL ที่คุณ Deploy สำเร็จจาก Google Apps Script มาวางและกรอกรหัสผ่านเพื่อสลับหน้าเว็บเข้าเชื่อมต่อระบบฐานข้อมูลจริงบนชีต
+1. เปิดด้วย local web server เพื่อให้เบราว์เซอร์โหลดไฟล์ CSV ใน Demo Mode ได้ถูกต้อง เช่นรันคำสั่ง `python -m http.server 8787 --bind 127.0.0.1` แล้วเปิด `http://127.0.0.1:8787/index.html`
+2. เข้าระบบด้วยรหัส demo เริ่มต้น `123456` หากยังไม่ได้ตั้งค่า API จริง
+3. ไปที่แถบ **"ตั้งค่า API"** นำลิงก์ Web App URL ที่คุณ Deploy สำเร็จจาก Google Apps Script มาวางและกรอกรหัสผ่าน API เพื่อสลับหน้าเว็บเข้าเชื่อมต่อระบบฐานข้อมูลจริงบนชีต
 
 ### การ Deploy ขึ้น Netlify
 1. เชื่อมต่อโปรเจกต์นี้เข้ากับบัญชี GitHub ของคุณ ([MuktarWaya/NCD-focus-ptn](https://github.com/MuktarWaya/NCD-focus-ptn))

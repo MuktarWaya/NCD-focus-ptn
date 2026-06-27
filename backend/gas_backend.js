@@ -4,31 +4,13 @@
  * ทำหน้าที่เป็น REST API สำหรับอ่านและบันทึกข้อมูลใน Google Sheets
  */
 
-// รหัสผ่านเข้าใช้งานระบบสำหรับบันทึกข้อมูล (Passcode)
-var API_PASSCODE = "123456";
+// ตั้งค่าใน Apps Script: Project Settings -> Script properties -> API_PASSCODE
+function getApiPasscode() {
+  return PropertiesService.getScriptProperties().getProperty("API_PASSCODE") || "";
+}
 
 function doGet(e) {
-  var action = e.parameter.action;
-  
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) {
-      return errorResponse("ไม่พบ Google Sheets ที่เปิดใช้งานอยู่ กรุณาผูกสคริปต์นี้กับ Google Sheet");
-    }
-    
-    if (action === "getTargets") {
-      return getTargets(ss);
-    } else if (action === "getTargetDetail") {
-      var targetId = parseInt(e.parameter.id);
-      return getTargetDetail(ss, targetId);
-    } else if (action === "getDashboardStats") {
-      return getDashboardStats(ss);
-    } else {
-      return errorResponse("ไม่พบ Action ที่ระบุ");
-    }
-  } catch (err) {
-    return errorResponse(err.toString());
-  }
+  return errorResponse("API นี้ต้องเรียกผ่าน POST พร้อมรหัสผ่านเท่านั้น");
 }
 
 function doPost(e) {
@@ -40,14 +22,25 @@ function doPost(e) {
     
     var requestData = JSON.parse(e.postData.contents);
     
+    var configuredPasscode = getApiPasscode();
+    if (!configuredPasscode) {
+      return errorResponse("ยังไม่ได้ตั้งค่า API_PASSCODE ใน Script properties");
+    }
+    
     // ตรวจสอบรหัสผ่าน API_PASSCODE
-    if (requestData.passcode !== API_PASSCODE) {
+    if (requestData.passcode !== configuredPasscode) {
       return errorResponse("รหัสผ่านไม่ถูกต้อง (Invalid Passcode)");
     }
     
     var action = requestData.action;
     
-    if (action === "addTarget") {
+    if (action === "getTargets") {
+      return getTargets(ss);
+    } else if (action === "getTargetDetail") {
+      return getTargetDetail(ss, parseInt(requestData.data.id));
+    } else if (action === "getDashboardStats") {
+      return getDashboardStats(ss);
+    } else if (action === "addTarget") {
       return addTarget(ss, requestData.data);
     } else if (action === "updateTarget") {
       return updateTarget(ss, requestData.data);
@@ -414,4 +407,3 @@ function setupSheets() {
   
   Logger.log("ตั้งค่าระบบฐานข้อมูลชีตเสร็จสมบูรณ์!");
 }
-

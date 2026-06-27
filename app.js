@@ -8,7 +8,7 @@ const state = {
     currentView: 'dashboard-view',
     connectionMode: 'demo', // 'demo' or 'online'
     gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
-    apiPasscode: '123456',
+    apiPasscode: '009941',
     
     // In-memory data (loaded from CSV or API)
     targets: [],
@@ -39,6 +39,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     initTheme();
+    setupProfileActionFallbacks();
     setupEventListeners();
     checkAuthentication();
 });
@@ -63,16 +64,23 @@ function loadSettings() {
         document.getElementById('setting-passcode').value = state.apiPasscode;
     }
     
-    if (savedMode) {
-        state.connectionMode = savedMode;
-    } else {
-        state.connectionMode = state.gasUrl ? 'online' : 'demo';
+    const hasApiSettings = Boolean(state.gasUrl && state.apiPasscode);
+    state.connectionMode = hasApiSettings ? 'online' : (savedMode || 'demo');
+
+    if (state.connectionMode === 'online' && (!state.gasUrl || !state.apiPasscode)) {
+        state.connectionMode = 'demo';
+        localStorage.setItem('ncd_connection_mode', 'demo');
     }
 
     updateConnectionIndicator();
 }
 
 function saveSettings(url, passcode) {
+    if (!url || !passcode) {
+        showToast("กรุณากรอก URL และรหัสผ่าน API ให้ครบถ้วน", "danger");
+        return;
+    }
+
     state.gasUrl = url;
     state.apiPasscode = passcode;
     state.connectionMode = 'online';
@@ -87,12 +95,16 @@ function saveSettings(url, passcode) {
 }
 
 function resetToDemo() {
-    state.connectionMode = 'demo';
-    localStorage.setItem('ncd_connection_mode', 'demo');
+    switchToDemoMode();
     
     updateConnectionIndicator();
     showToast("กลับสู่โหมดทดลองใช้ (Demo Mode)");
     refreshData();
+}
+
+function switchToDemoMode() {
+    state.connectionMode = 'demo';
+    localStorage.setItem('ncd_connection_mode', 'demo');
 }
 
 function updateConnectionIndicator() {
@@ -173,7 +185,7 @@ async function refreshData() {
         // Fallback to demo mode if API failed
         if (state.connectionMode === 'online') {
             showToast("สลับเข้าสู่โหมดทดลองใช้เนื่องจากเชื่อมต่อล้มเหลว", "warning");
-            state.connectionMode = 'demo';
+            switchToDemoMode();
             updateConnectionIndicator();
             await fetchFromLocalCSVs();
             switchView(state.currentView);
@@ -186,15 +198,13 @@ async function refreshData() {
 // Fetch database from Google Apps Script Web App
 async function fetchFromAPI() {
     // 1. Get Targets
-    const targetsRes = await fetch(`${state.gasUrl}?action=getTargets`);
-    const targetsJSON = await targetsRes.json();
+    const targetsJSON = await postToAPI('getTargets', {});
     if (!targetsJSON.success) throw new Error(targetsJSON.error);
     state.targets = targetsJSON.data;
     
     // 2. Fetch stats and other tables by fetching details when needed,
     // but to get dashboard Stats, we query getDashboardStats API
-    const statsRes = await fetch(`${state.gasUrl}?action=getDashboardStats`);
-    const statsJSON = await statsRes.json();
+    const statsJSON = await postToAPI('getDashboardStats', {});
     if (statsJSON.success) {
         state.apiDashboardStats = statsJSON.data;
     }
@@ -289,6 +299,21 @@ function parseCSV(text) {
         }
     }
     return result;
+}
+
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[char]));
+}
+
+function displayValue(value, fallback = '-') {
+    if (value === undefined || value === null || value === '') return fallback;
+    return escapeHTML(value);
 }
 
 // --- Navigation / Routing ---
@@ -577,10 +602,10 @@ function renderUrgentTargetsTable() {
         const badgeClass = item.target.type === 'กลุ่มเสี่ยง' ? 'badge-risk' : 'badge-patient';
         
         tr.innerHTML = `
-            <td class="py-3 px-4"><strong>${item.target.name}</strong></td>
-            <td class="py-3 px-3"><span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] ${badgeClass}">${item.target.type}</span></td>
-            <td class="py-3 px-3"><span class="${bpClass}">${item.bp || '-'}</span></td>
-            <td class="py-3 px-3"><span class="${dtxClass}">${item.dtx || '-'} มก.</span></td>
+            <td class="py-3 px-4"><strong>${displayValue(item.target.name)}</strong></td>
+            <td class="py-3 px-3"><span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] ${badgeClass}">${displayValue(item.target.type)}</span></td>
+            <td class="py-3 px-3"><span class="${bpClass}">${displayValue(item.bp)}</span></td>
+            <td class="py-3 px-3"><span class="${dtxClass}">${displayValue(item.dtx)} มก.</span></td>
             <td class="py-3 px-4 text-center">
                 <button class="text-primary hover:text-primary-container font-semibold inline-flex items-center gap-1 view-profile-btn" data-id="${item.target.id}">
                     <span class="material-symbols-outlined text-[18px]">visibility</span>
@@ -676,13 +701,16 @@ function renderTargetsList() {
         if (filterDisease !== 'all') {
             const log = latestLogs[t.id] || {};
             if (filterDisease === 'DM') {
-                matchDisease = t.chronic_disease.includes('DM') || (log.dtx >= 126);
+                const chronicDisease = t.chronic_disease || '';
+                matchDisease = chronicDisease.includes('DM') || (log.dtx >= 126);
             } else if (filterDisease === 'HT') {
-                matchDisease = t.chronic_disease.includes('HT') || (log.bp && parseInt(log.bp.toString().split('/')[0]) >= 130);
+                const chronicDisease = t.chronic_disease || '';
+                matchDisease = chronicDisease.includes('HT') || (log.bp && parseInt(log.bp.toString().split('/')[0]) >= 130);
             } else if (filterDisease === 'Obesity') {
                 matchDisease = log.bmi >= 25 || (t.co_morbidity && t.co_morbidity.includes('อ้วน'));
             } else if (filterDisease === 'Dyslipidemia') {
-                matchDisease = t.chronic_disease.toLowerCase().includes('lipid') || t.chronic_disease.includes('ไขมัน');
+                const chronicDisease = t.chronic_disease || '';
+                matchDisease = chronicDisease.toLowerCase().includes('lipid') || chronicDisease.includes('ไขมัน');
             }
         }
         
@@ -750,12 +778,12 @@ function renderTargetsList() {
             <div class="vital-bar ${dotColorClass}"></div>
             <div class="p-5 pl-6">
                 <div class="flex justify-between items-start mb-3">
-                    <span class="inline-block px-2.5 py-0.5 rounded-full font-bold text-[10px] ${badgeBgClass}">${t.type}</span>
+                    <span class="inline-block px-2.5 py-0.5 rounded-full font-bold text-[10px] ${badgeBgClass}">${displayValue(t.type)}</span>
                 </div>
-                <h3 class="font-headline text-lg font-bold text-on-surface mb-1">${t.name}</h3>
+                <h3 class="font-headline text-lg font-bold text-on-surface mb-1">${displayValue(t.name)}</h3>
                 <p class="text-xs text-on-surface-variant flex items-center gap-1 mb-4">
                     <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
-                    <span>${t.address} • อายุ ${t.age} ปี</span>
+                    <span>${displayValue(t.address)} &bull; อายุ ${displayValue(t.age)} ปี</span>
                 </p>
                 <div class="space-y-3">
                     <div class="bg-white/40 rounded-lg p-3">
@@ -806,8 +834,7 @@ async function viewTargetProfile(targetId) {
     try {
         if (state.connectionMode === 'online') {
             // Fetch target details from API
-            const res = await fetch(`${state.gasUrl}?action=getTargetDetail&id=${targetId}`);
-            const json = await res.json();
+            const json = await postToAPI('getTargetDetail', { id: targetId });
             if (!json.success) throw new Error(json.error);
             
             state.selectedTargetProfile = json.data.profile;
@@ -960,7 +987,7 @@ function renderTimelineCards() {
             <div class="vital-bar ${cardIndicatorColorClass}"></div>
             <div class="flex justify-between items-start mb-4 border-b border-slate-100/50 pb-2">
                 <span class="font-bold text-sm text-primary dark:text-primary-fixed">${qName}</span>
-                <span class="text-xs text-outline font-semibold">${log.date}</span>
+                <span class="text-xs text-outline font-semibold">${displayValue(log.date)}</span>
             </div>
             <div class="space-y-2.5 text-xs text-on-surface-variant font-medium">
                 <div class="flex justify-between items-center border-b border-slate-50 pb-1.5">
@@ -973,7 +1000,7 @@ function renderTimelineCards() {
                 </div>
                 <div class="flex justify-between items-center border-b border-slate-50 pb-1.5">
                     <span>ความดัน (BP):</span>
-                    <span class="font-bold text-on-surface">${log.bp || '-'} <span class="px-2 py-0.5 rounded-full font-bold text-[9px] ${bpStatusClass} ml-1">${bpStatusText}</span></span>
+                    <span class="font-bold text-on-surface">${displayValue(log.bp)} <span class="px-2 py-0.5 rounded-full font-bold text-[9px] ${bpStatusClass} ml-1">${bpStatusText}</span></span>
                 </div>
                 <div class="flex justify-between items-center border-b border-slate-50 pb-1.5">
                     <span>น้ำตาล (DTX):</span>
@@ -1194,17 +1221,17 @@ function renderDailyLogsTable() {
     logs.forEach(log => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${log.date}</strong></td>
-            <td>${log.week}</td>
-            <td>${log.day}</td>
-            <td><span class="tag bg-warning-light text-warning">${log.avoid_sweet}</span></td>
-            <td><span class="tag bg-warning-light text-warning">${log.avoid_oil}</span></td>
-            <td><span class="tag bg-warning-light text-warning">${log.avoid_salt}</span></td>
-            <td>${log.menu || '-'}</td>
-            <td>${log.exercise_type || '-'}</td>
-            <td>${log.exercise_duration || 0}</td>
-            <td>${log.water || 0}</td>
-            <td>${log.sleep_hours || 0}</td>
+            <td><strong>${displayValue(log.date)}</strong></td>
+            <td>${displayValue(log.week)}</td>
+            <td>${displayValue(log.day)}</td>
+            <td><span class="tag bg-warning-light text-warning">${displayValue(log.avoid_sweet)}</span></td>
+            <td><span class="tag bg-warning-light text-warning">${displayValue(log.avoid_oil)}</span></td>
+            <td><span class="tag bg-warning-light text-warning">${displayValue(log.avoid_salt)}</span></td>
+            <td>${displayValue(log.menu)}</td>
+            <td>${displayValue(log.exercise_type)}</td>
+            <td>${displayValue(log.exercise_duration, '0')}</td>
+            <td>${displayValue(log.water, '0')}</td>
+            <td>${displayValue(log.sleep_hours, '0')}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -1223,6 +1250,7 @@ function refreshCharts() {
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+        modal.classList.remove('hidden');
         modal.classList.add('active');
     }
 }
@@ -1231,7 +1259,62 @@ function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('active');
+        window.setTimeout(() => {
+            if (!modal.classList.contains('active')) {
+                modal.classList.add('hidden');
+            }
+        }, 250);
     }
+}
+
+function setupProfileActionFallbacks() {
+    document.addEventListener('click', (e) => {
+        const button = e.target.closest('#btn-edit-target, #btn-add-quarterly, #btn-add-daily');
+        if (!button) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (button.id === 'btn-edit-target') {
+            const t = state.selectedTargetProfile;
+            if (!t) {
+                showToast("กรุณาเลือกกลุ่มเป้าหมายก่อนแก้ไขข้อมูล", "warning");
+                return;
+            }
+
+            document.getElementById('form-target-id').value = t.id || '';
+            document.getElementById('form-target-name').value = t.name || '';
+            document.getElementById('form-target-type').value = t.type || 'กลุ่มเสี่ยง';
+            document.getElementById('form-target-age').value = t.age || '';
+            document.getElementById('form-target-height').value = t.height || '';
+            document.getElementById('form-target-address').value = t.address || '';
+            document.getElementById('form-target-chronic').value = t.chronic_disease || '';
+            document.getElementById('form-target-comorbidity').value = t.co_morbidity || '';
+            document.getElementById('form-target-onset').value = t.onset_year || '';
+            document.getElementById('form-target-medicines').value = t.medicines || '';
+
+            document.getElementById('target-modal-title').textContent = 'แก้ไขข้อมูลส่วนตัวกลุ่มเป้าหมาย';
+            openModal('target-modal');
+        } else if (button.id === 'btn-add-quarterly') {
+            openQuarterlyModal(state.selectedTargetId);
+        } else if (button.id === 'btn-add-daily') {
+            if (!state.selectedTargetId) {
+                showToast("กรุณาเลือกกลุ่มเป้าหมายก่อนบันทึกพฤติกรรม", "warning");
+                return;
+            }
+
+            document.getElementById('daily-form').reset();
+            document.getElementById('form-d-target-id').value = state.selectedTargetId;
+
+            const d = new Date();
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            document.getElementById('form-d-date').value = `${dd}/${mm}/${yyyy}`;
+
+            openModal('daily-modal');
+        }
+    }, true);
 }
 
 function setupEventListeners() {
@@ -1252,7 +1335,8 @@ function setupEventListeners() {
             const inputPasscode = document.getElementById('login-passcode').value.trim();
             const errorDiv = document.getElementById('login-error');
             
-            if (inputPasscode === state.apiPasscode) {
+            const expectedPasscode = state.apiPasscode || '123456';
+            if (inputPasscode === expectedPasscode) {
                 sessionStorage.setItem('ncd_authenticated', 'true');
                 const loginScreen = document.getElementById('login-screen');
                 if (loginScreen) loginScreen.classList.add('hidden');
@@ -1340,7 +1424,7 @@ function setupEventListeners() {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const modal = e.currentTarget.closest('.modal-overlay');
-            if (modal) modal.classList.remove('active');
+            if (modal) closeModal(modal.id);
         });
     });
 
@@ -1663,6 +1747,10 @@ function setupEventListeners() {
 
 // Post request handler using POST redirect trick for GAS (Text payload with text/plain to bypass Preflight)
 async function postToAPI(action, data) {
+    if (!state.gasUrl || !state.apiPasscode) {
+        throw new Error("ยังไม่ได้ตั้งค่า URL หรือรหัสผ่าน API");
+    }
+
     const payload = {
         action: action,
         passcode: state.apiPasscode,
@@ -1695,11 +1783,15 @@ function showToast(message, type = 'success') {
     
     const icon = type === 'success' ? 'check_circle' : 
                  type === 'warning' ? 'warning' : 'error';
-                 
-    toast.innerHTML = `
-        <span class="material-symbols-outlined">${icon}</span>
-        <span>${message}</span>
-    `;
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'material-symbols-outlined';
+    iconSpan.textContent = icon;
+
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+
+    toast.append(iconSpan, messageSpan);
     
     // Append to body (styled in CSS dynamically)
     document.body.appendChild(toast);

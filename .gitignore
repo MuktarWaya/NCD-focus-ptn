@@ -12,3 +12,9 @@ desktop.ini
 *.gslides
 *.gdoc
 *.gdraw
+
+# Local secrets and deployment endpoints
+.env
+.env.*
+env.local.txt
+env.secret.txt
