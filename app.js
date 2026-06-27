@@ -1593,6 +1593,16 @@ function setupEventListeners() {
         });
     }
 
+    const interpVillageFilter = document.getElementById('interp-village-filter');
+    if (interpVillageFilter) {
+        interpVillageFilter.addEventListener('change', () => {
+            renderInterpreterView();
+            const importBtn = document.getElementById('interp-import-btn');
+            if (importBtn) importBtn.classList.add('hidden');
+            calculateBodyComposition();
+        });
+    }
+
     // Input change listeners in interpreter
     const interpInputs = ['interp-gender', 'interp-age', 'interp-height', 'interp-weight', 'interp-bodyfat', 'interp-visceral', 'interp-muscle', 'interp-bodyage'];
     interpInputs.forEach(id => {
@@ -2051,18 +2061,31 @@ const bodyCompRules = {
 function renderInterpreterView() {
     const select = document.getElementById('interp-target-select');
     if (!select) return;
-    
-    // Only populate if length is 1 (meaning it only has the default option)
-    if (select.children.length <= 1) {
-        select.innerHTML = '<option value="">-- ป้อนแบบอิสระ --</option>';
-        
-        state.targets.forEach(t => {
-            const option = document.createElement('option');
-            option.value = t.id;
-            option.textContent = `${t.name} (บ้านเลขที่: ${t.address}, ${getTargetVillage(t)})`;
-            select.appendChild(option);
-        });
-    }
+
+    const villageFilter = document.getElementById('interp-village-filter');
+    const selectedVillage = villageFilter ? villageFilter.value : 'all';
+    const currentValue = select.value;
+    const filteredTargets = state.targets.filter(t => {
+        return selectedVillage === 'all' || getTargetVillage(t) === selectedVillage;
+    });
+
+    select.innerHTML = '';
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = selectedVillage === 'all'
+        ? '-- ป้อนแบบอิสระ --'
+        : `-- เลือกกลุ่มเป้าหมายใน${selectedVillage} --`;
+    select.appendChild(defaultOption);
+
+    filteredTargets.forEach(t => {
+        const option = document.createElement('option');
+        option.value = t.id;
+        option.textContent = `${t.name} (บ้านเลขที่: ${t.address}, ${getTargetVillage(t)})`;
+        select.appendChild(option);
+    });
+
+    const stillVisible = filteredTargets.some(t => String(t.id) === String(currentValue));
+    select.value = stillVisible ? currentValue : '';
 }
 
 function calculateBodyComposition() {

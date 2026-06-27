@@ -668,6 +668,20 @@
                             
                             <!-- Select target link optionally -->
                             <div class="space-y-1.5">
+                                <label for="interp-village-filter" class="block font-body-sm text-xs font-semibold text-slate-700">กรองตามหมู่บ้าน</label>
+                                <div class="relative">
+                                    <select id="interp-village-filter" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                        <option value="all">ทุกหมู่บ้าน</option>
+                                        <option value="หมู่ 2 บ้านตรัง">หมู่ 2 บ้านตรัง</option>
+                                        <option value="หมู่ 3 บ้านเขาวัง">หมู่ 3 บ้านเขาวัง</option>
+                                        <option value="หมู่ 4 บ้านม่วงเงิน">หมู่ 4 บ้านม่วงเงิน</option>
+                                        <option value="หมู่ 1 บ้านบองอ">หมู่ 1 บ้านบองอ</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+
+                            <div class="space-y-1.5">
                                 <label for="interp-target-select" class="block font-body-sm text-xs font-semibold text-slate-700">เลือกกลุ่มเป้าหมาย (ทางเลือก - เพื่อดึงส่วนสูง/เพศ)</label>
                                 <div class="relative">
                                     <select id="interp-target-select" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
@@ -1235,6 +1249,6 @@
     </div>
 
     <!-- Script Application Logic -->
-    <script src="app.js?v=20260627-village-dashboard"></script>
+    <script src="app.js?v=20260627-interpreter-village-filter"></script>
 </body>
 </html>
