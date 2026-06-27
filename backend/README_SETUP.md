@@ -16,7 +16,7 @@
    - นำเข้าไฟล์ `data/quarterly_data.csv` ลงในชีต **QuarterlyData**
    - นำเข้าไฟล์ `data/daily_logs.csv` ลงในชีต **DailyLogs**
 
-*หมายเหตุ: ตรวจสอบให้มั่นใจว่าแถวแรก (แถวที่ 1) ของแต่ละแผ่นงาน คือชื่อคอลัมน์ภาษาอังกฤษอย่างถูกต้อง เช่น ชีต Targets จะต้องขึ้นต้นแถวแรกว่า `id`, `name`, `address`...*
+*หมายเหตุ: ตรวจสอบให้มั่นใจว่าแถวแรก (แถวที่ 1) ของแต่ละแผ่นงาน คือชื่อคอลัมน์ภาษาอังกฤษอย่างถูกต้อง เช่น ชีต Targets จะต้องขึ้นต้นแถวแรกว่า `id`, `name`, `address`, `village`...*
 
 ---
 
@@ -79,7 +79,9 @@
 ## สรุปโครงสร้างคอลัมน์ของชีต (สำหรับการอ้างอิง)
 
 ### 1. Targets (ข้อมูลส่วนบุคคล)
-`id` | `name` | `address` | `age` | `height` | `type` | `chronic_disease` | `co_morbidity` | `onset_year` | `medicines`
+`id` | `name` | `address` | `village` | `age` | `height` | `type` | `chronic_disease` | `co_morbidity` | `onset_year` | `medicines`
+
+หมายเหตุ: `address` ใช้เก็บบ้านเลขที่เท่านั้น ส่วน `village` ใช้เก็บหมู่บ้านจากรายการควบคุม เช่น `หมู่ 2 บ้านตรัง`, `หมู่ 3 บ้านเขาวัง`, `หมู่ 4 บ้านม่วงเงิน` เพื่อให้ dashboard แยกความก้าวหน้ารายหมู่บ้านได้ถูกต้อง
 
 ### 2. QuarterlyData (ข้อมูลราย 3 เดือน)
 `id` | `target_id` | `quarter` | `date` | `weight` | `bmi` | `waist` | `dtx` | `bp` | `body_fat` | `muscle_mass` | `visceral_fat` | `body_age` | `physical_activity` | `food_overeat` | `food_unhealthy` | `food_habit` | `remark` | `veggie_fruit` | `depression_2q` | `sleep` | `smoking` | `alcohol` | `hba1c` | `egfr` | `creatinine` | `triglyceride` | `ldl` | `cholesterol`

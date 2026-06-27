@@ -5,6 +5,9 @@
 
 // --- Global Application State ---
 const DEFAULT_API_PASSCODE = '009941';
+const ACTIVE_VILLAGES = ['หมู่ 2 บ้านตรัง', 'หมู่ 3 บ้านเขาวัง', 'หมู่ 4 บ้านม่วงเงิน'];
+const FUTURE_VILLAGES = ['หมู่ 1 บ้านบองอ'];
+const ALL_VILLAGES = [...ACTIVE_VILLAGES, ...FUTURE_VILLAGES];
 
 const state = {
     currentView: 'dashboard-view',
@@ -126,6 +129,39 @@ function updateConnectionIndicator() {
     }
 }
 
+function getTargetVillage(target) {
+    if (!target || !target.village) return 'ยังไม่ระบุหมู่บ้าน';
+    return target.village;
+}
+
+function calculateVillageSummary() {
+    const quarterlyByTarget = {};
+    state.quarterlyData.forEach(row => {
+        if (!quarterlyByTarget[row.target_id]) quarterlyByTarget[row.target_id] = [];
+        quarterlyByTarget[row.target_id].push(row);
+    });
+
+    return ACTIVE_VILLAGES.map(village => {
+        const targets = state.targets.filter(t => getTargetVillage(t) === village);
+        const followed = targets.filter(t => (quarterlyByTarget[t.id] || []).length > 0).length;
+        const followUp = targets.filter(t => (quarterlyByTarget[t.id] || []).length > 1).length;
+        const risk = targets.filter(t => t.type === 'กลุ่มเสี่ยง').length;
+        const patient = targets.filter(t => t.type === 'กลุ่มป่วย').length;
+        const progressRate = targets.length > 0 ? Math.round((followed / targets.length) * 100) : 0;
+
+        return {
+            village,
+            total: targets.length,
+            followed,
+            followUp,
+            risk,
+            patient,
+            remaining: Math.max(targets.length - followed, 0),
+            progressRate
+        };
+    });
+}
+
 function checkAuthentication() {
     const loginScreen = document.getElementById('login-screen');
     if (!loginScreen) return;
@@ -205,6 +241,12 @@ async function fetchFromAPI() {
     const targetsJSON = await postToAPI('getTargets', {});
     if (!targetsJSON.success) throw new Error(targetsJSON.error);
     state.targets = targetsJSON.data;
+    state.targets.forEach(t => {
+        t.id = parseInt(t.id);
+        t.age = parseInt(t.age);
+        t.height = parseFloat(t.height);
+        t.village = t.village || '';
+    });
     
     // 2. Fetch stats and other tables by fetching details when needed,
     // but to get dashboard Stats, we query getDashboardStats API
@@ -233,6 +275,7 @@ async function fetchFromLocalCSVs() {
         t.id = parseInt(t.id);
         t.age = parseInt(t.age);
         t.height = parseFloat(t.height);
+        t.village = t.village || '';
     });
     
     state.quarterlyData.forEach(q => {
@@ -462,12 +505,60 @@ function renderDashboard() {
     
     // Draw Bar Chart: Improvement Indicators
     drawImprovementChart(stats.improvedBmiRate, stats.improvedBpRate, stats.improvedDtxRate);
+
+    // Render village-level progress cards
+    renderVillageProgress(stats);
     
     // Render Urgent targets table
     renderUrgentTargetsTable();
     
     // Render overall behavior metrics
     renderOverallBehavior();
+}
+
+function renderVillageProgress(stats = {}) {
+    const container = document.getElementById('village-progress-container');
+    if (!container) return;
+
+    const villageSummary = Array.isArray(stats.villageSummary) ? stats.villageSummary : calculateVillageSummary();
+    container.innerHTML = villageSummary.map(item => {
+        const progressWidth = Math.min(Math.max(item.progressRate, 0), 100);
+        return `
+            <div class="bg-white/50 border border-white/60 rounded-xl p-4 shadow-sm">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div>
+                        <h4 class="font-headline font-bold text-primary text-base">${displayValue(item.village)}</h4>
+                        <p class="text-xs text-on-surface-variant">กลุ่มเป้าหมาย ${item.total} คน</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-stat-display text-2xl font-extrabold text-on-surface">${item.progressRate}%</div>
+                        <span class="text-[10px] text-on-surface-variant font-semibold">มีข้อมูลติดตาม</span>
+                    </div>
+                </div>
+                <div class="w-full h-2.5 bg-outline-variant/30 rounded-full overflow-hidden mb-3">
+                    <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: ${progressWidth}%"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">ติดตามแล้ว</span>
+                        <strong class="text-on-surface">${item.followed} คน</strong>
+                    </div>
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">ยังไม่ครบ</span>
+                        <strong class="text-risk-warning">${item.remaining} คน</strong>
+                    </div>
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">กลุ่มเสี่ยง</span>
+                        <strong class="text-risk-warning">${item.risk} คน</strong>
+                    </div>
+                    <div class="rounded-lg bg-slate-50/80 p-2">
+                        <span class="block text-on-surface-variant">กลุ่มป่วย</span>
+                        <strong class="text-risk-danger">${item.patient} คน</strong>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
 }
 
 function drawRatioChart(risk, patient) {
@@ -680,6 +771,7 @@ function renderTargetsList() {
     
     const searchVal = document.getElementById('target-search-input').value.toLowerCase();
     const filterType = document.getElementById('filter-type').value;
+    const filterVillage = document.getElementById('filter-village').value;
     const filterDisease = document.getElementById('filter-disease').value;
     
     // Group latest quarterly logs for disease checking
@@ -695,10 +787,16 @@ function renderTargetsList() {
     // Filter targets
     let filtered = state.targets.filter(t => {
         // Search Name & Address
-        const matchSearch = t.name.toLowerCase().includes(searchVal) || t.address.toLowerCase().includes(searchVal);
+        const village = getTargetVillage(t);
+        const matchSearch = (t.name || '').toLowerCase().includes(searchVal)
+            || (t.address || '').toLowerCase().includes(searchVal)
+            || village.toLowerCase().includes(searchVal);
         
         // Filter Type (Risk vs Patient)
         const matchType = filterType === 'all' || t.type === filterType;
+
+        // Filter Village
+        const matchVillage = filterVillage === 'all' || village === filterVillage;
         
         // Filter Disease
         let matchDisease = true;
@@ -718,7 +816,7 @@ function renderTargetsList() {
             }
         }
         
-        return matchSearch && matchType && matchDisease;
+        return matchSearch && matchType && matchVillage && matchDisease;
     });
     
     // Pagination logic
@@ -757,6 +855,7 @@ function renderTargetsList() {
         
         const bmiVal = log.bmi ? log.bmi.toFixed(1) : '-';
         const dtxVal = log.dtx ? log.dtx : '-';
+        const village = getTargetVillage(t);
         
         // Calculate progress percents for bars
         const bmiPercent = log.bmi ? Math.min(Math.max((log.bmi - 15) / 20 * 100, 5), 100) : 0;
@@ -787,7 +886,7 @@ function renderTargetsList() {
                 <h3 class="font-headline text-lg font-bold text-on-surface mb-1">${displayValue(t.name)}</h3>
                 <p class="text-xs text-on-surface-variant flex items-center gap-1 mb-4">
                     <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
-                    <span>${displayValue(t.address)} &bull; อายุ ${displayValue(t.age)} ปี</span>
+                    <span>บ้านเลขที่ ${displayValue(t.address)} &bull; ${displayValue(village)} &bull; อายุ ${displayValue(t.age)} ปี</span>
                 </p>
                 <div class="space-y-3">
                     <div class="bg-white/40 rounded-lg p-3">
@@ -903,6 +1002,7 @@ function renderProfileDetail() {
     document.getElementById('profile-age').textContent = t.age;
     document.getElementById('profile-height').textContent = t.height;
     document.getElementById('profile-address').textContent = t.address;
+    document.getElementById('profile-village').textContent = getTargetVillage(t);
     
     const diseasesText = (t.chronic_disease === 'ไม่มี' || !t.chronic_disease) ? 'ไม่มีโรคประจำตัว' : t.chronic_disease;
     document.getElementById('profile-diseases').textContent = diseasesText;
@@ -1292,6 +1392,7 @@ function setupProfileActionFallbacks() {
             document.getElementById('form-target-age').value = t.age || '';
             document.getElementById('form-target-height').value = t.height || '';
             document.getElementById('form-target-address').value = t.address || '';
+            document.getElementById('form-target-village').value = t.village || '';
             document.getElementById('form-target-chronic').value = t.chronic_disease || '';
             document.getElementById('form-target-comorbidity').value = t.co_morbidity || '';
             document.getElementById('form-target-onset').value = t.onset_year || '';
@@ -1389,6 +1490,10 @@ function setupEventListeners() {
         renderTargetsList();
     });
     document.getElementById('filter-type').addEventListener('change', () => {
+        state.currentPage = 1;
+        renderTargetsList();
+    });
+    document.getElementById('filter-village').addEventListener('change', () => {
         state.currentPage = 1;
         renderTargetsList();
     });
@@ -1534,6 +1639,7 @@ function setupEventListeners() {
         document.getElementById('form-target-age').value = t.age;
         document.getElementById('form-target-height').value = t.height;
         document.getElementById('form-target-address').value = t.address;
+        document.getElementById('form-target-village').value = t.village || '';
         document.getElementById('form-target-chronic').value = t.chronic_disease;
         document.getElementById('form-target-comorbidity').value = t.co_morbidity;
         document.getElementById('form-target-onset').value = t.onset_year;
@@ -1555,11 +1661,17 @@ function setupEventListeners() {
             age: parseInt(document.getElementById('form-target-age').value),
             height: parseFloat(document.getElementById('form-target-height').value),
             address: document.getElementById('form-target-address').value.trim(),
+            village: document.getElementById('form-target-village').value,
             chronic_disease: document.getElementById('form-target-chronic').value.trim(),
             co_morbidity: document.getElementById('form-target-comorbidity').value.trim(),
             onset_year: document.getElementById('form-target-onset').value.trim(),
             medicines: document.getElementById('form-target-medicines').value.trim()
         };
+
+        if (!ALL_VILLAGES.includes(formData.village)) {
+            showToast("กรุณาเลือกหมู่บ้านจากรายการที่กำหนด", "warning");
+            return;
+        }
         
         if (targetId) {
             formData.id = parseInt(targetId);
@@ -1916,7 +2028,7 @@ function renderInterpreterView() {
         state.targets.forEach(t => {
             const option = document.createElement('option');
             option.value = t.id;
-            option.textContent = `${t.name} (บ้านเลขที่: ${t.address})`;
+            option.textContent = `${t.name} (บ้านเลขที่: ${t.address}, ${getTargetVillage(t)})`;
             select.appendChild(option);
         });
     }

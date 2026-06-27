@@ -128,12 +128,12 @@ function getDashboardStats(ss) {
   var improvedBpCount = 0;
   var improvedDtxCount = 0;
   var totalWithFollowUp = 0;
+  var targetGroups = {};
   
   if (quarterlySheet) {
     var qData = getSheetData(quarterlySheet);
     
     // จัดกลุ่มตาม target_id
-    var targetGroups = {};
     qData.forEach(function(row) {
       var tid = row.target_id;
       if (!targetGroups[tid]) targetGroups[tid] = [];
@@ -171,6 +171,31 @@ function getDashboardStats(ss) {
       }
     });
   }
+
+  var activeVillages = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
+  var villageSummary = activeVillages.map(function(village) {
+    var villageTargets = targets.filter(function(t) { return t.village === village; });
+    var followed = villageTargets.filter(function(t) {
+      return (targetGroups[t.id] || []).length > 0;
+    }).length;
+    var followUp = villageTargets.filter(function(t) {
+      return (targetGroups[t.id] || []).length > 1;
+    }).length;
+    var risk = villageTargets.filter(function(t) { return t.type === "กลุ่มเสี่ยง"; }).length;
+    var patient = villageTargets.filter(function(t) { return t.type === "กลุ่มป่วย"; }).length;
+    var progressRate = villageTargets.length > 0 ? Math.round((followed / villageTargets.length) * 100) : 0;
+
+    return {
+      village: village,
+      total: villageTargets.length,
+      followed: followed,
+      followUp: followUp,
+      risk: risk,
+      patient: patient,
+      remaining: Math.max(villageTargets.length - followed, 0),
+      progressRate: progressRate
+    };
+  });
   
   return successResponse({
     totalTargets: total,
@@ -182,7 +207,8 @@ function getDashboardStats(ss) {
     improvedBpCount: improvedBpCount,
     improvedBpRate: totalWithFollowUp > 0 ? ((improvedBpCount / totalWithFollowUp) * 100).toFixed(1) : "0",
     improvedDtxCount: improvedDtxCount,
-    improvedDtxRate: totalWithFollowUp > 0 ? ((improvedDtxCount / totalWithFollowUp) * 100).toFixed(1) : "0"
+    improvedDtxRate: totalWithFollowUp > 0 ? ((improvedDtxCount / totalWithFollowUp) * 100).toFixed(1) : "0",
+    villageSummary: villageSummary
   });
 }
 
@@ -384,7 +410,7 @@ function setupSheets() {
   }
   
   var sheetsConfig = {
-    "Targets": ["id", "name", "address", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
+    "Targets": ["id", "name", "address", "village", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
     "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"],
     "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"]
   };
@@ -401,7 +427,18 @@ function setupSheets() {
       sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
       Logger.log("สร้างแผ่นงาน '" + sheetName + "' และเขียนหัวตารางสำเร็จ");
     } else {
-      Logger.log("แผ่นงาน '" + sheetName + "' มีข้อมูลอยู่แล้ว ข้ามขั้นตอนการเขียนหัวตาราง");
+      var expectedHeaders = sheetsConfig[sheetName];
+      var currentHeaders = getSheetHeaders(sheet);
+      var missingHeaders = expectedHeaders.filter(function(header) {
+        return currentHeaders.indexOf(header) === -1;
+      });
+
+      if (missingHeaders.length > 0) {
+        sheet.getRange(1, currentHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+        Logger.log("เพิ่มคอลัมน์ที่ขาดในแผ่นงาน '" + sheetName + "': " + missingHeaders.join(", "));
+      } else {
+        Logger.log("แผ่นงาน '" + sheetName + "' มีหัวตารางครบแล้ว");
+      }
     }
   });
   
