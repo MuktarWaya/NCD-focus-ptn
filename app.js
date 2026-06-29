@@ -62,6 +62,7 @@ const state = {
     targets: [],
     quarterlyData: [],
     dailyLogs: [],
+    workerOptions: [...MOCK_WORKERS],
     
     // Current viewed target details
     selectedTargetId: null,
@@ -217,7 +218,7 @@ function calculateWorkerSummary() {
         quarterlyByTarget[row.target_id].push(row);
     });
 
-    const workers = [...MOCK_WORKERS];
+    const workers = getWorkerFilterOptions();
     state.targets.forEach(t => {
         const worker = getTargetWorker(t);
         if (!workers.includes(worker)) workers.push(worker);
@@ -319,6 +320,8 @@ async function refreshData() {
 
 // Fetch database from Google Apps Script Web App
 async function fetchFromAPI() {
+    await fetchWorkerOptions();
+
     // 1. Get Targets
     const targetsJSON = await postToAPI('getTargets', {});
     if (!targetsJSON.success) throw new Error(targetsJSON.error);
@@ -337,6 +340,8 @@ async function fetchFromAPI() {
     if (statsJSON.success) {
         state.apiDashboardStats = statsJSON.data;
     }
+
+    populateWorkerControls();
 }
 
 // Fetch database from local CSV mock files (Demo Mode)
@@ -361,6 +366,10 @@ async function fetchFromLocalCSVs() {
         t.village = t.village || '';
         t.responsible_worker = t.responsible_worker || '';
     });
+
+    state.workerOptions = getUniqueWorkers(state.targets.map(t => t.responsible_worker)).length > 0
+        ? getUniqueWorkers(state.targets.map(t => t.responsible_worker))
+        : [...MOCK_WORKERS];
     
     state.quarterlyData.forEach(q => {
         q.id = parseInt(q.id);
@@ -386,6 +395,17 @@ async function fetchFromLocalCSVs() {
         d.water = parseInt(d.water);
         d.sleep_hours = parseFloat(d.sleep_hours);
     });
+}
+
+async function fetchWorkerOptions() {
+    state.workerOptions = [...MOCK_WORKERS];
+
+    if (state.connectionMode !== 'online') return;
+
+    const workerJSON = await postToAPI('getOsmWorkers', {});
+    if (workerJSON.success && Array.isArray(workerJSON.data) && workerJSON.data.length > 0) {
+        state.workerOptions = getUniqueWorkers(workerJSON.data);
+    }
 }
 
 // Custom CSV Parser (Robust Client-Side parsing)
@@ -447,6 +467,30 @@ function displayValue(value, fallback = '-') {
     return escapeHTML(value);
 }
 
+function getUniqueWorkers(values) {
+    const seen = new Set();
+    return values
+        .map(value => String(value || '').trim())
+        .filter(value => {
+            if (!value || seen.has(value)) return false;
+            seen.add(value);
+            return true;
+        });
+}
+
+function getWorkerOptions() {
+    return Array.isArray(state.workerOptions) && state.workerOptions.length > 0
+        ? state.workerOptions
+        : MOCK_WORKERS;
+}
+
+function getWorkerFilterOptions() {
+    return getUniqueWorkers([
+        ...getWorkerOptions(),
+        ...state.targets.map(t => t.responsible_worker)
+    ]);
+}
+
 function populateWorkerSelect(selectId, options = {}) {
     const select = document.getElementById(selectId);
     if (!select) return;
@@ -461,7 +505,8 @@ function populateWorkerSelect(selectId, options = {}) {
     defaultOption.textContent = defaultLabel;
     select.appendChild(defaultOption);
 
-    MOCK_WORKERS.forEach(worker => {
+    const workers = options.includeAssignedWorkers ? getWorkerFilterOptions() : getWorkerOptions();
+    workers.forEach(worker => {
         const option = document.createElement('option');
         option.value = worker;
         option.textContent = worker;
@@ -472,8 +517,8 @@ function populateWorkerSelect(selectId, options = {}) {
 }
 
 function populateWorkerControls() {
-    populateWorkerSelect('filter-worker');
-    populateWorkerSelect('dashboard-worker-filter');
+    populateWorkerSelect('filter-worker', { includeAssignedWorkers: true });
+    populateWorkerSelect('dashboard-worker-filter', { includeAssignedWorkers: true });
     populateWorkerSelect('form-target-worker', { defaultValue: '', defaultLabel: 'เลือกคณะทำงาน' });
 }
 
@@ -1913,7 +1958,7 @@ function setupEventListeners() {
             return;
         }
 
-        if (!MOCK_WORKERS.includes(formData.responsible_worker)) {
+        if (!getWorkerOptions().includes(formData.responsible_worker)) {
             showToast("กรุณาเลือกคณะทำงานที่รับผิดชอบจากรายการที่กำหนด", "warning");
             return;
         }

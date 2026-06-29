@@ -36,6 +36,8 @@ function doPost(e) {
     
     if (action === "getTargets") {
       return getTargets(ss);
+    } else if (action === "getOsmWorkers") {
+      return getOsmWorkers(ss);
     } else if (action === "getTargetDetail") {
       return getTargetDetail(ss, parseInt(requestData.data.id));
     } else if (action === "getDashboardStats") {
@@ -72,6 +74,32 @@ function getTargets(ss) {
   
   var data = getSheetData(sheet);
   return successResponse(data);
+}
+
+function getOsmWorkers(ss) {
+  var workers = readOsmWorkers(ss);
+  return successResponse(workers);
+}
+
+function readOsmWorkers(ss) {
+  var sheet = ss.getSheetByName("OSM");
+  if (!sheet) return [];
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  var values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+  var seen = {};
+  var workers = [];
+  values.forEach(function(row) {
+    var worker = row[0] ? row[0].toString().trim() : "";
+    if (worker && !seen[worker]) {
+      seen[worker] = true;
+      workers.push(worker);
+    }
+  });
+
+  return workers;
 }
 
 // 2. ดึงรายละเอียดของบุคคล ประวัติรายไตรมาส และพฤติกรรมรายวัน
@@ -180,6 +208,7 @@ function getDashboardStats(ss) {
   }
 
   var activeVillages = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
+  var osmWorkers = readOsmWorkers(ss);
   var mockWorkers = [
     "อสม.นูรอัยนี มะ", "อสม.ฟาตีเมาะ สาและ", "อสม.ไซนับ ดอเลาะ", "อสม.อามีนะห์ มะลี",
     "อสม.รอกีเยาะ เจ๊ะมะ", "อสม.ซูไรดา ดือราแม", "อสม.ปาตีเมาะ มามะ", "อสม.มารียัม สะแลแม",
@@ -216,7 +245,7 @@ function getDashboardStats(ss) {
     };
   });
 
-  var workers = mockWorkers.slice();
+  var workers = osmWorkers.length > 0 ? osmWorkers.slice() : mockWorkers.slice();
   targets.forEach(function(t) {
     var worker = t.responsible_worker || "ยังไม่ระบุคณะทำงาน";
     if (workers.indexOf(worker) === -1) workers.push(worker);
