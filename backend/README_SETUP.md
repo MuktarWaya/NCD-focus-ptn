@@ -94,3 +94,68 @@
 คอลัมน์ A: `ลำดับที่` | คอลัมน์ B: `ชื่อ อสม`
 
 ระบบจะอ่านรายชื่อจากคอลัมน์ B ตั้งแต่แถวที่ 2 เป็นต้นไป เพื่อนำไปใช้เป็นตัวเลือก `คณะทำงานที่รับผิดชอบ` ในฟอร์มรายบุคคล
+
+### 5. NotificationLog (ประวัติการแจ้งเตือน)
+`timestamp` | `type` | `severity` | `target_id` | `target_name` | `village` | `responsible_worker` | `message` | `channel` | `status` | `sent_at` | `dedupe_key` | `error`
+
+ชีตนี้ใช้เก็บประวัติการแจ้งเตือน Telegram ทั้งแบบรายวันและแบบรายครั้ง เพื่อให้ตรวจสอบย้อนหลังได้ และเตรียมต่อยอดเป็น dashboard notification ในอนาคต
+
+---
+
+## ขั้นตอนที่ 4: ตั้งค่าระบบแจ้งเตือน Telegram
+
+ระบบแจ้งเตือนจะไม่เก็บ token ไว้ใน GitHub, Netlify หรือไฟล์ JavaScript ใด ๆ ให้ตั้งค่าใน **Apps Script -> Project Settings -> Script properties** เท่านั้น
+
+เพิ่ม Script properties ดังนี้:
+
+- `TELEGRAM_BOT_TOKEN`: token ของ bot จาก BotFather
+- `TELEGRAM_CHAT_ID`: `-5385222091`
+
+หลังตั้งค่าแล้วให้กด Deploy เวอร์ชันใหม่ของ Web App เพื่อให้โค้ดแจ้งเตือนทำงานบน live deployment
+
+### การทดสอบส่งสรุปรายวัน
+
+หลัง deploy แล้ว สามารถทดสอบจากหน้าเว็บหรือเครื่องมือยิง API ด้วย action:
+
+```json
+{
+  "action": "sendDailyTelegramSummary",
+  "passcode": "รหัส API_PASSCODE",
+  "data": {}
+}
+```
+
+ข้อความ Telegram รายวันจะแสดง:
+
+- จำนวนกลุ่มเป้าหมายใน 3 หมู่หลัก
+- จำนวนที่ติดตามแล้วและค้างติดตาม
+- สรุปแยกตามหมู่บ้าน
+- รายชื่อคนที่ค้างติดตาม พร้อมหมู่บ้านและผู้รับผิดชอบ
+- รายชื่อที่ต้องติดตามสุขภาพ ถ้ามีสัญญาณเสี่ยงจากผลตรวจล่าสุด
+
+ข้อความจะไม่แสดงค่าตรวจสุขภาพละเอียด เช่น DTX, BP หรือ HbA1c ในกลุ่ม Telegram
+
+### การตั้ง trigger รายวัน
+
+เรียก action นี้หนึ่งครั้งหลัง deploy เพื่อสร้าง time-driven trigger:
+
+```json
+{
+  "action": "setupDailyNotificationTrigger",
+  "passcode": "รหัส API_PASSCODE",
+  "data": {}
+}
+```
+
+ระบบจะลบ trigger เดิมของ `sendDailyTelegramSummary` แล้วสร้างใหม่ให้ส่งทุกวันเวลาประมาณ 07:00 น. ตาม timezone `Asia/Bangkok`
+
+### แจ้งเตือนรายครั้ง
+
+หลัง deploy แล้ว ระบบจะส่ง Telegram และบันทึกลง `NotificationLog` เมื่อเกิดเหตุการณ์เหล่านี้:
+
+- เพิ่มกลุ่มเป้าหมายใหม่
+- แก้ไขข้อมูลสำคัญของกลุ่มเป้าหมาย เช่น หมู่บ้าน ผู้รับผิดชอบ ประเภทกลุ่ม โรคประจำตัว โรคร่วม
+- บันทึกหรืออัปเดตผลตรวจ 3 เดือน
+- บันทึกพฤติกรรมรายวัน
+
+ถ้า Telegram ส่งไม่สำเร็จ ระบบจะยังบันทึกข้อมูลหลักลงชีตตามปกติ และบันทึก error ไว้ใน `NotificationLog`

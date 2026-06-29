@@ -9,6 +9,17 @@ function getApiPasscode() {
   return PropertiesService.getScriptProperties().getProperty("API_PASSCODE") || "";
 }
 
+var ACTIVE_VILLAGES = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
+var NOTIFICATION_LOG_SHEET = "NotificationLog";
+
+function getTelegramBotToken_() {
+  return PropertiesService.getScriptProperties().getProperty("TELEGRAM_BOT_TOKEN") || "";
+}
+
+function getTelegramChatId_() {
+  return PropertiesService.getScriptProperties().getProperty("TELEGRAM_CHAT_ID") || "";
+}
+
 function doGet(e) {
   return errorResponse("API นี้ต้องเรียกผ่าน POST พร้อมรหัสผ่านเท่านั้น");
 }
@@ -57,6 +68,12 @@ function doPost(e) {
       return addQuarterly(ss, requestData.data);
     } else if (action === "addDailyLog") {
       return addDailyLog(ss, requestData.data);
+    } else if (action === "sendDailyTelegramSummary") {
+      return sendDailyTelegramSummary();
+    } else if (action === "setupDailyNotificationTrigger") {
+      return setupDailyNotificationTrigger();
+    } else if (action === "authorizeNotificationServices") {
+      return authorizeNotificationServices();
     } else {
       return errorResponse("ไม่พบ Action สำหรับการเขียนข้อมูล");
     }
@@ -207,7 +224,6 @@ function getDashboardStats(ss) {
     });
   }
 
-  var activeVillages = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
   var osmWorkers = readOsmWorkers(ss);
   var mockWorkers = [
     "อสม.นูรอัยนี มะ", "อสม.ฟาตีเมาะ สาและ", "อสม.ไซนับ ดอเลาะ", "อสม.อามีนะห์ มะลี",
@@ -221,7 +237,7 @@ function getDashboardStats(ss) {
     "อสม.ฮานีฟะห์ ดอเลาะ", "อสม.ซูไบดะห์ มะลี", "อสม.อาลีฟะห์ เจ๊ะเลาะ", "อสม.นูรฟารีซา ดือราแม",
     "อสม.ซาฟีนะห์ มามะ", "อสม.รอฮีมะห์ สาและ", "อสม.นูรอีมาน สะมะแอ", "อสม.ฮาซานะห์ ยะโกะ"
   ];
-  var villageSummary = activeVillages.map(function(village) {
+  var villageSummary = ACTIVE_VILLAGES.map(function(village) {
     var villageTargets = targets.filter(function(t) { return t.village === village; });
     var followed = villageTargets.filter(function(t) {
       return (targetGroups[t.id] || []).length > 0;
@@ -309,6 +325,7 @@ function addTarget(ss, data) {
   });
   
   sheet.appendRow(newRow);
+  notifyRecordEvent_(ss, "addTarget", data);
   return successResponse({ message: "เพิ่มข้อมูลกลุ่มเป้าหมายเรียบร้อยแล้ว", id: nextId });
 }
 
@@ -326,12 +343,14 @@ function updateTarget(ss, data) {
   
   for (var i = 1; i < rows.length; i++) {
     if (parseInt(rows[i][idColIdx]) === id) {
+      var before = rowToObject_(headers, rows[i]);
       // พบแถวเป้าหมาย อัปเดตคอลัมน์ที่ส่งมา
       headers.forEach(function(header, colIdx) {
         if (data[header] !== undefined && header !== "id") {
           sheet.getRange(i + 1, colIdx + 1).setValue(data[header]);
         }
       });
+      notifyRecordEvent_(ss, "updateTarget", data, before);
       return successResponse({ message: "อัปเดตข้อมูลกลุ่มเป้าหมายสำเร็จ" });
     }
   }
@@ -354,13 +373,12 @@ function migrateMockVillages(ss) {
     return errorResponse("ไม่พบคอลัมน์ address หรือ village ในแผ่นงาน Targets");
   }
 
-  var activeVillages = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
   var updatedRows = [];
 
   for (var i = 1; i < rows.length; i++) {
     var address = rows[i][addressColIdx] ? rows[i][addressColIdx].toString() : "";
     var addressOnly = address.split(/\s+/)[0];
-    var village = activeVillages[(i - 1) % activeVillages.length];
+    var village = ACTIVE_VILLAGES[(i - 1) % ACTIVE_VILLAGES.length];
     updatedRows.push([addressOnly, village]);
   }
 
@@ -469,6 +487,7 @@ function addQuarterly(ss, data) {
             sheet.getRange(i + 1, colIdx + 1).setValue(data[header]);
           }
         });
+        notifyRecordEvent_(ss, "updateQuarterly", data);
         return successResponse({ message: "อัปเดตข้อมูลรอบ " + data.quarter + " เรียบร้อยแล้ว (เขียนทับข้อมูลเดิม)", id: rows[i][headers.indexOf("id")] });
       }
     }
@@ -479,6 +498,7 @@ function addQuarterly(ss, data) {
   });
   
   sheet.appendRow(newRow);
+  notifyRecordEvent_(ss, "addQuarterly", data);
   return successResponse({ message: "บันทึกผลสุขภาพรอบ " + data.quarter + " เรียบร้อยแล้ว", id: nextId });
 }
 
@@ -497,7 +517,405 @@ function addDailyLog(ss, data) {
   });
   
   sheet.appendRow(newRow);
+  notifyRecordEvent_(ss, "addDailyLog", data);
   return successResponse({ message: "บันทึกพฤติกรรมสุขภาพรายวันเรียบร้อยแล้ว", id: nextId });
+}
+
+// --- ระบบแจ้งเตือน Telegram และ NotificationLog ---
+
+function buildDailyNotificationSummaryFromData_(targets, quarterlyData, dailyLogs) {
+  targets = targets || [];
+  quarterlyData = quarterlyData || [];
+  dailyLogs = dailyLogs || [];
+
+  var activeTargets = targets.filter(function(target) {
+    return ACTIVE_VILLAGES.indexOf(target.village) !== -1;
+  });
+
+  var quarterlyByTarget = {};
+  quarterlyData.forEach(function(row) {
+    var targetId = parseInt(row.target_id);
+    if (!quarterlyByTarget[targetId]) quarterlyByTarget[targetId] = [];
+    quarterlyByTarget[targetId].push(row);
+  });
+
+  var pending = [];
+  var urgent = [];
+  var villageMap = {};
+  ACTIVE_VILLAGES.forEach(function(village) {
+    villageMap[village] = { village: village, total: 0, followed: 0, pending: 0 };
+  });
+
+  activeTargets.forEach(function(target) {
+    var targetId = parseInt(target.id);
+    var village = target.village;
+    var logs = quarterlyByTarget[targetId] || [];
+    var villageItem = villageMap[village];
+    villageItem.total++;
+    if (logs.length > 0) {
+      villageItem.followed++;
+    } else {
+      villageItem.pending++;
+      pending.push(toNotificationTarget_(target, "ยังไม่มีผลติดตาม"));
+    }
+
+    var latest = getLatestQuarterlyLog_(logs);
+    if (latest && isUrgentQuarterlyLog_(latest)) {
+      urgent.push(toNotificationTarget_(target, "ต้องติดตามสุขภาพ"));
+    }
+  });
+
+  return {
+    totalTargets: activeTargets.length,
+    followed: activeTargets.length - pending.length,
+    pendingCount: pending.length,
+    pending: pending,
+    urgentCount: urgent.length,
+    urgent: urgent,
+    villageSummary: ACTIVE_VILLAGES.map(function(village) {
+      return villageMap[village];
+    })
+  };
+}
+
+function buildDailyNotificationSummary_(ss) {
+  var targetsSheet = ss.getSheetByName("Targets");
+  var quarterlySheet = ss.getSheetByName("QuarterlyData");
+  var dailySheet = ss.getSheetByName("DailyLogs");
+  if (!targetsSheet) throw new Error("ไม่พบแผ่นงาน 'Targets'");
+
+  return buildDailyNotificationSummaryFromData_(
+    getSheetData(targetsSheet),
+    quarterlySheet ? getSheetData(quarterlySheet) : [],
+    dailySheet ? getSheetData(dailySheet) : []
+  );
+}
+
+function buildDailyTelegramMessage_(summary, now) {
+  now = now || new Date();
+  var dateText = typeof Utilities !== "undefined" && Utilities.formatDate
+    ? Utilities.formatDate(now, "Asia/Bangkok", "dd/MM/yyyy")
+    : formatDateForMessage_(now);
+  var lines = [];
+
+  lines.push("NCD Focus PTN - สรุปแจ้งเตือนรายวัน " + dateText);
+  lines.push("กลุ่มเป้าหมายใน 3 หมู่หลัก " + summary.totalTargets + " คน");
+  lines.push("ติดตามแล้ว " + summary.followed + " คน | ค้างติดตาม " + summary.pendingCount + " คน");
+  if (summary.urgentCount > 0) {
+    lines.push("ต้องติดตามสุขภาพ " + summary.urgentCount + " คน");
+  }
+  lines.push("");
+  lines.push("แยกตามหมู่บ้าน");
+  summary.villageSummary.forEach(function(item) {
+    lines.push("- " + item.village + ": ทั้งหมด " + item.total + ", ค้างติดตาม " + item.pending);
+  });
+
+  if (summary.pending.length > 0) {
+    lines.push("");
+    lines.push("รายชื่อค้างติดตาม");
+    summary.pending.slice(0, 30).forEach(function(item, index) {
+      lines.push((index + 1) + ". " + item.name + " | " + item.village + " | " + item.responsible_worker);
+    });
+    if (summary.pending.length > 30) {
+      lines.push("...และอีก " + (summary.pending.length - 30) + " คน");
+    }
+  }
+
+  if (summary.urgent.length > 0) {
+    lines.push("");
+    lines.push("รายชื่อต้องติดตามสุขภาพ");
+    summary.urgent.slice(0, 15).forEach(function(item, index) {
+      lines.push((index + 1) + ". " + item.name + " | " + item.village + " | " + item.responsible_worker);
+    });
+    if (summary.urgent.length > 15) {
+      lines.push("...และอีก " + (summary.urgent.length - 15) + " คน");
+    }
+  }
+
+  lines.push("");
+  lines.push("หมายเหตุ: ข้อความนี้ไม่แสดงค่าตรวจสุขภาพละเอียด กรุณาเปิด dashboard เพื่อดูข้อมูลรายบุคคล");
+
+  return lines.join("\n");
+}
+
+function sendDailyTelegramSummary() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) return errorResponse("ไม่พบ Google Sheets");
+
+    setupSheetsForSpreadsheet(ss);
+    var summary = buildDailyNotificationSummary_(ss);
+    var message = buildDailyTelegramMessage_(summary, new Date());
+    var result = sendTelegramMessage_(message);
+    appendNotificationLog_(ss, {
+      type: "daily_summary",
+      severity: summary.urgentCount > 0 ? "warning" : "info",
+      target_id: "",
+      target_name: "",
+      village: "",
+      responsible_worker: "",
+      message: message,
+      channel: "telegram",
+      status: result.ok ? "sent" : "failed",
+      sent_at: result.ok ? getTimestamp_() : "",
+      dedupe_key: "daily_summary_" + Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyyMMdd"),
+      error: result.error || ""
+    });
+
+    return successResponse({
+      message: result.ok ? "ส่งสรุป Telegram รายวันแล้ว" : "สร้างสรุปแล้วแต่ส่ง Telegram ไม่สำเร็จ",
+      sent: result.ok,
+      error: result.error || ""
+    });
+  } catch (err) {
+    return errorResponse(err.toString());
+  }
+}
+
+function setupDailyNotificationTrigger() {
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    triggers.forEach(function(trigger) {
+      if (trigger.getHandlerFunction() === "sendDailyTelegramSummary") {
+        ScriptApp.deleteTrigger(trigger);
+      }
+    });
+    ScriptApp.newTrigger("sendDailyTelegramSummary").timeBased().everyDays(1).atHour(7).create();
+    return successResponse({ message: "ตั้งค่า trigger ส่ง Telegram รายวันเวลาประมาณ 07:00 น. เรียบร้อยแล้ว" });
+  } catch (err) {
+    return errorResponse(err.toString());
+  }
+}
+
+function authorizeNotificationServices() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var response = UrlFetchApp.fetch("https://api.telegram.org", {
+    method: "get",
+    muteHttpExceptions: true
+  });
+  Logger.log("พบ trigger ในโปรเจกต์ " + triggers.length + " รายการ");
+  Logger.log("ทดสอบ UrlFetchApp ได้ HTTP " + response.getResponseCode());
+  return successResponse({ message: "อนุญาตสิทธิ์ ScriptApp และ UrlFetchApp เรียบร้อยแล้ว" });
+}
+
+function notifyRecordEvent_(ss, type, data, before) {
+  try {
+    setupNotificationSheet_(ss);
+    var target = getTargetForNotification_(ss, data.target_id || data.id, data);
+    var message = buildRecordEventTelegramMessage_(type, target, data, before);
+    if (!message) return;
+
+    var severity = type === "addQuarterly" || type === "updateQuarterly"
+      ? (isUrgentQuarterlyLog_(data) ? "warning" : "info")
+      : "info";
+    var result = sendTelegramMessage_(message);
+    appendNotificationLog_(ss, {
+      type: type,
+      severity: severity,
+      target_id: target.id || data.target_id || data.id || "",
+      target_name: target.name || "",
+      village: target.village || "",
+      responsible_worker: target.responsible_worker || "",
+      message: message,
+      channel: "telegram",
+      status: result.ok ? "sent" : "failed",
+      sent_at: result.ok ? getTimestamp_() : "",
+      dedupe_key: type + "_" + (target.id || data.target_id || data.id || "") + "_" + new Date().getTime(),
+      error: result.error || ""
+    });
+  } catch (err) {
+    try {
+      appendNotificationLog_(ss, {
+        type: type,
+        severity: "error",
+        target_id: data && (data.target_id || data.id) || "",
+        target_name: "",
+        village: "",
+        responsible_worker: "",
+        message: "Notification error: " + err.toString(),
+        channel: "telegram",
+        status: "failed",
+        sent_at: "",
+        dedupe_key: "notification_error_" + new Date().getTime(),
+        error: err.toString()
+      });
+    } catch (ignored) {}
+  }
+}
+
+function buildRecordEventTelegramMessage_(type, target, data, before) {
+  var labelByType = {
+    addTarget: "เพิ่มกลุ่มเป้าหมายใหม่",
+    updateTarget: "แก้ไขข้อมูลสำคัญ",
+    addQuarterly: "บันทึกผลตรวจ 3 เดือน",
+    updateQuarterly: "อัปเดตผลตรวจ 3 เดือน",
+    addDailyLog: "บันทึกพฤติกรรมรายวัน"
+  };
+  var label = labelByType[type];
+  if (!label) return "";
+
+  var lines = [];
+  lines.push("NCD Focus PTN - " + label);
+  lines.push("ชื่อ: " + (target.name || "-"));
+  lines.push("หมู่บ้าน: " + (target.village || "-"));
+  lines.push("ผู้รับผิดชอบ: " + (target.responsible_worker || "-"));
+
+  if (type === "addQuarterly" || type === "updateQuarterly") {
+    lines.push("รอบ: " + (data.quarter || "-"));
+    if (isUrgentQuarterlyLog_(data)) {
+      lines.push("สถานะ: ต้องติดตามสุขภาพ");
+    }
+  } else if (type === "addDailyLog") {
+    lines.push("วันที่: " + (data.date || getTodayThaiDate()));
+  } else if (type === "updateTarget" && before) {
+    var changes = getImportantTargetChanges_(before, data);
+    if (changes.length > 0) {
+      lines.push("เปลี่ยนแปลง: " + changes.join(", "));
+    }
+  }
+
+  lines.push("หมายเหตุ: ไม่แสดงค่าตรวจสุขภาพละเอียดในกลุ่ม");
+  return lines.join("\n");
+}
+
+function sendTelegramMessage_(message) {
+  var token = getTelegramBotToken_();
+  var chatId = getTelegramChatId_();
+  if (!token || !chatId) {
+    return { ok: false, error: "ยังไม่ได้ตั้งค่า TELEGRAM_BOT_TOKEN หรือ TELEGRAM_CHAT_ID" };
+  }
+
+  try {
+    var response = UrlFetchApp.fetch("https://api.telegram.org/bot" + token + "/sendMessage", {
+      method: "post",
+      contentType: "application/json",
+      muteHttpExceptions: true,
+      payload: JSON.stringify({
+        chat_id: chatId,
+        text: message,
+        disable_web_page_preview: true
+      })
+    });
+    var code = response.getResponseCode();
+    var text = response.getContentText();
+    if (code >= 200 && code < 300) return { ok: true, response: text };
+    return { ok: false, error: "Telegram HTTP " + code + ": " + text };
+  } catch (err) {
+    return { ok: false, error: err.toString() };
+  }
+}
+
+function appendNotificationLog_(ss, entry) {
+  var sheet = setupNotificationSheet_(ss);
+  var headers = getSheetHeaders(sheet);
+  var row = headers.map(function(header) {
+    if (header === "timestamp") return entry.timestamp || getTimestamp_();
+    return entry[header] !== undefined ? entry[header] : "";
+  });
+  sheet.appendRow(row);
+}
+
+function setupNotificationSheet_(ss) {
+  var sheet = ss.getSheetByName(NOTIFICATION_LOG_SHEET);
+  var headers = ["timestamp", "type", "severity", "target_id", "target_name", "village", "responsible_worker", "message", "channel", "status", "sent_at", "dedupe_key", "error"];
+  if (!sheet) {
+    sheet = ss.insertSheet(NOTIFICATION_LOG_SHEET);
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return sheet;
+  }
+
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return sheet;
+  }
+
+  var currentHeaders = getSheetHeaders(sheet);
+  var missingHeaders = headers.filter(function(header) {
+    return currentHeaders.indexOf(header) === -1;
+  });
+  if (missingHeaders.length > 0) {
+    sheet.getRange(1, currentHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+  }
+  return sheet;
+}
+
+function toNotificationTarget_(target, reason) {
+  return {
+    id: target.id || "",
+    name: target.name || "",
+    village: target.village || "",
+    responsible_worker: target.responsible_worker || "ยังไม่ระบุคณะทำงาน",
+    reason: reason || ""
+  };
+}
+
+function getLatestQuarterlyLog_(logs) {
+  if (!logs || logs.length === 0) return null;
+  var qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
+  logs.sort(function(a, b) {
+    return (qOrder[a.quarter] || 0) - (qOrder[b.quarter] || 0);
+  });
+  return logs[logs.length - 1];
+}
+
+function isUrgentQuarterlyLog_(log) {
+  if (!log) return false;
+  var dtx = parseFloat(log.dtx);
+  if (!isNaN(dtx) && dtx > 160) return true;
+  if (log.bp) {
+    var parts = log.bp.toString().split("/");
+    var sys = parseInt(parts[0], 10);
+    var dia = parts.length > 1 ? parseInt(parts[1], 10) : 0;
+    if ((!isNaN(sys) && sys > 140) || (!isNaN(dia) && dia > 90)) return true;
+  }
+  return false;
+}
+
+function getTargetForNotification_(ss, targetId, fallback) {
+  fallback = fallback || {};
+  if (!targetId) return fallback;
+  var sheet = ss.getSheetByName("Targets");
+  if (!sheet) return fallback;
+  var targets = getSheetData(sheet);
+  var found = targets.find(function(target) {
+    return parseInt(target.id) === parseInt(targetId);
+  });
+  return found || fallback;
+}
+
+function getImportantTargetChanges_(before, after) {
+  var labels = {
+    name: "ชื่อ",
+    village: "หมู่บ้าน",
+    responsible_worker: "ผู้รับผิดชอบ",
+    type: "ประเภทกลุ่ม",
+    chronic_disease: "โรคประจำตัว",
+    co_morbidity: "โรคร่วม"
+  };
+  return Object.keys(labels).filter(function(key) {
+    return after[key] !== undefined && (before[key] || "").toString() !== (after[key] || "").toString();
+  }).map(function(key) {
+    return labels[key];
+  });
+}
+
+function rowToObject_(headers, row) {
+  var obj = {};
+  headers.forEach(function(header, index) {
+    obj[header] = row[index];
+  });
+  return obj;
+}
+
+function getTimestamp_() {
+  return Utilities.formatDate(new Date(), "Asia/Bangkok", "yyyy-MM-dd HH:mm:ss");
+}
+
+function formatDateForMessage_(date) {
+  var dd = String(date.getDate()).padStart(2, "0");
+  var mm = String(date.getMonth() + 1).padStart(2, "0");
+  var yyyy = date.getFullYear();
+  return dd + "/" + mm + "/" + yyyy;
 }
 
 // --- ฟังก์ชันช่วยเหลือ (Helper Functions) ---
@@ -598,7 +1016,8 @@ function setupSheetsForSpreadsheet(ss) {
   var sheetsConfig = {
     "Targets": ["id", "name", "address", "village", "responsible_worker", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
     "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"],
-    "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"]
+    "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"],
+    "NotificationLog": ["timestamp", "type", "severity", "target_id", "target_name", "village", "responsible_worker", "message", "channel", "status", "sent_at", "dedupe_key", "error"]
   };
   
   Object.keys(sheetsConfig).forEach(function(sheetName) {
