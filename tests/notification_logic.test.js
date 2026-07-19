@@ -67,3 +67,34 @@ test('telegram daily message includes counts and pending names but omits detaile
   assert.doesNotMatch(message, /150\/90/);
   assert.doesNotMatch(message, /DTX|BP|HbA1c/i);
 });
+
+test('tracking rounds sort from baseline through week 24 while keeping legacy rounds readable', () => {
+  assert.strictEqual(context.trackingRoundOrder_('W0'), 0);
+  assert.strictEqual(context.trackingRoundOrder_('W12'), 12);
+  assert.strictEqual(context.trackingRoundOrder_('W24'), 24);
+  assert.strictEqual(context.trackingRoundOrder_('M3'), 12);
+});
+
+test('biweekly tracking validation accepts two valid paper-summary weeks', () => {
+  const data = { quarter: 'W2' };
+  [1, 2].forEach((week) => {
+    data[`week${week}_exercise_minutes`] = 100;
+    data[`week${week}_healthy_menu_days`] = 7;
+    data[`week${week}_sleep_avg`] = 6.76;
+    data[`week${week}_avoid_sweet`] = 3;
+    data[`week${week}_avoid_oil`] = 4;
+    data[`week${week}_avoid_salt`] = 3;
+  });
+  assert.strictEqual(context.validateTrackingData_(data), '');
+});
+
+test('biweekly tracking validation rejects out-of-range paper-summary scores', () => {
+  const data = {
+    quarter: 'W2',
+    week1_exercise_minutes: 100, week1_healthy_menu_days: 8, week1_sleep_avg: 6.76,
+    week1_avoid_sweet: 6, week1_avoid_oil: 4, week1_avoid_salt: 3,
+    week2_exercise_minutes: 100, week2_healthy_menu_days: 7, week2_sleep_avg: 6.76,
+    week2_avoid_sweet: 3, week2_avoid_oil: 4, week2_avoid_salt: 3,
+  };
+  assert.match(context.validateTrackingData_(data), /0-7|1-5/);
+});

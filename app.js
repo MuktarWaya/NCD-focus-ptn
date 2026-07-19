@@ -9,6 +9,15 @@ const ACTIVE_VILLAGES = ['หมู่ 2 บ้านตรัง', 'หมู�
 const FUTURE_VILLAGES = ['หมู่ 1 บ้านบองอ'];
 const ALL_VILLAGES = [...ACTIVE_VILLAGES, ...FUTURE_VILLAGES];
 const UNASSIGNED_WORKER = 'ยังไม่ระบุคณะทำงาน';
+const {
+    TRACKING_ROUNDS,
+    getWeeksForRound,
+    isLabRound,
+    summarizeWeek,
+    roundLabel,
+    roundSortValue
+} = trackingUtils;
+const WEEKLY_SUMMARY_FIELDS = ['exercise_minutes', 'healthy_menu_days', 'sleep_avg', 'avoid_sweet', 'avoid_oil', 'avoid_salt'];
 const MOCK_WORKERS = [
     'อสม.นูรอัยนี มะ',
     'อสม.ฟาตีเมาะ สาและ',
@@ -344,6 +353,21 @@ async function fetchFromAPI() {
     populateWorkerControls();
 }
 
+function normalizeTrackingRecord(record) {
+    record.id = parseInt(record.id);
+    record.target_id = parseInt(record.target_id);
+    ['weight', 'bmi', 'waist', 'dtx', 'body_fat', 'muscle_mass', 'visceral_fat', 'body_age'].forEach(field => {
+        record[field] = parseFloat(record[field]) || 0;
+    });
+    [1, 2].forEach(weekIndex => {
+        WEEKLY_SUMMARY_FIELDS.forEach(field => {
+            const key = `week${weekIndex}_${field}`;
+            if (record[key] !== undefined && record[key] !== '') record[key] = parseFloat(record[key]);
+        });
+    });
+    return record;
+}
+
 // Fetch database from local CSV mock files (Demo Mode)
 async function fetchFromLocalCSVs() {
     // Helper to read and parse local files
@@ -371,19 +395,7 @@ async function fetchFromLocalCSVs() {
         ? getUniqueWorkers(state.targets.map(t => t.responsible_worker))
         : [...MOCK_WORKERS];
     
-    state.quarterlyData.forEach(q => {
-        q.id = parseInt(q.id);
-        q.target_id = parseInt(q.target_id);
-        q.weight = parseFloat(q.weight);
-        q.bmi = parseFloat(q.bmi);
-        q.waist = parseFloat(q.waist);
-        q.dtx = parseInt(q.dtx);
-        q.body_fat = parseFloat(q.body_fat) || 0;
-        q.muscle_mass = parseFloat(q.muscle_mass) || 0;
-        q.visceral_fat = parseInt(q.visceral_fat) || 0;
-        q.body_age = parseInt(q.body_age) || 0;
-        q.veggie_fruit = parseInt(q.veggie_fruit) || 0;
-    });
+    state.quarterlyData.forEach(normalizeTrackingRecord);
 
     state.dailyLogs.forEach(d => {
         d.id = parseInt(d.id);
@@ -589,7 +601,7 @@ function updateHeaderTitles(viewId) {
         subtitle.textContent = 'แสดงข้อมูลประชากรเป้าหมาย นำเข้า ติดตามผล และกรองกลุ่มเสี่ยง/กลุ่มป่วย';
     } else if (viewId === 'profile-view') {
         title.textContent = 'ข้อมูลพฤติกรรมและสุขภาพรายบุคคล';
-        subtitle.textContent = 'แสดงรายละเอียดสุขภาพประวัติการคัดกรอง 3 เดือน และกราฟแนวโน้มพัฒนาการ';
+        subtitle.textContent = 'แสดงผลตรวจร่างกายและสรุปพฤติกรรมจากสมุดทุก 2 สัปดาห์ ตลอด 24 สัปดาห์';
     } else if (viewId === 'settings-view') {
         title.textContent = 'ตั้งค่าการเชื่อมต่อระบบ';
         subtitle.textContent = 'เชื่อมต่อฐานข้อมูล Google Sheets ของคุณผ่านระบบ Google Apps Script';
@@ -629,8 +641,7 @@ function renderDashboard() {
             if (logs.length > 1) { // has M0 and follow-ups
                 followUpCount++;
                 // Sort by quarter
-                const qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
-                logs.sort((a, b) => (qOrder[a.quarter] || 99) - (qOrder[b.quarter] || 99));
+                logs.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
                 
                 const m0 = logs[0];
                 const latest = logs[logs.length - 1];
@@ -872,11 +883,10 @@ function renderUrgentTargetsTable() {
     
     // Find urgent targets (BP > 140/90 or DTX > 160) from latest quarterly data
     const latestLogs = {};
-    const qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
     
     state.quarterlyData.forEach(row => {
         const tid = row.target_id;
-        if (!latestLogs[tid] || qOrder[row.quarter] > qOrder[latestLogs[tid].quarter]) {
+        if (!latestLogs[tid] || roundSortValue(row.quarter) > roundSortValue(latestLogs[tid].quarter)) {
             latestLogs[tid] = row;
         }
     });
@@ -952,15 +962,11 @@ function renderUrgentTargetsTable() {
 }
 
 function renderOverallBehavior() {
-    if (state.quarterlyData.length === 0) return;
-    
-    // Calculate behavioral metrics from the latest quarterly logs
+    // ใช้เฉพาะค่าสรุปจากสมุดกระดาษ โดยเลือกสัปดาห์ล่าสุดของแต่ละคน
     const latestLogs = {};
-    const qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
-    
-    state.quarterlyData.forEach(row => {
+    state.quarterlyData.filter(row => row.week2_exercise_minutes !== undefined && row.week2_exercise_minutes !== '').forEach(row => {
         const tid = row.target_id;
-        if (!latestLogs[tid] || qOrder[row.quarter] > qOrder[latestLogs[tid].quarter]) {
+        if (!latestLogs[tid] || roundSortValue(row.quarter) > roundSortValue(latestLogs[tid].quarter)) {
             latestLogs[tid] = row;
         }
     });
@@ -968,17 +974,19 @@ function renderOverallBehavior() {
     const logsArray = Object.values(latestLogs);
     const total = logsArray.length;
     
-    if (total === 0) return;
+    const exerciseCount = logsArray.filter(l => Number(l.week2_exercise_minutes) >= 150).length;
+    const veggieCount = logsArray.filter(l => Number(l.week2_healthy_menu_days) >= 7).length;
+    const sleepCount = logsArray.filter(l => Number(l.week2_sleep_avg) >= 7).length;
+    const smokingCount = logsArray.filter(l => {
+        const scores = [l.week2_avoid_sweet, l.week2_avoid_oil, l.week2_avoid_salt].map(Number);
+        return scores.every(Number.isFinite) && scores.reduce((sum, score) => sum + score, 0) / 3 >= 3.5;
+    }).length;
     
-    const exerciseCount = logsArray.filter(l => l.physical_activity === '>= 150 นาที').length;
-    const veggieCount = logsArray.filter(l => l.veggie_fruit >= 5).length;
-    const sleepCount = logsArray.filter(l => l.sleep === '≥ 7-8 ชม.').length;
-    const smokingCount = logsArray.filter(l => l.smoking === 'ไม่สูบ').length;
-    
-    const exerciseRate = ((exerciseCount / total) * 100).toFixed(0);
-    const veggieRate = ((veggieCount / total) * 100).toFixed(0);
-    const sleepRate = ((sleepCount / total) * 100).toFixed(0);
-    const smokingRate = ((smokingCount / total) * 100).toFixed(0);
+    const rate = count => total > 0 ? ((count / total) * 100).toFixed(0) : '0';
+    const exerciseRate = rate(exerciseCount);
+    const veggieRate = rate(veggieCount);
+    const sleepRate = rate(sleepCount);
+    const smokingRate = rate(smokingCount);
     
     // Update progress bars
     document.getElementById('bar-exercise').style.width = exerciseRate + "%";
@@ -1007,10 +1015,9 @@ function renderTargetsList() {
     
     // Group latest quarterly logs for disease checking
     const latestLogs = {};
-    const qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
     state.quarterlyData.forEach(row => {
         const tid = row.target_id;
-        if (!latestLogs[tid] || qOrder[row.quarter] > qOrder[latestLogs[tid].quarter]) {
+        if (!latestLogs[tid] || roundSortValue(row.quarter) > roundSortValue(latestLogs[tid].quarter)) {
             latestLogs[tid] = row;
         }
     });
@@ -1191,19 +1198,7 @@ async function viewTargetProfile(targetId) {
             state.selectedTargetProfile.height = parseFloat(state.selectedTargetProfile.height);
             state.selectedTargetProfile.responsible_worker = state.selectedTargetProfile.responsible_worker || '';
             
-            state.selectedTargetQuarterly.forEach(q => {
-                q.id = parseInt(q.id);
-                q.target_id = parseInt(q.target_id);
-                q.weight = parseFloat(q.weight);
-                q.bmi = parseFloat(q.bmi);
-                q.waist = parseFloat(q.waist);
-                q.dtx = parseInt(q.dtx);
-                q.body_fat = parseFloat(q.body_fat) || 0;
-                q.muscle_mass = parseFloat(q.muscle_mass) || 0;
-                q.visceral_fat = parseInt(q.visceral_fat) || 0;
-                q.body_age = parseInt(q.body_age) || 0;
-                q.veggie_fruit = parseInt(q.veggie_fruit) || 0;
-            });
+            state.selectedTargetQuarterly.forEach(normalizeTrackingRecord);
             
             state.selectedTargetDailyLogs.forEach(d => {
                 d.id = parseInt(d.id);
@@ -1221,10 +1216,10 @@ async function viewTargetProfile(targetId) {
             state.selectedTargetQuarterly = state.quarterlyData.filter(q => q.target_id === targetId);
             state.selectedTargetDailyLogs = state.dailyLogs.filter(d => d.target_id === targetId);
             
-            // Sort quarterly (M0, M3, M6, M9)
-            const qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
-            state.selectedTargetQuarterly.sort((a, b) => (qOrder[a.quarter] || 99) - (qOrder[b.quarter] || 99));
+            state.selectedTargetQuarterly.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
         }
+
+        state.selectedTargetQuarterly.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
         
         switchView('profile-view');
     } catch (err) {
@@ -1266,8 +1261,50 @@ function renderProfileDetail() {
     // 3. Render Charts (Weight/BMI, BP/Sugar, Body Composition)
     renderProfileCharts();
     
-    // 4. Render Daily Logs Table
-    renderDailyLogsTable();
+}
+
+function getStoredWeekSummary(log, weekIndex) {
+    const prefix = `week${weekIndex}_`;
+    const hasData = WEEKLY_SUMMARY_FIELDS.some(field => log[`${prefix}${field}`] !== undefined && log[`${prefix}${field}`] !== '');
+    if (!hasData) return null;
+    return summarizeWeek({
+        exercise_minutes: log[`${prefix}exercise_minutes`],
+        healthy_menu_days: log[`${prefix}healthy_menu_days`],
+        sleep_avg: log[`${prefix}sleep_avg`],
+        avoid_sweet: log[`${prefix}avoid_sweet`],
+        avoid_oil: log[`${prefix}avoid_oil`],
+        avoid_salt: log[`${prefix}avoid_salt`]
+    });
+}
+
+function renderWeekSummaryCard(summary, weekNumber) {
+    if (!summary) return '';
+    const exerciseClass = summary.exercisePassed ? 'text-emerald-700 bg-emerald-50' : 'text-amber-700 bg-amber-50';
+    return `
+        <div class="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
+            <div class="flex items-center justify-between gap-2 mb-2">
+                <strong class="text-xs text-on-surface">สัปดาห์ที่ ${weekNumber}</strong>
+                <span class="text-[9px] font-bold rounded-full px-2 py-0.5 ${exerciseClass}">${summary.exercisePassed ? 'ออกกำลังกายผ่านเกณฑ์' : 'ยังไม่ถึง 150 นาที'}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-center">
+                <div><span class="block text-sm font-extrabold text-primary">${summary.exerciseMinutes}</span><span class="text-[9px] text-outline">นาที</span></div>
+                <div><span class="block text-sm font-extrabold text-tertiary">${summary.healthyMenuDays}</span><span class="text-[9px] text-outline">วันเมนูสุขภาพ</span></div>
+                <div><span class="block text-sm font-extrabold text-sky-600">${summary.sleepAverage}</span><span class="text-[9px] text-outline">ชม.นอนเฉลี่ย</span></div>
+            </div>
+            <p class="text-[10px] text-on-surface-variant mt-2 border-t border-slate-100 pt-2">เลี่ยงรสจัด <strong>${summary.avoidanceAverage}/5 · ${summary.avoidanceLabel}</strong></p>
+        </div>`;
+}
+
+function renderLabSummary(log) {
+    const labs = [
+        ['HbA1C', log.hba1c], ['eGFR', log.egfr], ['Creatinine', log.creatinine],
+        ['Triglyceride', log.triglyceride], ['LDL-C', log.ldl], ['Cholesterol', log.cholesterol]
+    ].filter(([, value]) => value !== undefined && value !== '');
+    if (labs.length === 0) return '';
+    return `<div class="mt-3 rounded-xl border border-rose-100 bg-rose-50/60 p-3">
+        <strong class="text-[10px] text-rose-600 block mb-2">ผลตรวจทางห้องปฏิบัติการ</strong>
+        <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[10px]">${labs.map(([label, value]) => `<span>${label}: <b>${value}</b></span>`).join('')}</div>
+    </div>`;
 }
 
 function renderTimelineCards() {
@@ -1277,7 +1314,7 @@ function renderTimelineCards() {
     const logs = state.selectedTargetQuarterly;
     
     if (logs.length === 0) {
-        container.innerHTML = `<div class="glass-card rounded-2xl p-6 text-center text-on-surface-variant font-semibold w-full col-span-full">ยังไม่มีการบันทึกข้อมูลสุขภาพรายไตรมาสสำหรับบุคคลนี้</div>`;
+        container.innerHTML = `<div class="glass-card rounded-2xl p-8 text-center text-on-surface-variant font-semibold w-full col-span-full">ยังไม่มีผลติดตาม 24 สัปดาห์สำหรับบุคคลนี้</div>`;
         return;
     }
     
@@ -1286,20 +1323,20 @@ function renderTimelineCards() {
     logs.forEach((log, idx) => {
         const card = document.createElement('div');
         
-        const qName = log.quarter === 'M0' ? 'Month 0 (แรกเริ่ม)' : 
-                      log.quarter === 'M3' ? 'Month 3 (3 เดือน)' :
-                      log.quarter === 'M6' ? 'Month 6 (6 เดือน)' : 'Month 9 (9 เดือน)';
+        const qName = roundLabel(log.quarter);
                       
         // Status calculations for indicators
         let bpStatusText = 'ปกติ';
         let bpStatusClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
         if (log.bp) {
-            const sys = parseInt(log.bp.toString().split('/')[0]);
-            if (sys >= 140) {
+            const bpParts = log.bp.toString().split('/');
+            const sys = parseInt(bpParts[0]);
+            const dia = parseInt(bpParts[1]);
+            if (sys >= 140 || dia >= 90) {
                 bpStatusText = 'สูง';
                 bpStatusClass = 'bg-rose-50 text-rose-700 border border-rose-200';
-            } else if (sys >= 130) {
-                bpStatusText = 'เฝ้าระวัง';
+            } else if (sys >= 120 || dia >= 80) {
+                bpStatusText = 'ยังไม่ถึงเป้าหมาย';
                 bpStatusClass = 'bg-amber-50 text-amber-700 border border-amber-200';
             }
         }
@@ -1318,16 +1355,24 @@ function renderTimelineCards() {
         const fatInterp = bodyCompRules.interpretBodyFat(log.body_fat, gender);
         const visceralInterp = bodyCompRules.interpretVisceralFat(log.visceral_fat);
         const muscleInterp = bodyCompRules.interpretSkeletalMuscle(log.muscle_mass, gender);
+        const bodyAgePassed = log.body_age > 0 && log.body_age <= Number(state.selectedTargetProfile.age || 0);
+        const waistPassed = log.waist > 0 && log.waist < (gender === 'ชาย' ? 90 : 80);
 
         // Sidebar indicators
         let cardIndicatorColorClass = 'bg-slate-300';
         if (bpStatusText === 'สูง' || dtxStatusText === 'สูง' || bmiInterp.label === 'อ้วน') {
             cardIndicatorColorClass = 'bg-rose-500';
-        } else if (bpStatusText === 'เฝ้าระวัง' || dtxStatusText === 'เสี่ยง' || bmiInterp.label === 'น้ำหนักเกิน') {
+        } else if (bpStatusText === 'ยังไม่ถึงเป้าหมาย' || dtxStatusText === 'เสี่ยง' || bmiInterp.label === 'น้ำหนักเกิน') {
             cardIndicatorColorClass = 'bg-amber-500';
         } else if (bpStatusText === 'ปกติ' && dtxStatusText === 'ปกติ') {
             cardIndicatorColorClass = 'bg-emerald-500';
         }
+
+        const paperWeeks = getWeeksForRound(log.quarter);
+        const weekSummaries = paperWeeks.map((weekNumber, weekIndex) =>
+            renderWeekSummaryCard(getStoredWeekSummary(log, weekIndex + 1), weekNumber)
+        ).join('');
+        const labSummary = renderLabSummary(log);
         
         card.className = 'bg-white/70 dark:bg-inverse-surface/60 rounded-2xl p-5 border border-white/50 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between hover:scale-[1.02] transition-all';
         card.innerHTML = `
@@ -1371,18 +1416,15 @@ function renderTimelineCards() {
                 ${log.body_age > 0 ? `
                 <div class="flex justify-between items-center border-b border-slate-50 pb-1.5">
                     <span>อายุร่างกาย:</span>
-                    <span class="font-bold text-on-surface">${log.body_age} ปี</span>
-                </div>` : ''}
-                ${log.hba1c ? `
-                <div class="flex justify-between items-center border-b border-rose-50 pb-1.5 text-rose-600">
-                    <span>HbA1C (Lab):</span>
-                    <span class="font-bold">${log.hba1c} %</span>
+                    <span class="font-bold text-on-surface">${log.body_age} ปี <span class="px-2 py-0.5 rounded-full font-bold text-[9px] ${bodyAgePassed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'} ml-1">${bodyAgePassed ? 'ผ่านเป้าหมาย' : 'เกินอายุจริง'}</span></span>
                 </div>` : ''}
                 <div class="flex justify-between items-center">
                     <span>รอบเอว:</span>
-                    <span class="font-bold text-on-surface">${log.waist} ซม.</span>
+                    <span class="font-bold text-on-surface">${log.waist} ซม. <span class="px-2 py-0.5 rounded-full font-bold text-[9px] ${waistPassed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'} ml-1">${waistPassed ? 'ผ่านเป้าหมาย' : 'ยังไม่ถึงเป้าหมาย'}</span></span>
                 </div>
             </div>
+            ${labSummary}
+            ${weekSummaries ? `<div class="mt-4 pt-3 border-t border-slate-100 space-y-2">${weekSummaries}</div>` : ''}
         `;
         
         container.appendChild(card);
@@ -2012,6 +2054,14 @@ function setupEventListeners() {
         openQuarterlyModal(state.selectedTargetId);
     });
 
+    document.getElementById('form-q-round').addEventListener('change', (event) => loadTrackingRoundRecord(event.target.value));
+    document.querySelectorAll('.weekly-summary-input').forEach(input => {
+        input.addEventListener('input', () => {
+            updateWeeklySummaryPreview(1);
+            updateWeeklySummaryPreview(2);
+        });
+    });
+
     document.getElementById('quarterly-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -2036,15 +2086,6 @@ function setupEventListeners() {
             muscle_mass: parseFloat(document.getElementById('form-q-muscle').value) || 0,
             visceral_fat: parseInt(document.getElementById('form-q-visceral').value) || 0,
             body_age: parseInt(document.getElementById('form-q-bodyage').value) || 0,
-            physical_activity: document.getElementById('form-q-pa').value,
-            veggie_fruit: parseInt(document.getElementById('form-q-fruit').value) || 0,
-            sleep: document.getElementById('form-q-sleep').value,
-            food_overeat: document.getElementById('form-q-overeat').value,
-            food_unhealthy: document.getElementById('form-q-unhealthy').value,
-            smoking: document.getElementById('form-q-smoke').value,
-            alcohol: document.getElementById('form-q-alcohol').value,
-            depression_2q: document.getElementById('form-q-depress').value,
-            food_habit: document.getElementById('form-q-habit').value.trim(),
             remark: document.getElementById('form-q-remark').value.trim(),
             // Lab results
             hba1c: parseFloat(document.getElementById('form-q-hba1c').value) || '',
@@ -2054,6 +2095,23 @@ function setupEventListeners() {
             ldl: parseInt(document.getElementById('form-q-ldl').value) || '',
             cholesterol: parseInt(document.getElementById('form-q-chol').value) || ''
         };
+
+        if (formData.quarter !== 'W0') {
+            [1, 2].forEach(weekIndex => {
+                formData[`week${weekIndex}_exercise_minutes`] = parseInt(document.getElementById(`form-q-w${weekIndex}-exercise`).value);
+                formData[`week${weekIndex}_healthy_menu_days`] = parseInt(document.getElementById(`form-q-w${weekIndex}-menu`).value);
+                formData[`week${weekIndex}_sleep_avg`] = parseFloat(document.getElementById(`form-q-w${weekIndex}-sleep`).value);
+                formData[`week${weekIndex}_avoid_sweet`] = parseFloat(document.getElementById(`form-q-w${weekIndex}-sweet`).value);
+                formData[`week${weekIndex}_avoid_oil`] = parseFloat(document.getElementById(`form-q-w${weekIndex}-oil`).value);
+                formData[`week${weekIndex}_avoid_salt`] = parseFloat(document.getElementById(`form-q-w${weekIndex}-salt`).value);
+            });
+        }
+
+        if (!isLabRound(formData.quarter)) {
+            ['hba1c', 'egfr', 'creatinine', 'triglyceride', 'ldl', 'cholesterol'].forEach(field => {
+                formData[field] = '';
+            });
+        }
         
         showSpinner(true);
         try {
@@ -2068,11 +2126,11 @@ function setupEventListeners() {
                 const existingIdx = state.quarterlyData.findIndex(q => q.target_id === targetId && q.quarter === formData.quarter);
                 if (existingIdx !== -1) {
                     state.quarterlyData[existingIdx] = { ...state.quarterlyData[existingIdx], ...formData };
-                    showToast("อัปเดตข้อมูลไตรมาสสำเร็จ (โหมดทดลองใช้)");
+                    showToast("อัปเดตผลติดตามเรียบร้อย (โหมดทดลองใช้)");
                 } else {
                     formData.id = state.quarterlyData.length + 1;
                     state.quarterlyData.push(formData);
-                    showToast("บันทึกผลการคัดกรองรอบใหม่สำเร็จ (โหมดทดลองใช้)");
+                    showToast("บันทึกผลติดตามรอบใหม่สำเร็จ (โหมดทดลองใช้)");
                 }
             }
             closeModal('quarterly-modal');
@@ -2086,7 +2144,7 @@ function setupEventListeners() {
     });
 
     // 3. Add Daily Log Form
-    document.getElementById('btn-add-daily').addEventListener('click', () => {
+    document.getElementById('btn-add-daily')?.addEventListener('click', () => {
         const t = state.selectedTargetProfile;
         if (!t) return;
         
@@ -2267,42 +2325,30 @@ const bodyCompRules = {
     interpretBMI: function(bmi) {
         if (!bmi || bmi <= 0) return { label: '-', class: 'text-slate-400', badgeClass: 'bg-slate-100 text-slate-700', bgClass: 'bg-slate-400' };
         if (bmi < 18.5) return { label: 'น้ำหนักต่ำกว่าเกณฑ์', class: 'text-sky-500', badgeClass: 'bg-sky-50 text-sky-700 border border-sky-200', bgClass: 'bg-sky-500' };
-        if (bmi < 25.0) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
-        if (bmi < 30.0) return { label: 'น้ำหนักเกิน', class: 'text-amber-500', badgeClass: 'bg-amber-50 text-amber-700 border border-amber-200', bgClass: 'bg-amber-500' };
+        if (bmi < 23.0) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
+        if (bmi < 25.0) return { label: 'น้ำหนักเกิน', class: 'text-amber-500', badgeClass: 'bg-amber-50 text-amber-700 border border-amber-200', bgClass: 'bg-amber-500' };
         return { label: 'อ้วน', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
     },
     interpretBodyFat: function(fat, gender) {
         if (!fat || fat <= 0) return { label: '-', class: 'text-slate-400', badgeClass: 'bg-slate-100 text-slate-700', bgClass: 'bg-slate-400' };
-        if (gender === 'ชาย') {
-            if (fat < 10.0) return { label: 'ต่ำ', class: 'text-sky-500', badgeClass: 'bg-sky-50 text-sky-700 border border-sky-200', bgClass: 'bg-sky-500' };
-            if (fat < 20.0) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
-            if (fat < 25.0) return { label: 'สูง', class: 'text-amber-500', badgeClass: 'bg-amber-50 text-amber-700 border border-amber-200', bgClass: 'bg-amber-500' };
-            return { label: 'สูงมาก', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
-        } else {
-            if (fat < 20.0) return { label: 'ต่ำ', class: 'text-sky-500', badgeClass: 'bg-sky-50 text-sky-700 border border-sky-200', bgClass: 'bg-sky-500' };
-            if (fat < 30.0) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
-            if (fat < 35.0) return { label: 'สูง', class: 'text-amber-500', badgeClass: 'bg-amber-50 text-amber-700 border border-amber-200', bgClass: 'bg-amber-500' };
-            return { label: 'สูงมาก', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
-        }
+        const target = gender === 'ชาย' ? 20 : 30;
+        if (fat < target) return { label: 'ผ่านเป้าหมาย', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
+        return { label: 'สูงกว่าเป้าหมาย', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
     },
     interpretVisceralFat: function(level) {
         if (!level || level <= 0) return { label: '-', class: 'text-slate-400', badgeClass: 'bg-slate-100 text-slate-700', bgClass: 'bg-slate-400' };
-        if (level < 10) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
+        if (level < 9) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
         if (level < 15) return { label: 'สูง', class: 'text-amber-500', badgeClass: 'bg-amber-50 text-amber-700 border border-amber-200', bgClass: 'bg-amber-500' };
         return { label: 'สูงมาก', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
     },
     interpretSkeletalMuscle: function(muscle, gender) {
         if (!muscle || muscle <= 0) return { label: '-', class: 'text-slate-400', badgeClass: 'bg-slate-100 text-slate-700', bgClass: 'bg-slate-400' };
         if (gender === 'ชาย') {
-            if (muscle < 32.9) return { label: 'ต่ำ', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
-            if (muscle < 35.8) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
-            if (muscle < 37.4) return { label: 'สูง', class: 'text-sky-500', badgeClass: 'bg-sky-50 text-sky-700 border border-sky-200', bgClass: 'bg-sky-500' };
-            return { label: 'สูงมาก', class: 'text-primary', badgeClass: 'bg-primary/10 text-primary border border-primary/20', bgClass: 'bg-primary' };
+            if (muscle <= 30) return { label: 'ต่ำกว่าเป้าหมาย', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
+            return { label: 'ผ่านเป้าหมาย', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
         } else {
-            if (muscle < 25.9) return { label: 'ต่ำ', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
-            if (muscle < 28.0) return { label: 'ปกติ', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
-            if (muscle < 29.1) return { label: 'สูง', class: 'text-sky-500', badgeClass: 'bg-sky-50 text-sky-700 border border-sky-200', bgClass: 'bg-sky-500' };
-            return { label: 'สูงมาก', class: 'text-primary', badgeClass: 'bg-primary/10 text-primary border border-primary/20', bgClass: 'bg-primary' };
+            if (muscle <= 25) return { label: 'ต่ำกว่าเป้าหมาย', class: 'text-rose-500', badgeClass: 'bg-rose-50 text-rose-700 border border-rose-200', bgClass: 'bg-rose-500' };
+            return { label: 'ผ่านเป้าหมาย', class: 'text-emerald-500', badgeClass: 'bg-emerald-50 text-emerald-700 border border-emerald-200', bgClass: 'bg-emerald-500' };
         }
     }
 };
@@ -2411,7 +2457,7 @@ function updateCardUI(cardId, badgeId, interp) {
         }
     } else if (interp.label.includes('สูง') || interp.label.includes('น้ำหนักเกิน') || interp.label.includes('เสี่ยง')) {
         card.classList.add('status-bar-warning', 'border-amber-200');
-    } else if (interp.label.includes('ปกติ') || interp.label.includes('ดี')) {
+    } else if (interp.label.includes('ปกติ') || interp.label.includes('ดี') || interp.label.includes('ผ่านเป้าหมาย')) {
         card.classList.add('status-bar-success', 'border-emerald-200');
     }
 }
@@ -2454,8 +2500,7 @@ function updateOverallInterpretation(gender, height, weight, fat, visceral, musc
     else if (bmiInterp.label === 'น้ำหนักต่ำกว่าเกณฑ์') { riskScore += 1; alerts.push('น้ำหนักต่ำกว่าเกณฑ์มาตรฐาน'); }
     
     if (fat > 0) {
-        if (fatInterp.label === 'สูงมาก') { riskScore += 3; alerts.push('เปอร์เซ็นต์ไขมันในร่างกายอยู่ในระดับสูงมาก'); }
-        else if (fatInterp.label === 'สูง') { riskScore += 2; alerts.push('เปอร์เซ็นต์ไขมันในร่างกายอยู่ในระดับสูง'); }
+        if (fatInterp.label.includes('สูง')) { riskScore += 2; alerts.push('เปอร์เซ็นต์ไขมันในร่างกายสูงกว่าเป้าหมาย'); }
     }
     
     if (visceral > 0) {
@@ -2464,7 +2509,7 @@ function updateOverallInterpretation(gender, height, weight, fat, visceral, musc
     }
     
     if (muscle > 0) {
-        if (muscleInterp.label === 'ต่ำ') { riskScore += 1; alerts.push('มวลกล้ามเนื้อลายต่ำกว่าเกณฑ์ปกติ'); }
+        if (muscleInterp.label.includes('ต่ำ')) { riskScore += 1; alerts.push('มวลกล้ามเนื้อลายต่ำกว่าเป้าหมาย'); }
     }
     
     if (riskScore >= 4) {
@@ -2555,6 +2600,83 @@ function setupQuarterlyFormRealtimeInterpretation() {
     muscleInput.addEventListener('input', updateFormMuscle);
 }
 
+function getWeeklySummaryFormData(weekIndex) {
+    return {
+        exercise_minutes: document.getElementById(`form-q-w${weekIndex}-exercise`).value,
+        healthy_menu_days: document.getElementById(`form-q-w${weekIndex}-menu`).value,
+        sleep_avg: document.getElementById(`form-q-w${weekIndex}-sleep`).value,
+        avoid_sweet: document.getElementById(`form-q-w${weekIndex}-sweet`).value,
+        avoid_oil: document.getElementById(`form-q-w${weekIndex}-oil`).value,
+        avoid_salt: document.getElementById(`form-q-w${weekIndex}-salt`).value
+    };
+}
+
+function updateWeeklySummaryPreview(weekIndex) {
+    const preview = document.getElementById(`form-q-week${weekIndex}-preview`);
+    const data = getWeeklySummaryFormData(weekIndex);
+    if ([data.avoid_sweet, data.avoid_oil, data.avoid_salt].some(value => value === '')) {
+        preview.textContent = 'รอข้อมูล';
+        preview.classList.remove('text-emerald-700', 'text-amber-700');
+        preview.classList.add('text-slate-500');
+        return;
+    }
+    const summary = summarizeWeek(data);
+    preview.textContent = `รสจัด ${summary.avoidanceAverage}/5 · ${summary.avoidanceLabel}`;
+    preview.classList.remove('text-slate-500', 'text-emerald-700', 'text-amber-700');
+    preview.classList.add(summary.avoidanceAverage >= 3.5 ? 'text-emerald-700' : 'text-amber-700');
+}
+
+function toggleWeeklySummaryInputs(enabled) {
+    document.querySelectorAll('.weekly-summary-input').forEach(input => {
+        input.disabled = !enabled;
+        input.required = enabled;
+    });
+}
+
+function updateTrackingRoundForm() {
+    const round = document.getElementById('form-q-round').value;
+    const weeks = getWeeksForRound(round);
+    const hasWeeklySummary = weeks.length === 2;
+    document.getElementById('biweekly-summary-section').classList.toggle('hidden', !hasWeeklySummary);
+    toggleWeeklySummaryInputs(hasWeeklySummary);
+    if (hasWeeklySummary) {
+        document.getElementById('form-q-week1-title').textContent = `สัปดาห์ที่ ${weeks[0]}`;
+        document.getElementById('form-q-week2-title').textContent = `สัปดาห์ที่ ${weeks[1]}`;
+    }
+    document.querySelector('.lab-round-section').classList.toggle('hidden', !isLabRound(round));
+}
+
+function setTrackingField(id, value) {
+    const field = document.getElementById(id);
+    if (field) field.value = value ?? '';
+}
+
+function loadTrackingRoundRecord(round) {
+    const record = state.selectedTargetQuarterly.find(item => item.quarter === round);
+    const physicalFields = {
+        'form-q-weight': 'weight', 'form-q-waist': 'waist', 'form-q-bp': 'bp', 'form-q-dtx': 'dtx',
+        'form-q-fat': 'body_fat', 'form-q-muscle': 'muscle_mass', 'form-q-visceral': 'visceral_fat',
+        'form-q-bodyage': 'body_age', 'form-q-remark': 'remark', 'form-q-hba1c': 'hba1c',
+        'form-q-egfr': 'egfr', 'form-q-creatinine': 'creatinine', 'form-q-trigly': 'triglyceride',
+        'form-q-ldl': 'ldl', 'form-q-chol': 'cholesterol'
+    };
+    Object.entries(physicalFields).forEach(([id, key]) => setTrackingField(id, record ? record[key] : ''));
+    if (record) {
+        setTrackingField('form-q-date', record.date);
+    } else {
+        const today = new Date();
+        setTrackingField('form-q-date', `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`);
+    }
+    [1, 2].forEach(weekIndex => {
+        const fields = { exercise: 'exercise_minutes', menu: 'healthy_menu_days', sleep: 'sleep_avg', sweet: 'avoid_sweet', oil: 'avoid_oil', salt: 'avoid_salt' };
+        Object.entries(fields).forEach(([suffix, key]) => {
+            setTrackingField(`form-q-w${weekIndex}-${suffix}`, record ? record[`week${weekIndex}_${key}`] : '');
+        });
+        updateWeeklySummaryPreview(weekIndex);
+    });
+    updateTrackingRoundForm();
+}
+
 function openQuarterlyModal(targetId) {
     const t = state.targets.find(t => t.id === targetId) || state.selectedTargetProfile;
     if (!t) return;
@@ -2569,18 +2691,17 @@ function openQuarterlyModal(targetId) {
     const yyyy = d.getFullYear();
     document.getElementById('form-q-date').value = `${dd}/${mm}/${yyyy}`;
     
-    const patientFields = document.querySelectorAll('.patient-field');
-    if (t.type === 'กลุ่มป่วย') {
-        patientFields.forEach(f => f.classList.remove('hidden'));
-    } else {
-        patientFields.forEach(f => f.classList.add('hidden'));
-    }
+    const recordedRounds = new Set(state.selectedTargetQuarterly.map(item => item.quarter));
+    const nextRound = TRACKING_ROUNDS.find(item => !recordedRounds.has(item.value));
+    document.getElementById('form-q-round').value = nextRound ? nextRound.value : 'W24';
     
     // Reset badges
     document.getElementById('form-q-badge-bmi').innerHTML = 'BMI: -';
     document.getElementById('form-q-badge-fat').innerHTML = 'ไขมัน: -';
     document.getElementById('form-q-badge-visceral').innerHTML = 'ช่องท้อง: -';
     document.getElementById('form-q-badge-muscle').innerHTML = 'กล้ามเนื้อ: -';
+
+    loadTrackingRoundRecord(document.getElementById('form-q-round').value);
     
     openModal('quarterly-modal');
 }

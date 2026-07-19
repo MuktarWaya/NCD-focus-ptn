@@ -84,11 +84,17 @@
 หมายเหตุ: `address` ใช้เก็บบ้านเลขที่เท่านั้น ส่วน `village` ใช้เก็บหมู่บ้านจากรายการควบคุม เช่น `หมู่ 2 บ้านตรัง`, `หมู่ 3 บ้านเขาวัง`, `หมู่ 4 บ้านม่วงเงิน` เพื่อให้ dashboard แยกความก้าวหน้ารายหมู่บ้านได้ถูกต้อง
 `responsible_worker` ใช้เก็บชื่อคณะทำงาน/อสม. ที่รับผิดชอบกลุ่มเป้าหมายรายบุคคล เพื่อให้กรองรายชื่อและสรุป dashboard ตามผู้รับผิดชอบได้
 
-### 2. QuarterlyData (ข้อมูลราย 3 เดือน)
-`id` | `target_id` | `quarter` | `date` | `weight` | `bmi` | `waist` | `dtx` | `bp` | `body_fat` | `muscle_mass` | `visceral_fat` | `body_age` | `physical_activity` | `food_overeat` | `food_unhealthy` | `food_habit` | `remark` | `veggie_fruit` | `depression_2q` | `sleep` | `smoking` | `alcohol` | `hba1c` | `egfr` | `creatinine` | `triglyceride` | `ldl` | `cholesterol`
+### 2. QuarterlyData (ผลติดตามทุก 2 สัปดาห์)
+คอลัมน์ผลตรวจเดิมยังคงอยู่ และใช้ `quarter` เป็น `W0`, `W2`, `W4` ... `W24` ระบบจะเพิ่มคอลัมน์สรุปจากสมุดกระดาษต่อท้ายโดยอัตโนมัติ:
 
-### 3. DailyLogs (บันทึกรายวัน)
+`week1_exercise_minutes` | `week1_healthy_menu_days` | `week1_sleep_avg` | `week1_avoid_sweet` | `week1_avoid_oil` | `week1_avoid_salt` | `week2_exercise_minutes` | `week2_healthy_menu_days` | `week2_sleep_avg` | `week2_avoid_sweet` | `week2_avoid_oil` | `week2_avoid_salt`
+
+หนึ่งแถวเก็บผลตรวจหนึ่งครั้งและสรุปสองสัปดาห์ในรอบเดียวกัน ค่าแล็บ `hba1c`, `egfr`, `creatinine`, `triglyceride`, `ldl`, `cholesterol` ใช้เฉพาะ `W0`, `W12` และ `W24`
+
+### 3. DailyLogs (ข้อมูลเดิม — ไม่รับบันทึกรายวันใหม่)
 `id` | `target_id` | `week` | `day` | `date` | `avoid_sweet` | `avoid_oil` | `avoid_salt` | `menu` | `exercise_type` | `exercise_duration` | `water` | `sleep_hours`
+
+ชีตนี้เก็บไว้เพื่อรักษาข้อมูลเดิม หน้าเว็บรุ่นใหม่ไม่แสดงฟอร์มบันทึกรายวัน
 
 ### 4. OSM (รายชื่อคณะทำงาน/อสม.)
 คอลัมน์ A: `ลำดับที่` | คอลัมน์ B: `ชื่อ อสม`
@@ -155,7 +161,6 @@
 
 - เพิ่มกลุ่มเป้าหมายใหม่
 - แก้ไขข้อมูลสำคัญของกลุ่มเป้าหมาย เช่น หมู่บ้าน ผู้รับผิดชอบ ประเภทกลุ่ม โรคประจำตัว โรคร่วม
-- บันทึกหรืออัปเดตผลตรวจ 3 เดือน
-- บันทึกพฤติกรรมรายวัน
+- บันทึกหรืออัปเดตผลตรวจและสรุปพฤติกรรมทุก 2 สัปดาห์
 
 ถ้า Telegram ส่งไม่สำเร็จ ระบบจะยังบันทึกข้อมูลหลักลงชีตตามปกติ และบันทึก error ไว้ใน `NotificationLog`

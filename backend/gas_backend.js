@@ -11,6 +11,52 @@ function getApiPasscode() {
 
 var ACTIVE_VILLAGES = ["หมู่ 2 บ้านตรัง", "หมู่ 3 บ้านเขาวัง", "หมู่ 4 บ้านม่วงเงิน"];
 var NOTIFICATION_LOG_SHEET = "NotificationLog";
+var TRACKING_ROUNDS = ["W0", "W2", "W4", "W6", "W8", "W10", "W12", "W14", "W16", "W18", "W20", "W22", "W24"];
+var WEEKLY_SUMMARY_HEADERS = [
+  "week1_exercise_minutes", "week1_healthy_menu_days", "week1_sleep_avg", "week1_avoid_sweet", "week1_avoid_oil", "week1_avoid_salt",
+  "week2_exercise_minutes", "week2_healthy_menu_days", "week2_sleep_avg", "week2_avoid_sweet", "week2_avoid_oil", "week2_avoid_salt"
+];
+
+function trackingRoundOrder_(round) {
+  var match = /^W(\d+)$/.exec(String(round || ""));
+  if (match) return parseInt(match[1]);
+  var legacyOrder = { M0: 0, M3: 12, M6: 24, M9: 36 };
+  return Object.prototype.hasOwnProperty.call(legacyOrder, round) ? legacyOrder[round] : 999;
+}
+
+function validateTrackingData_(data) {
+  var round = String(data.quarter || "");
+  if (["M0", "M3", "M6", "M9"].indexOf(round) !== -1) return "";
+  if (TRACKING_ROUNDS.indexOf(round) === -1) return "รอบติดตามไม่ถูกต้อง";
+  if (round === "W0") return "";
+
+  for (var weekIndex = 1; weekIndex <= 2; weekIndex++) {
+    var prefix = "week" + weekIndex + "_";
+    var exercise = parseFloat(data[prefix + "exercise_minutes"]);
+    var menuDays = parseFloat(data[prefix + "healthy_menu_days"]);
+    var sleep = parseFloat(data[prefix + "sleep_avg"]);
+    if (isNaN(exercise) || exercise < 0) return "เวลาออกกำลังกายต้องเป็น 0 นาทีขึ้นไป";
+    if (isNaN(menuDays) || menuDays < 0 || menuDays > 7) return "จำนวนวันเมนูสุขภาพต้องอยู่ระหว่าง 0-7 วัน";
+    if (isNaN(sleep) || sleep < 0 || sleep > 24) return "เวลานอนเฉลี่ยต้องอยู่ระหว่าง 0-24 ชั่วโมง";
+    var scoreFields = ["avoid_sweet", "avoid_oil", "avoid_salt"];
+    for (var scoreIndex = 0; scoreIndex < scoreFields.length; scoreIndex++) {
+      var score = parseFloat(data[prefix + scoreFields[scoreIndex]]);
+      if (isNaN(score) || score < 1 || score > 5) return "คะแนนหลีกเลี่ยงรสจัดต้องอยู่ระหว่าง 1-5 คะแนน";
+    }
+  }
+  return "";
+}
+
+function ensureSheetHeaders_(sheet, expectedHeaders) {
+  var currentHeaders = getSheetHeaders(sheet);
+  var missingHeaders = expectedHeaders.filter(function(header) {
+    return currentHeaders.indexOf(header) === -1;
+  });
+  if (missingHeaders.length > 0) {
+    sheet.getRange(1, currentHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+  }
+  return getSheetHeaders(sheet);
+}
 
 function getTelegramBotToken_() {
   return PropertiesService.getScriptProperties().getProperty("TELEGRAM_BOT_TOKEN") || "";
@@ -137,10 +183,8 @@ function getTargetDetail(ss, targetId) {
   if (quarterlySheet) {
     var qData = getSheetData(quarterlySheet);
     quarterly = qData.filter(function(q) { return parseInt(q.target_id) === targetId; });
-    // เรียงตามเวลา (M0, M3, M6, M9)
-    var qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
     quarterly.sort(function(a, b) {
-      return (qOrder[a.quarter] || 99) - (qOrder[b.quarter] || 99);
+      return trackingRoundOrder_(a.quarter) - trackingRoundOrder_(b.quarter);
     });
   }
   
@@ -197,9 +241,7 @@ function getDashboardStats(ss) {
       if (logs.length > 1) { // มีการติดตามผลมากกว่า 1 ครั้ง (มี M0 และไตรมาสอื่น)
         totalWithFollowUp++;
         
-        // เรียงตาม M0, M3, M6, M9
-        var qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
-        logs.sort(function(a, b) { return (qOrder[a.quarter] || 99) - (qOrder[b.quarter] || 99); });
+        logs.sort(function(a, b) { return trackingRoundOrder_(a.quarter) - trackingRoundOrder_(b.quarter); });
         
         var m0 = logs[0];
         var latest = logs[logs.length - 1];
@@ -455,12 +497,12 @@ function bulkUpdateTargetLocations(ss, locations) {
   });
 }
 
-// 6. เพิ่มประวัติผลสุขภาพ 3 เดือน (Quarterly Tracking)
+// 6. เพิ่มผลตรวจและสรุปพฤติกรรมทุก 2 สัปดาห์ (รองรับข้อมูลรอบเดิม)
 function addQuarterly(ss, data) {
   var sheet = ss.getSheetByName("QuarterlyData");
   if (!sheet) return errorResponse("ไม่พบแผ่นงาน 'QuarterlyData'");
   
-  var headers = getSheetHeaders(sheet);
+  var headers = ensureSheetHeaders_(sheet, WEEKLY_SUMMARY_HEADERS);
   var nextId = getNextId(sheet);
   data.id = nextId;
   data.date = data.date || getTodayThaiDate();
@@ -470,8 +512,17 @@ function addQuarterly(ss, data) {
     var hM = parseFloat(data.height) / 100;
     data.bmi = (parseFloat(data.weight) / (hM * hM)).toFixed(1);
   }
+
+  var validationError = validateTrackingData_(data);
+  if (validationError) return errorResponse(validationError);
+
+  if (["W0", "W12", "W24"].indexOf(String(data.quarter)) === -1) {
+    ["hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"].forEach(function(field) {
+      data[field] = "";
+    });
+  }
   
-  // ตรวจสอบว่ามีข้อมูลไตรมาสนี้ของคนนี้อยู่แล้วหรือไม่ ถ้ามีให้เขียนทับ
+  // คนหนึ่งมีได้หนึ่งรายการต่อรอบติดตาม หากมีแล้วให้เขียนทับ
   var rows = sheet.getDataRange().getValues();
   var targetIdColIdx = headers.indexOf("target_id");
   var quarterColIdx = headers.indexOf("quarter");
@@ -747,8 +798,8 @@ function buildRecordEventTelegramMessage_(type, target, data, before) {
   var labelByType = {
     addTarget: "เพิ่มกลุ่มเป้าหมายใหม่",
     updateTarget: "แก้ไขข้อมูลสำคัญ",
-    addQuarterly: "บันทึกผลตรวจ 3 เดือน",
-    updateQuarterly: "อัปเดตผลตรวจ 3 เดือน",
+    addQuarterly: "บันทึกผลติดตามทุก 2 สัปดาห์",
+    updateQuarterly: "อัปเดตผลติดตามทุก 2 สัปดาห์",
     addDailyLog: "บันทึกพฤติกรรมรายวัน"
   };
   var label = labelByType[type];
@@ -851,9 +902,8 @@ function toNotificationTarget_(target, reason) {
 
 function getLatestQuarterlyLog_(logs) {
   if (!logs || logs.length === 0) return null;
-  var qOrder = { "M0": 1, "M3": 2, "M6": 3, "M9": 4 };
   logs.sort(function(a, b) {
-    return (qOrder[a.quarter] || 0) - (qOrder[b.quarter] || 0);
+    return trackingRoundOrder_(a.quarter) - trackingRoundOrder_(b.quarter);
   });
   return logs[logs.length - 1];
 }
@@ -1015,7 +1065,7 @@ function setupSheets() {
 function setupSheetsForSpreadsheet(ss) {
   var sheetsConfig = {
     "Targets": ["id", "name", "address", "village", "responsible_worker", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
-    "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"],
+    "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"].concat(WEEKLY_SUMMARY_HEADERS),
     "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"],
     "NotificationLog": ["timestamp", "type", "severity", "target_id", "target_name", "village", "responsible_worker", "message", "channel", "status", "sent_at", "dedupe_key", "error"]
   };
