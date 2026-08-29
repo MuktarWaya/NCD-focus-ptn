@@ -97,6 +97,7 @@ const state = {
 document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     initTheme();
+    initFontScale();
     setupProfileActionFallbacks();
     setupEventListeners();
     checkAuthentication();
@@ -285,6 +286,21 @@ function initTheme() {
         document.body.classList.remove('dark');
         document.getElementById('theme-toggle').innerHTML = '<span class="material-symbols-outlined">dark_mode</span>';
     }
+}
+
+function initFontScale() {
+    const scale = localStorage.getItem('ncd_font_scale') || 'normal';
+    document.documentElement.dataset.fontScale = scale;
+    const button = document.getElementById('font-size-toggle');
+    if (button) button.setAttribute('aria-pressed', String(scale === 'large'));
+}
+
+function toggleFontScale() {
+    const nextScale = document.documentElement.dataset.fontScale === 'large' ? 'normal' : 'large';
+    document.documentElement.dataset.fontScale = nextScale;
+    localStorage.setItem('ncd_font_scale', nextScale);
+    const button = document.getElementById('font-size-toggle');
+    if (button) button.setAttribute('aria-pressed', String(nextScale === 'large'));
 }
 
 function toggleTheme() {
@@ -548,7 +564,7 @@ function switchView(viewId) {
     }
     
     // Update active nav item
-    document.querySelectorAll('.nav-item').forEach(item => {
+    document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(item => {
         if (item.getAttribute('data-view') === viewId) {
             item.classList.add('active');
         } else {
@@ -806,7 +822,7 @@ function drawRatioChart(risk, patient) {
     const ctx = document.getElementById('ratio-chart').getContext('2d');
     if (state.charts.ratio) state.charts.ratio.destroy();
     
-    const isDark = document.body.classList.contains('dark-theme');
+    const isDark = document.body.classList.contains('dark');
     
     state.charts.ratio = new Chart(ctx, {
         type: 'doughnut',
@@ -840,7 +856,7 @@ function drawImprovementChart(bmi, bp, dtx) {
     const ctx = document.getElementById('improvement-chart').getContext('2d');
     if (state.charts.improvement) state.charts.improvement.destroy();
     
-    const isDark = document.body.classList.contains('dark-theme');
+    const isDark = document.body.classList.contains('dark');
     
     state.charts.improvement = new Chart(ctx, {
         type: 'bar',
@@ -1436,7 +1452,7 @@ function renderProfileCharts() {
     if (logs.length === 0) return;
     
     const labels = logs.map(l => l.quarter);
-    const isDark = document.body.classList.contains('dark-theme');
+    const isDark = document.body.classList.contains('dark');
     
     // --- Chart 1: Weight & BMI ---
     const ctx1 = document.getElementById('chart-weight-bmi').getContext('2d');
@@ -1735,6 +1751,13 @@ function setupEventListeners() {
         });
     });
 
+    document.querySelectorAll('.mobile-nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchView(e.currentTarget.getAttribute('data-view'));
+        });
+    });
+
     // Login form submission
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
@@ -1764,6 +1787,7 @@ function setupEventListeners() {
 
     // Theme toggle
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+    document.getElementById('font-size-toggle')?.addEventListener('click', toggleFontScale);
     
     // Close demo banner button
     document.getElementById('close-demo-banner').addEventListener('click', () => {

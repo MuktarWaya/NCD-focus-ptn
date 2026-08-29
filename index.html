@@ -216,6 +216,9 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-3">
+                    <button class="font-size-toggle" id="font-size-toggle" type="button" aria-label="ปรับขนาดตัวอักษร" title="ปรับขนาดตัวอักษร">
+                        <span class="font-size-small">A</span><span class="font-size-large">A</span>
+                    </button>
                     <button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-all" id="theme-toggle">
                         <span class="material-symbols-outlined">dark_mode</span>
                     </button>
@@ -875,7 +878,14 @@
         </div>
     </div>
 
-    <!-- ==================== MODAL OVERLAYS ==================== -->
+    <nav class="mobile-bottom-nav" aria-label="เมนูหลักบนมือถือ">
+        <a href="#" class="mobile-nav-item active" data-view="dashboard-view"><span class="material-symbols-outlined">dashboard</span><span>หน้าหลัก</span></a>
+        <a href="#" class="mobile-nav-item" data-view="targets-view"><span class="material-symbols-outlined">groups</span><span>รายชื่อ</span></a>
+        <a href="#" class="mobile-nav-item" data-view="interpreter-view"><span class="material-symbols-outlined">analytics</span><span>แปลผล</span></a>
+        <a href="#" class="mobile-nav-item" data-view="settings-view"><span class="material-symbols-outlined">settings</span><span>ตั้งค่า</span></a>
+    </nav>
+
+     <!-- ==================== MODAL OVERLAYS ==================== -->
 
     <!-- MODAL 1: Add/Edit Target Profile -->
     <div id="target-modal" class="modal-overlay hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
