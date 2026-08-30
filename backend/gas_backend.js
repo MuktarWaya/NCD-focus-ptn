@@ -17,6 +17,9 @@ var WEEKLY_SUMMARY_HEADERS = [
   "week2_exercise_minutes", "week2_healthy_menu_days", "week2_sleep_avg", "week2_avoid_sweet", "week2_avoid_oil", "week2_avoid_salt"
 ];
 
+// รหัสสีปิงปองจราจร 7 สี ที่คำนวณและเก็บติดกับผลติดตามแต่ละรอบ (ทะเบียนจำแนกรหัสสี)
+var PINGPONG_HEADERS = ["pingpong", "pingpong_rank"];
+
 function trackingRoundOrder_(round) {
   var match = /^W(\d+)$/.exec(String(round || ""));
   if (match) return parseInt(match[1]);
@@ -104,6 +107,8 @@ function doPost(e) {
       return successResponse({ message: "ตรวจสอบและเติมหัวตารางชีตเรียบร้อยแล้ว" });
     } else if (action === "migrateMockVillages") {
       return migrateMockVillages(ss);
+    } else if (action === "backfillPingpong") {
+      return backfillPingpong(ss);
     } else if (action === "bulkUpdateTargetLocations") {
       return bulkUpdateTargetLocations(ss, requestData.data.locations || []);
     } else if (action === "addTarget") {
@@ -498,11 +503,88 @@ function bulkUpdateTargetLocations(ss, locations) {
 }
 
 // 6. เพิ่มผลตรวจและสรุปพฤติกรรมทุก 2 สัปดาห์ (รองรับข้อมูลรอบเดิม)
+/* ---------------------------------------------------------------------------
+   ปิงปองจราจรชีวิต 7 สี (คำนวณฝั่งเซิร์ฟเวอร์ตอน save — mirror ของ pingpongRules
+   ในฝั่งเว็บ) : ทำ 6 สี (ขาว→แดง) ยังไม่รวมสีดำกลุ่มภาวะแทรกซ้อน
+   ยึด Worst-Case ระหว่างน้ำตาล (DTX/FBS + HbA1c) กับความดันโลหิต
+   --------------------------------------------------------------------------- */
+var PINGPONG_LABELS_ = { white: "ขาว", lightgreen: "เขียวอ่อน", darkgreen: "เขียวเข้ม", yellow: "เหลือง", orange: "ส้ม", red: "แดง" };
+var PINGPONG_RANK_ = { white: 0, lightgreen: 1, darkgreen: 2, yellow: 3, orange: 4, red: 5 };
+
+function pingpongGlucoseScore_(dtx, hba1c) {
+  var s = -1;
+  var d = parseFloat(dtx);
+  if (!isNaN(d) && d > 0) {
+    if (d < 100) s = 0;
+    else if (d <= 125) s = 1;
+    else if (d <= 154) s = 2;
+    else if (d <= 182) s = 3;
+    else s = 4;
+  }
+  var h = parseFloat(hba1c);
+  if (!isNaN(h) && h > 0) {
+    var hs = 0;               // HbA1c < 7.0 ถือว่าคุมได้ ไม่ยกระดับ
+    if (h >= 8.0) hs = 4;     // แดง
+    else if (h >= 7.0) hs = 3; // ส้ม
+    s = Math.max(s, hs);
+  }
+  return s;
+}
+
+function pingpongBpScore_(bp) {
+  if (bp === undefined || bp === null || bp === "") return -1;
+  var parts = bp.toString().split("/");
+  var sys = parseInt(parts[0]);
+  var dia = parseInt(parts[1]);
+  if (isNaN(sys) && isNaN(dia)) return -1;
+  var s = isNaN(sys) ? 0 : sys;
+  var d = isNaN(dia) ? 0 : dia;
+  if (s >= 180 || d >= 110) return 4;
+  if (s >= 160 || d >= 100) return 3;
+  if (s >= 140 || d >= 90) return 2;
+  if (s >= 120 || d >= 80) return 1;
+  return 0;
+}
+
+function pingpongIsPatient_(target) {
+  if (!target) return false;
+  if (target.type === "กลุ่มป่วย") return true;
+  var cd = (target.chronic_disease || "").toString().toUpperCase();
+  return cd.indexOf("DM") !== -1 || cd.indexOf("HT") !== -1 ||
+         cd.indexOf("เบาหวาน") !== -1 || cd.indexOf("ความดัน") !== -1;
+}
+
+// คืน { key, colorTh, rank } ; ข้อมูลไม่พอ -> colorTh/rank เป็น "" (ปล่อยว่างในชีต)
+function pingpongClassify_(data, target) {
+  var g = pingpongGlucoseScore_(data.dtx, data.hba1c);
+  var b = pingpongBpScore_(data.bp);
+  if (g < 0 && b < 0) return { key: "unknown", colorTh: "", rank: "" };
+  var score = Math.max(g, b);
+  var key;
+  if (score >= 4) key = "red";
+  else if (score === 3) key = "orange";
+  else if (score === 2) key = "yellow";
+  else if (pingpongIsPatient_(target)) key = "darkgreen";
+  else key = (score === 1) ? "lightgreen" : "white";
+  return { key: key, colorTh: PINGPONG_LABELS_[key], rank: PINGPONG_RANK_[key] };
+}
+
+// อ่านข้อมูลกลุ่มเป้าหมายจากชีต Targets ตาม id (เพื่อรู้สถานะผู้ป่วย)
+function getTargetById_(ss, id) {
+  var sheet = ss.getSheetByName("Targets");
+  if (!sheet) return null;
+  var data = getSheetData(sheet);
+  for (var i = 0; i < data.length; i++) {
+    if (parseInt(data[i].id) === parseInt(id)) return data[i];
+  }
+  return null;
+}
+
 function addQuarterly(ss, data) {
   var sheet = ss.getSheetByName("QuarterlyData");
   if (!sheet) return errorResponse("ไม่พบแผ่นงาน 'QuarterlyData'");
-  
-  var headers = ensureSheetHeaders_(sheet, WEEKLY_SUMMARY_HEADERS);
+
+  var headers = ensureSheetHeaders_(sheet, WEEKLY_SUMMARY_HEADERS.concat(PINGPONG_HEADERS));
   var nextId = getNextId(sheet);
   data.id = nextId;
   data.date = data.date || getTodayThaiDate();
@@ -521,7 +603,13 @@ function addQuarterly(ss, data) {
       data[field] = "";
     });
   }
-  
+
+  // คำนวณรหัสสีปิงปองจราจร 7 สี แล้วเก็บติดไปกับแถว (คำนวณหลังเคลียร์ค่าแล็บตามรอบ)
+  var ppTarget = getTargetById_(ss, data.target_id);
+  var pp = pingpongClassify_(data, ppTarget);
+  data.pingpong = pp.colorTh;
+  data.pingpong_rank = pp.rank;
+
   // คนหนึ่งมีได้หนึ่งรายการต่อรอบติดตาม หากมีแล้วให้เขียนทับ
   var rows = sheet.getDataRange().getValues();
   var targetIdColIdx = headers.indexOf("target_id");
@@ -551,6 +639,46 @@ function addQuarterly(ss, data) {
   sheet.appendRow(newRow);
   notifyRecordEvent_(ss, "addQuarterly", data);
   return successResponse({ message: "บันทึกผลสุขภาพรอบ " + data.quarter + " เรียบร้อยแล้ว", id: nextId });
+}
+
+// 6.1 คำนวณรหัสสีปิงปองย้อนหลังให้ทุกแถวใน QuarterlyData (รันครั้งเดียวหลังเพิ่มคอลัมน์)
+// รันเองได้จาก Apps Script editor: เลือกฟังก์ชัน runBackfillPingpong แล้วกด Run
+function runBackfillPingpong() {
+  return backfillPingpong(SpreadsheetApp.getActiveSpreadsheet());
+}
+
+function backfillPingpong(ss) {
+  var sheet = ss.getSheetByName("QuarterlyData");
+  if (!sheet) return errorResponse("ไม่พบแผ่นงาน 'QuarterlyData'");
+
+  var headers = ensureSheetHeaders_(sheet, WEEKLY_SUMMARY_HEADERS.concat(PINGPONG_HEADERS));
+  var ppColIdx = headers.indexOf("pingpong");
+  var rankColIdx = headers.indexOf("pingpong_rank");
+  if (ppColIdx === -1 || rankColIdx === -1) return errorResponse("ไม่พบคอลัมน์ pingpong ในแผ่นงาน");
+
+  // เตรียม lookup สถานะผู้ป่วยจากชีต Targets ล่วงหน้า (กันอ่านซ้ำต่อแถว)
+  var targetsSheet = ss.getSheetByName("Targets");
+  var targetsById = {};
+  if (targetsSheet) {
+    getSheetData(targetsSheet).forEach(function(t) { targetsById[parseInt(t.id)] = t; });
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return successResponse({ message: "ไม่มีข้อมูลให้คำนวณย้อนหลัง", updated: 0 });
+
+  var range = sheet.getRange(1, 1, lastRow, sheet.getLastColumn());
+  var values = range.getValues();
+  var updated = 0;
+  for (var i = 1; i < values.length; i++) {
+    var row = rowToObject_(headers, values[i]);
+    var target = targetsById[parseInt(row.target_id)] || null;
+    var pp = pingpongClassify_(row, target);
+    values[i][ppColIdx] = pp.colorTh;
+    values[i][rankColIdx] = pp.rank;
+    updated++;
+  }
+  range.setValues(values);
+  return successResponse({ message: "คำนวณรหัสสีปิงปองย้อนหลังเรียบร้อยแล้ว", updated: updated });
 }
 
 // 7. เพิ่มบันทึกพฤติกรรมประจำวัน
@@ -1065,7 +1193,7 @@ function setupSheets() {
 function setupSheetsForSpreadsheet(ss) {
   var sheetsConfig = {
     "Targets": ["id", "name", "address", "village", "responsible_worker", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
-    "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"].concat(WEEKLY_SUMMARY_HEADERS),
+    "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"].concat(WEEKLY_SUMMARY_HEADERS).concat(PINGPONG_HEADERS),
     "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"],
     "NotificationLog": ["timestamp", "type", "severity", "target_id", "target_name", "village", "responsible_worker", "message", "channel", "status", "sent_at", "dedupe_key", "error"]
   };
