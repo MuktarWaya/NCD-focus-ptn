@@ -102,6 +102,8 @@ function doPost(e) {
       return getTargetDetail(ss, parseInt(requestData.data.id));
     } else if (action === "getDashboardStats") {
       return getDashboardStats(ss);
+    } else if (action === "getAllQuarterly") {
+      return getAllQuarterly(ss);
     } else if (action === "setupSheets") {
       setupSheetsForSpreadsheet(ss);
       return successResponse({ message: "ตรวจสอบและเติมหัวตารางชีตเรียบร้อยแล้ว" });
@@ -639,6 +641,13 @@ function addQuarterly(ss, data) {
   sheet.appendRow(newRow);
   notifyRecordEvent_(ss, "addQuarterly", data);
   return successResponse({ message: "บันทึกผลสุขภาพรอบ " + data.quarter + " เรียบร้อยแล้ว", id: nextId });
+}
+
+// 5.1 ดึงผลติดตามทั้งหมด (รวมคอลัมน์ pingpong) — ใช้ทำทะเบียนรหัสสี/การกระจายสีฝั่งเว็บ
+function getAllQuarterly(ss) {
+  var sheet = ss.getSheetByName("QuarterlyData");
+  if (!sheet) return successResponse({ quarterly: [] });
+  return successResponse({ quarterly: getSheetData(sheet) });
 }
 
 // 6.1 คำนวณรหัสสีปิงปองย้อนหลังให้ทุกแถวใน QuarterlyData (รันครั้งเดียวหลังเพิ่มคอลัมน์)

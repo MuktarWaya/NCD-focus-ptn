@@ -366,6 +366,17 @@ async function fetchFromAPI() {
         state.apiDashboardStats = statsJSON.data;
     }
 
+    // 3. Load all quarterly rows (incl. stored pingpong) for registry / distribution
+    try {
+        const quarterlyJSON = await postToAPI('getAllQuarterly', {});
+        if (quarterlyJSON.success && quarterlyJSON.data && Array.isArray(quarterlyJSON.data.quarterly)) {
+            state.quarterlyData = quarterlyJSON.data.quarterly;
+            state.quarterlyData.forEach(normalizeTrackingRecord);
+        }
+    } catch (err) {
+        console.warn('ไม่สามารถโหลดผลติดตามทั้งหมด (ทะเบียนสี/การกระจายสีจะว่าง):', err);
+    }
+
     populateWorkerControls();
 }
 
@@ -582,6 +593,8 @@ function switchView(viewId) {
         renderDashboard();
     } else if (viewId === 'targets-view') {
         renderTargetsList();
+    } else if (viewId === 'registry-view') {
+        renderRegistry();
     } else if (viewId === 'profile-view') {
         renderProfileDetail();
     } else if (viewId === 'interpreter-view') {
@@ -615,6 +628,9 @@ function updateHeaderTitles(viewId) {
     } else if (viewId === 'targets-view') {
         title.textContent = 'รายชื่อกลุ่มเป้าหมาย';
         subtitle.textContent = 'แสดงข้อมูลประชากรเป้าหมาย นำเข้า ติดตามผล และกรองกลุ่มเสี่ยง/กลุ่มป่วย';
+    } else if (viewId === 'registry-view') {
+        title.textContent = 'ทะเบียนจำแนกรหัสสี ปิงปองจราจร 7 สี';
+        subtitle.textContent = 'ทะเบียนกลุ่มเป้าหมายจำแนกตามรหัสสีจากผลติดตามล่าสุด เรียงตามความรุนแรง พร้อมส่งออกรายงาน';
     } else if (viewId === 'profile-view') {
         title.textContent = 'ข้อมูลพฤติกรรมและสุขภาพรายบุคคล';
         subtitle.textContent = 'แสดงผลตรวจร่างกายและสรุปพฤติกรรมจากสมุดทุก 2 สัปดาห์ ตลอด 24 สัปดาห์';
@@ -773,6 +789,120 @@ function renderPingpongDistribution() {
                 <div class="text-[10px] text-on-surface-variant">${c.sub}</div>
             </div>`;
     }).join('');
+}
+
+// --- ทะเบียนจำแนกรหัสสี (Color-Coded Registry) ---
+function getRegistryRows() {
+    const colorFilter = (document.getElementById('registry-filter-color') || {}).value || 'all';
+    const villageFilter = (document.getElementById('registry-filter-village') || {}).value || 'all';
+
+    const rows = state.targets.map(t => {
+        const latest = getLatestLogForTarget(t.id);
+        const color = latest ? pingpongRules.classify(latest, t) : pingpongRules.colors.unknown;
+        return { target: t, latest: latest, color: color };
+    }).filter(r => {
+        if (villageFilter !== 'all' && getTargetVillage(r.target) !== villageFilter) return false;
+        if (colorFilter !== 'all' && r.color.key !== colorFilter) return false;
+        return true;
+    });
+
+    // เรียงตามความรุนแรง (สีรุนแรงก่อน) แล้วตามชื่อ ; ยังไม่ประเมินไปท้ายสุด
+    rows.sort((a, b) => {
+        const ra = a.color.rank < 0 ? -99 : a.color.rank;
+        const rb = b.color.rank < 0 ? -99 : b.color.rank;
+        if (rb !== ra) return rb - ra;
+        return (a.target.name || '').localeCompare(b.target.name || '', 'th');
+    });
+    return rows;
+}
+
+function renderRegistry() {
+    const tbody = document.getElementById('registry-tbody');
+    const empty = document.getElementById('registry-empty');
+    const count = document.getElementById('registry-count');
+    if (!tbody) return;
+
+    const rows = getRegistryRows();
+    if (count) count.textContent = `${rows.length} ราย`;
+
+    if (rows.length === 0) {
+        tbody.innerHTML = '';
+        if (empty) empty.classList.remove('hidden');
+        return;
+    }
+    if (empty) empty.classList.add('hidden');
+
+    tbody.innerHTML = rows.map((r, idx) => {
+        const t = r.target, latest = r.latest, c = r.color;
+        const diseases = (t.chronic_disease === 'ไม่มี' || !t.chronic_disease) ? '-' : t.chronic_disease;
+        const dtx = latest && latest.dtx ? displayValue(latest.dtx) : '-';
+        const bp = latest && latest.bp ? displayValue(latest.bp) : '-';
+        const round = latest ? roundLabel(latest.quarter) : '-';
+        const badge = c.rank >= 0
+            ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[11px] ${c.badgeClass}"><span class="w-2.5 h-2.5 rounded-full" style="background:${c.dot}"></span>${c.label} · ${c.sub}</span>`
+            : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-[11px] bg-slate-100 text-slate-400 border border-slate-200">ยังไม่ประเมิน</span>`;
+        const typeBadge = t.type === 'กลุ่มเสี่ยง'
+            ? '<span class="badge badge-risk">กลุ่มเสี่ยง</span>'
+            : '<span class="badge badge-patient">กลุ่มป่วย</span>';
+        return `
+            <tr class="border-b border-slate-100/70 hover:bg-primary/5 cursor-pointer transition-colors registry-row" data-id="${t.id}">
+                <td class="py-3 px-3 text-on-surface-variant">${idx + 1}</td>
+                <td class="py-3 px-3 font-bold text-on-surface whitespace-nowrap">${escapeHTML(t.name)}</td>
+                <td class="py-3 px-3 text-on-surface-variant whitespace-nowrap">${displayValue(getTargetVillage(t))}</td>
+                <td class="py-3 px-3">${typeBadge}</td>
+                <td class="py-3 px-3 text-on-surface-variant">${escapeHTML(diseases)}</td>
+                <td class="py-3 px-3 text-on-surface-variant whitespace-nowrap">${round}</td>
+                <td class="py-3 px-3 tabular-nums">${dtx}</td>
+                <td class="py-3 px-3 tabular-nums whitespace-nowrap">${bp}</td>
+                <td class="py-3 px-3 whitespace-nowrap">${badge}</td>
+                <td class="py-3 px-3 text-on-surface-variant whitespace-nowrap">${displayValue(getTargetWorker(t))}</td>
+            </tr>`;
+    }).join('');
+
+    tbody.querySelectorAll('.registry-row').forEach(tr => {
+        tr.addEventListener('click', () => viewTargetProfile(parseInt(tr.getAttribute('data-id'))));
+    });
+}
+
+function exportRegistryCSV() {
+    const rows = getRegistryRows();
+    if (rows.length === 0) {
+        showToast('ไม่มีข้อมูลให้ส่งออก', 'warning');
+        return;
+    }
+    const headers = ['ลำดับ', 'ชื่อ-สกุล', 'หมู่บ้าน', 'กลุ่ม', 'โรคประจำตัว', 'รอบล่าสุด', 'DTX', 'BP', 'HbA1c', 'สีปิงปอง', 'ระดับ(rank)', 'คณะทำงาน'];
+    const escapeCSV = (v) => {
+        const s = (v === undefined || v === null) ? '' : String(v);
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const lines = [headers.join(',')];
+    rows.forEach((r, idx) => {
+        const t = r.target, latest = r.latest, c = r.color;
+        lines.push([
+            idx + 1,
+            t.name,
+            getTargetVillage(t),
+            t.type,
+            (t.chronic_disease === 'ไม่มี' || !t.chronic_disease) ? '' : t.chronic_disease,
+            latest ? roundLabel(latest.quarter) : '',
+            latest && latest.dtx ? latest.dtx : '',
+            latest && latest.bp ? latest.bp : '',
+            latest && latest.hba1c ? latest.hba1c : '',
+            c.rank >= 0 ? c.label : 'ยังไม่ประเมิน',
+            c.rank >= 0 ? c.rank : '',
+            getTargetWorker(t)
+        ].map(escapeCSV).join(','));
+    });
+    const csv = '﻿' + lines.join('\n'); // BOM ให้ Excel อ่านภาษาไทยถูก
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ทะเบียนรหัสสีปิงปอง_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function renderVillageProgress(stats = {}) {
@@ -2002,6 +2132,14 @@ function setupEventListeners() {
             el.addEventListener('change', classifyInterpreterPingpong);
         }
     });
+
+    // Registry (ทะเบียนจำแนกรหัสสี) filters + export
+    ['registry-filter-color', 'registry-filter-village'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', renderRegistry);
+    });
+    const registryExportBtn = document.getElementById('registry-export-btn');
+    if (registryExportBtn) registryExportBtn.addEventListener('click', exportRegistryCSV);
 
     const interpVillageFilter = document.getElementById('interp-village-filter');
     if (interpVillageFilter) {
