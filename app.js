@@ -708,6 +708,9 @@ function renderDashboard() {
     // Draw Bar Chart: Improvement Indicators
     drawImprovementChart(stats.improvedBmiRate, stats.improvedBpRate, stats.improvedDtxRate);
 
+    // Render ping-pong 7-color distribution
+    renderPingpongDistribution();
+
     // Render village-level progress cards
     renderVillageProgress(stats);
     renderWorkerProgress(stats);
@@ -717,6 +720,59 @@ function renderDashboard() {
     
     // Render overall behavior metrics
     renderOverallBehavior();
+}
+
+function renderPingpongDistribution() {
+    const bar = document.getElementById('pingpong-dist-bar');
+    const legend = document.getElementById('pingpong-dist-legend');
+    const note = document.getElementById('pingpong-dist-note');
+    if (!bar || !legend) return;
+
+    // นับสีปัจจุบัน (จากผลติดตามล่าสุด) ของกลุ่มเป้าหมายที่มีข้อมูลพอแปลผล
+    const counts = {};
+    pingpongRules.scaleOrder.forEach(k => counts[k] = 0);
+    let assessed = 0;
+    state.targets.forEach(t => {
+        const latest = getLatestLogForTarget(t.id);
+        if (!latest) return;
+        const pp = pingpongRules.classify(latest, t);
+        if (pp.rank < 0) return;
+        counts[pp.key]++;
+        assessed++;
+    });
+
+    if (note) {
+        note.textContent = assessed > 0
+            ? `แปลผลจากผลติดตามล่าสุด · ประเมินได้ ${assessed} คน`
+            : 'ยังไม่มีข้อมูลผลตรวจเพียงพอสำหรับแปลผล';
+    }
+
+    if (assessed === 0) {
+        bar.innerHTML = '<div class="w-full bg-slate-200"></div>';
+        legend.innerHTML = '<p class="col-span-full text-sm text-on-surface-variant text-center py-2">ยังไม่มีข้อมูลน้ำตาล/ความดันของกลุ่มเป้าหมาย</p>';
+        return;
+    }
+
+    bar.innerHTML = pingpongRules.scaleOrder.map(k => {
+        const c = pingpongRules.colors[k];
+        const pct = (counts[k] / assessed) * 100;
+        if (pct <= 0) return '';
+        return `<div class="${c.barClass} h-full" style="width:${pct}%" title="${c.label} ${counts[k]} คน"></div>`;
+    }).join('');
+
+    legend.innerHTML = pingpongRules.scaleOrder.map(k => {
+        const c = pingpongRules.colors[k];
+        const pct = Math.round((counts[k] / assessed) * 100);
+        return `
+            <div class="rounded-xl border border-slate-100 bg-white/60 p-3">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="w-3 h-3 rounded-full" style="background:${c.dot}"></span>
+                    <span class="text-[11px] font-bold text-on-surface">${c.label}</span>
+                </div>
+                <div class="font-stat-display text-xl font-extrabold text-on-surface">${counts[k]} <span class="text-xs font-semibold text-on-surface-variant">คน (${pct}%)</span></div>
+                <div class="text-[10px] text-on-surface-variant">${c.sub}</div>
+            </div>`;
+    }).join('');
 }
 
 function renderVillageProgress(stats = {}) {
@@ -1265,6 +1321,21 @@ function renderProfileDetail() {
     const badge = document.getElementById('profile-type-badge');
     badge.textContent = t.type;
     badge.className = t.type === 'กลุ่มเสี่ยง' ? 'badge badge-risk' : 'badge badge-patient';
+
+    // สรุปสีปิงปองจราจรปัจจุบัน (จากผลติดตามล่าสุด)
+    const ppBadge = document.getElementById('profile-pingpong-badge');
+    if (ppBadge) {
+        const latestLog = getLatestLogForTarget(t.id);
+        const pp = latestLog ? pingpongRules.classify(latestLog, t) : pingpongRules.colors.unknown;
+        if (pp.rank >= 0) {
+            ppBadge.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-[11px] ${pp.badgeClass}`;
+            ppBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full" style="background:${pp.dot}"></span>ปิงปอง ${pp.label} · ${pp.sub}`;
+            ppBadge.title = pp.advice;
+        } else {
+            ppBadge.className = 'hidden';
+            ppBadge.innerHTML = '';
+        }
+    }
     
     // Set profile icon avatar color
     const avatar = document.getElementById('profile-avatar-icon');
@@ -1389,14 +1460,21 @@ function renderTimelineCards() {
             renderWeekSummaryCard(getStoredWeekSummary(log, weekIndex + 1), weekNumber)
         ).join('');
         const labSummary = renderLabSummary(log);
-        
+
+        // สีปิงปองจราจร 7 สี ประจำรอบนี้
+        const pp = pingpongRules.classify(log, state.selectedTargetProfile);
+        const ppBadge = pp.rank >= 0
+            ? `<div class="mb-3">${pingpongRules.badgeHtml(pp)}</div>`
+            : '';
+
         card.className = 'bg-white/70 dark:bg-inverse-surface/60 rounded-2xl p-5 border border-white/50 dark:border-slate-800 shadow-sm relative overflow-hidden flex flex-col justify-between hover:scale-[1.02] transition-all';
         card.innerHTML = `
             <div class="vital-bar ${cardIndicatorColorClass}"></div>
-            <div class="flex justify-between items-start mb-4 border-b border-slate-100/50 pb-2">
+            <div class="flex justify-between items-start mb-3 border-b border-slate-100/50 pb-2">
                 <span class="font-bold text-sm text-primary dark:text-primary-fixed">${qName}</span>
                 <span class="text-xs text-outline font-semibold">${displayValue(log.date)}</span>
             </div>
+            ${ppBadge}
             <div class="space-y-2.5 text-xs text-on-surface-variant font-medium">
                 <div class="flex justify-between items-center border-b border-slate-50 pb-1.5">
                     <span>น้ำหนัก:</span>
@@ -1890,7 +1968,22 @@ function setupEventListeners() {
                     document.getElementById('interp-gender').value = inferGender(target.name);
                     document.getElementById('interp-height').value = target.height;
                     document.getElementById('interp-age').value = target.age;
-                    
+
+                    // Prefill ping-pong inputs from latest follow-up
+                    const latest = getLatestLogForTarget(target.id);
+                    document.getElementById('interp-pp-dtx').value = (latest && latest.dtx) ? latest.dtx : '';
+                    document.getElementById('interp-pp-hba1c').value = (latest && latest.hba1c) ? latest.hba1c : '';
+                    if (latest && latest.bp) {
+                        const parts = latest.bp.toString().split('/');
+                        document.getElementById('interp-pp-sbp').value = parts[0] || '';
+                        document.getElementById('interp-pp-dbp').value = parts[1] || '';
+                    } else {
+                        document.getElementById('interp-pp-sbp').value = '';
+                        document.getElementById('interp-pp-dbp').value = '';
+                    }
+                    document.getElementById('interp-pp-patient').checked = pingpongRules.isPatient(target);
+                    classifyInterpreterPingpong();
+
                     // Show import button
                     if (importBtn) importBtn.classList.remove('hidden');
                 }
@@ -1900,6 +1993,15 @@ function setupEventListeners() {
             calculateBodyComposition();
         });
     }
+
+    // Ping-pong interpreter inputs (realtime)
+    ['interp-pp-dtx', 'interp-pp-hba1c', 'interp-pp-sbp', 'interp-pp-dbp', 'interp-pp-patient'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', classifyInterpreterPingpong);
+            el.addEventListener('change', classifyInterpreterPingpong);
+        }
+    });
 
     const interpVillageFilter = document.getElementById('interp-village-filter');
     if (interpVillageFilter) {
@@ -1934,10 +2036,19 @@ function setupEventListeners() {
             document.getElementById('interp-visceral').value = '';
             document.getElementById('interp-muscle').value = '';
             document.getElementById('interp-bodyage').value = '';
-            
+
+            // Clear ping-pong inputs
+            ['interp-pp-dtx', 'interp-pp-hba1c', 'interp-pp-sbp', 'interp-pp-dbp'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const ppPatient = document.getElementById('interp-pp-patient');
+            if (ppPatient) ppPatient.checked = false;
+            classifyInterpreterPingpong();
+
             const importBtn = document.getElementById('interp-import-btn');
             if (importBtn) importBtn.classList.add('hidden');
-            
+
             calculateBodyComposition();
         });
     }
@@ -2377,6 +2488,106 @@ const bodyCompRules = {
     }
 };
 
+/* ---------------------------------------------------------------------------
+   ปิงปองจราจรชีวิต 7 สี (NCDs) — แปลผลสถานะสุขภาพ "แต่ละครั้ง"
+   อ้างอิงนิยาม ศ.(พิเศษ) ดร.นพ.วิชัย เทียนถาวร / สบช.โมเดล
+   หมายเหตุการออกแบบ:
+   - ทำ 6 สี (ขาว→แดง) ยังไม่รวม "สีดำ" (กลุ่มภาวะแทรกซ้อน) เพราะยังไม่มีฟิลด์
+     บันทึกความเสียหายอวัยวะเป้าหมาย (ตา/ไต/เท้า/หัวใจ/สมอง)
+   - น้ำตาลยึด DTX(=FBS) ร่วมกับ HbA1c แบบ Worst-Case (เลือกค่ารุนแรงสุด)
+     โดย HbA1c จะยกระดับเฉพาะเมื่อสูง (≥7.0 = ส้ม, ≥8.0 = แดง); ต่ำกว่า 7.0
+     ถือว่าคุมได้ ไม่ดันให้เกิน "เขียวเข้ม" เพื่อไม่ให้ผู้ป่วยคุมดีถูกจัดเป็นสีเหลือง
+   - ความดันและน้ำตาลประเมินแยกกันแล้วยึดสีที่รุนแรงสุด (Worst-Case Classification)
+   --------------------------------------------------------------------------- */
+const pingpongRules = {
+    colors: {
+        white:      { key: 'white',      label: 'สีขาว',       sub: 'ปกติ',              rank: 0, dot: '#94a3b8', badgeClass: 'bg-white text-slate-600 border border-slate-300',       barClass: 'bg-slate-300',   advice: 'สุขภาพดี ธำรงพฤติกรรม 3อ. ออกกำลังกาย ≥150 นาที/สัปดาห์ และคัดกรองประจำปี' },
+        lightgreen: { key: 'lightgreen', label: 'สีเขียวอ่อน', sub: 'กลุ่มเสี่ยง',        rank: 1, dot: '#a3e635', badgeClass: 'bg-lime-50 text-lime-700 border border-lime-300',        barClass: 'bg-lime-400',    advice: 'ภาวะก่อนป่วย ปรับพฤติกรรมเข้มข้น 3อ.3ล. ลดพุง ติดตามซ้ำทุก 3–6 เดือน' },
+        darkgreen:  { key: 'darkgreen',  label: 'สีเขียวเข้ม', sub: 'ป่วยระดับ 0 (คุมได้)', rank: 2, dot: '#059669', badgeClass: 'bg-emerald-50 text-emerald-800 border border-emerald-300', barClass: 'bg-emerald-600', advice: 'ผู้ป่วยคุมได้ดี เน้นกินยาต่อเนื่องห้ามหยุดยาเอง ตรวจภาวะแทรกซ้อนประจำปี' },
+        yellow:     { key: 'yellow',     label: 'สีเหลือง',     sub: 'ป่วยระดับ 1',        rank: 3, dot: '#eab308', badgeClass: 'bg-yellow-50 text-yellow-800 border border-yellow-300', barClass: 'bg-yellow-400',  advice: 'ควบคุมได้ปานกลาง ทบทวนอาหาร/การใช้ยา ติดตามทุก 2–3 เดือน เป้าลดกลับเขียวเข้ม' },
+        orange:     { key: 'orange',     label: 'สีส้ม',        sub: 'ป่วยระดับ 2',        rank: 4, dot: '#f97316', badgeClass: 'bg-orange-50 text-orange-800 border border-orange-300', barClass: 'bg-orange-500',  advice: 'ควบคุมไม่ดี ค้นหาอุปสรรค ประสานแพทย์ปรับยา ติดตามใกล้ชิดทุก 2–4 สัปดาห์' },
+        red:        { key: 'red',        label: 'สีแดง',        sub: 'ป่วยระดับ 3',        rank: 5, dot: '#dc2626', badgeClass: 'bg-red-50 text-red-800 border border-red-300',          barClass: 'bg-red-600',     advice: 'วิกฤต ส่งพบแพทย์ทันที เฝ้าระวังภาวะฉุกเฉิน วางแผนเยี่ยมบ้านใน 1–2 สัปดาห์' },
+        unknown:    { key: 'unknown',    label: 'ยังไม่ประเมิน', sub: 'ข้อมูลไม่พอ',        rank: -1, dot: '#cbd5e1', badgeClass: 'bg-slate-100 text-slate-400 border border-slate-200',   barClass: 'bg-slate-200',   advice: 'ต้องมีค่าน้ำตาล (DTX/HbA1c) หรือความดันโลหิตอย่างน้อยหนึ่งอย่างเพื่อแปลผล' }
+    },
+
+    // ลำดับสีสำหรับแสดงสเกล/กราจาย (ไม่รวม unknown)
+    scaleOrder: ['white', 'lightgreen', 'darkgreen', 'yellow', 'orange', 'red'],
+
+    // ระดับความรุนแรงจากค่าน้ำตาล 0–4 (worst-case ของ DTX/FBS กับ HbA1c) ; -1 = ไม่มีข้อมูล
+    glucoseScore: function(dtx, hba1c) {
+        let s = -1;
+        const d = parseFloat(dtx);
+        if (!isNaN(d) && d > 0) {
+            if (d < 100) s = 0;
+            else if (d <= 125) s = 1;
+            else if (d <= 154) s = 2;
+            else if (d <= 182) s = 3;
+            else s = 4;
+        }
+        const h = parseFloat(hba1c);
+        if (!isNaN(h) && h > 0) {
+            let hs = 0;                 // <7.0 = คุมได้ ไม่ยกระดับ
+            if (h >= 8.0) hs = 4;       // แดง
+            else if (h >= 7.0) hs = 3;  // ส้ม
+            s = Math.max(s, hs);
+        }
+        return s;
+    },
+
+    // ระดับความรุนแรงจากความดันโลหิต 0–4 ; -1 = ไม่มีข้อมูล
+    bpScore: function(bp) {
+        if (!bp && bp !== 0) return -1;
+        const parts = bp.toString().split('/');
+        const sys = parseInt(parts[0]);
+        const dia = parseInt(parts[1]);
+        if (isNaN(sys) && isNaN(dia)) return -1;
+        const s = isNaN(sys) ? 0 : sys;
+        const d = isNaN(dia) ? 0 : dia;
+        if (s >= 180 || d >= 110) return 4;
+        if (s >= 160 || d >= 100) return 3;
+        if (s >= 140 || d >= 90) return 2;
+        if (s >= 120 || d >= 80) return 1;
+        return 0;
+    },
+
+    // เป็นผู้ป่วยที่ได้รับการวินิจฉัย/รับยา (ใช้แยก "เขียวเข้ม" ออกจาก "ขาว/เขียวอ่อน")
+    isPatient: function(target) {
+        if (!target) return false;
+        if (target.type === 'กลุ่มป่วย') return true;
+        const cd = (target.chronic_disease || '').toString().toUpperCase();
+        return cd.includes('DM') || cd.includes('HT') || cd.includes('เบาหวาน') || cd.includes('ความดัน');
+    },
+
+    // แปลผลหนึ่งครั้งเป็นสีปิงปอง — คืน object สีจาก this.colors
+    classify: function(log, target) {
+        const g = this.glucoseScore(log ? log.dtx : null, log ? log.hba1c : null);
+        const b = this.bpScore(log ? log.bp : null);
+        if (g < 0 && b < 0) return this.colors.unknown;
+        const score = Math.max(g, b);                 // Worst-Case ระหว่างน้ำตาลกับความดัน
+        if (score >= 4) return this.colors.red;
+        if (score === 3) return this.colors.orange;
+        if (score === 2) return this.colors.yellow;
+        // score 0 หรือ 1
+        if (this.isPatient(target)) return this.colors.darkgreen; // ผู้ป่วยที่คุมค่าได้
+        return score === 1 ? this.colors.lightgreen : this.colors.white;
+    },
+
+    // badge HTML สั้นสำหรับใช้ซ้ำ
+    badgeHtml: function(color, extraClass) {
+        if (!color || color.rank < 0) return '';
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[10px] ${color.badgeClass} ${extraClass || ''}">`
+             + `<span class="w-2.5 h-2.5 rounded-full" style="background:${color.dot}"></span>ปิงปอง ${color.label} · ${color.sub}</span>`;
+    }
+};
+
+// หาผลติดตามล่าสุด (ตามรอบ) ของกลุ่มเป้าหมายหนึ่งราย
+function getLatestLogForTarget(targetId) {
+    const logs = state.quarterlyData.filter(q => String(q.target_id) === String(targetId));
+    if (logs.length === 0) return null;
+    logs.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
+    return logs[logs.length - 1];
+}
+
 function renderInterpreterView() {
     const select = document.getElementById('interp-target-select');
     if (!select) return;
@@ -2405,6 +2616,55 @@ function renderInterpreterView() {
 
     const stillVisible = filteredTargets.some(t => String(t.id) === String(currentValue));
     select.value = stillVisible ? currentValue : '';
+
+    // วาดสเกลสีปิงปอง และแปลผลค่าปัจจุบัน (ถ้ามี)
+    renderPingpongScale();
+    classifyInterpreterPingpong();
+}
+
+// วาดสเกลสี 6 สี (ขาว→แดง) ในหน้าแปลผล
+function renderPingpongScale() {
+    const scale = document.getElementById('interp-pp-scale');
+    if (!scale) return;
+    scale.innerHTML = pingpongRules.scaleOrder.map(k => {
+        const c = pingpongRules.colors[k];
+        return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold ${c.badgeClass}">`
+             + `<span class="w-2.5 h-2.5 rounded-full" style="background:${c.dot}"></span>${c.label} · ${c.sub}</span>`;
+    }).join('');
+}
+
+// แปลผลปิงปองจากช่องกรอกในหน้าแปลผล (แบบ realtime)
+function classifyInterpreterPingpong() {
+    const badge = document.getElementById('interp-pp-badge');
+    const dot = document.getElementById('interp-pp-dot');
+    const title = document.getElementById('interp-pp-title');
+    const advice = document.getElementById('interp-pp-advice');
+    const result = document.getElementById('interp-pp-result');
+    if (!badge || !title) return;
+
+    const dtx = document.getElementById('interp-pp-dtx').value;
+    const hba1c = document.getElementById('interp-pp-hba1c').value;
+    const sbp = document.getElementById('interp-pp-sbp').value;
+    const dbp = document.getElementById('interp-pp-dbp').value;
+    const isPatient = document.getElementById('interp-pp-patient').checked;
+
+    const bp = (sbp || dbp) ? `${sbp || ''}/${dbp || ''}` : '';
+    const pseudoLog = { dtx: dtx, hba1c: hba1c, bp: bp };
+    const pseudoTarget = { type: isPatient ? 'กลุ่มป่วย' : 'กลุ่มเสี่ยง' };
+    const pp = pingpongRules.classify(pseudoLog, pseudoTarget);
+
+    badge.className = `inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs ${pp.badgeClass}`;
+    badge.innerHTML = pp.rank >= 0
+        ? `<span class="w-2.5 h-2.5 rounded-full" style="background:${pp.dot}"></span>${pp.label}`
+        : 'ยังไม่ประเมิน';
+    if (dot) dot.style.background = pp.dot;
+    title.textContent = pp.rank >= 0 ? `${pp.label} — ${pp.sub}` : 'ป้อนค่าน้ำตาลหรือความดันเพื่อแปลผล';
+    if (advice) advice.textContent = pp.advice;
+    if (result) {
+        result.className = pp.rank >= 0
+            ? `rounded-xl border p-4 flex items-start gap-3 ${pp.badgeClass}`
+            : 'rounded-xl border border-slate-200 bg-slate-50/60 p-4 flex items-start gap-3';
+    }
 }
 
 function calculateBodyComposition() {
