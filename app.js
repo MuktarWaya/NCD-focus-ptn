@@ -477,16 +477,15 @@ function parseCSV(text) {
         }
         row.push(entry.trim());
         
-        if (row.length === headers.length) {
-            const obj = {};
-            headers.forEach((header, idx) => {
-                let val = row[idx].replace(/^"|"$/g, '');
-                // Handle newlines
-                val = val.replace(/\\n/g, '\n');
-                obj[header] = val;
-            });
-            result.push(obj);
-        }
+        const obj = {};
+        headers.forEach((header, idx) => {
+            const raw = idx < row.length ? row[idx] : '';
+            let val = raw.replace(/^"|"$/g, '');
+            // Handle newlines
+            val = val.replace(/\\n/g, '\n');
+            obj[header] = val;
+        });
+        result.push(obj);
     }
     return result;
 }
@@ -595,6 +594,8 @@ function switchView(viewId) {
         renderTargetsList();
     } else if (viewId === 'registry-view') {
         renderRegistry();
+    } else if (viewId === 'focusgroup-view') {
+        renderFocusGroupView();
     } else if (viewId === 'profile-view') {
         renderProfileDetail();
     } else if (viewId === 'interpreter-view') {
@@ -631,6 +632,9 @@ function updateHeaderTitles(viewId) {
     } else if (viewId === 'registry-view') {
         title.textContent = 'ทะเบียนจำแนกรหัสสี ปิงปองจราจร 7 สี';
         subtitle.textContent = 'ทะเบียนกลุ่มเป้าหมายจำแนกตามรหัสสีจากผลติดตามล่าสุด เรียงตามความรุนแรง พร้อมส่งออกรายงาน';
+    } else if (viewId === 'focusgroup-view') {
+        title.textContent = 'รายงาน Focus Group (องค์ประกอบร่างกาย)';
+        subtitle.textContent = 'รายชื่อกลุ่มเป้าหมายที่มีค่าองค์ประกอบร่างกายผิดปกติ เพื่อแบ่งกลุ่มให้คำปรึกษารายกลุ่ม';
     } else if (viewId === 'profile-view') {
         title.textContent = 'ข้อมูลพฤติกรรมและสุขภาพรายบุคคล';
         subtitle.textContent = 'แสดงผลตรวจร่างกายและสรุปพฤติกรรมจากสมุดทุก 2 สัปดาห์ ตลอด 24 สัปดาห์';
@@ -903,6 +907,239 @@ function exportRegistryCSV() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+}
+
+// --- รายงาน Focus Group: กลุ่มค่าองค์ประกอบร่างกายผิดปกติ ---
+const focusGroupMeta = {
+    fat: {
+        title: 'ไขมันร่างกายสูง',
+        subtitle: 'สูงกว่าเป้าหมาย (ชาย 20% / หญิง 30%)',
+        icon: 'elderly_woman',
+        accent: 'text-rose-500',
+        bar: 'bg-rose-500',
+        format: (v) => `${Number(v).toFixed(1)}%`
+    },
+    visceral: {
+        title: 'ไขมันช่องท้องสูง',
+        subtitle: 'ระดับ ≥ 9 (สูง / สูงมาก)',
+        icon: 'monitor_heart',
+        accent: 'text-orange-500',
+        bar: 'bg-orange-500',
+        format: (v) => `ระดับ ${v}`
+    },
+    muscle: {
+        title: 'กล้ามเนื้อลายต่ำ',
+        subtitle: 'ต่ำกว่าเป้าหมาย (ชาย ≤ 30% / หญิง ≤ 25%)',
+        icon: 'accessibility_new',
+        accent: 'text-sky-500',
+        bar: 'bg-sky-500',
+        format: (v) => `${Number(v).toFixed(1)}%`
+    }
+};
+
+function buildFocusGroupData() {
+    const villageFilter = (document.getElementById('focusgroup-filter-village') || {}).value || 'all';
+    const groups = {
+        fat: [],
+        visceral: [],
+        muscle: []
+    };
+
+    state.targets.forEach(t => {
+        if (villageFilter !== 'all' && getTargetVillage(t) !== villageFilter) return;
+
+        const latest = getLatestLogForTarget(t.id);
+        if (!latest) return;
+
+        const gender = inferGender(t.name);
+        const fatInterp = bodyCompRules.interpretBodyFat(latest.body_fat, gender);
+        const visceralInterp = bodyCompRules.interpretVisceralFat(latest.visceral_fat);
+        const muscleInterp = bodyCompRules.interpretSkeletalMuscle(latest.muscle_mass, gender);
+
+        const base = {
+            target: t,
+            latest: latest,
+            gender: gender,
+            village: getTargetVillage(t),
+            worker: getTargetWorker(t),
+            round: roundLabel(latest.quarter)
+        };
+
+        if (fatInterp.label === 'สูงกว่าเป้าหมาย') {
+            groups.fat.push({ ...base, value: latest.body_fat, interp: fatInterp.label });
+        }
+        if (visceralInterp.label === 'สูง' || visceralInterp.label === 'สูงมาก') {
+            groups.visceral.push({ ...base, value: latest.visceral_fat, interp: visceralInterp.label });
+        }
+        if (muscleInterp.label === 'ต่ำกว่าเป้าหมาย') {
+            groups.muscle.push({ ...base, value: latest.muscle_mass, interp: muscleInterp.label });
+        }
+    });
+
+    ['fat', 'visceral', 'muscle'].forEach(key => {
+        groups[key].sort((a, b) => (a.target.name || '').localeCompare(b.target.name || '', 'th'));
+    });
+    return groups;
+}
+
+function renderFocusGroupView() {
+    const container = document.getElementById('focusgroup-groups-container');
+    if (!container) return;
+
+    const groups = buildFocusGroupData();
+    const totalAbnormal = groups.fat.length + groups.visceral.length + groups.muscle.length;
+
+    const groupCard = (key) => {
+        const meta = focusGroupMeta[key];
+        const items = groups[key];
+        const rows = items.map((it, idx) => `
+            <tr class="border-b border-slate-100/70 hover:bg-primary/5 transition-colors focusgroup-row" data-id="${it.target.id}">
+                <td class="py-3 px-3 text-on-surface-variant">${idx + 1}</td>
+                <td class="py-3 px-3 font-bold text-on-surface whitespace-nowrap">${escapeHTML(it.target.name)}</td>
+                <td class="py-3 px-3 text-on-surface-variant whitespace-nowrap">${displayValue(it.village)}</td>
+                <td class="py-3 px-3 text-on-surface-variant whitespace-nowrap">${displayValue(it.worker)}</td>
+                <td class="py-3 px-3 tabular-nums font-semibold ${meta.accent} whitespace-nowrap">${meta.format(it.value)}</td>
+                <td class="py-3 px-3 text-on-surface-variant whitespace-nowrap">${displayValue(it.round)}</td>
+            </tr>`).join('');
+
+        const empty = items.length === 0
+            ? `<tr><td colspan="6" class="py-6 px-3 text-center text-on-surface-variant">ไม่มีบุคคลในกลุ่มนี้ตามเกณฑ์ปัจจุบัน</td></tr>`
+            : '';
+
+        return `
+            <div class="glass-card rounded-2xl p-6">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-white/60 border border-white/60 flex items-center justify-center ${meta.accent}">
+                            <span class="material-symbols-outlined">${meta.icon}</span>
+                        </div>
+                        <div>
+                            <h3 class="font-headline text-base font-bold text-on-surface">${meta.title}</h3>
+                            <p class="text-xs text-on-surface-variant">${meta.subtitle}</p>
+                        </div>
+                    </div>
+                    <span class="font-stat-display text-lg font-extrabold text-on-surface shrink-0">${items.length} คน</span>
+                </div>
+                <div class="w-full h-1.5 rounded-full overflow-hidden bg-slate-100 mb-4">
+                    <div class="h-full ${meta.bar} rounded-full transition-all duration-500" style="width: ${totalAbnormal > 0 ? Math.round((items.length / totalAbnormal) * 100) : 0}%"></div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-100/50 text-slate-600 font-semibold border-b border-slate-200">
+                            <tr>
+                                <th class="py-2.5 px-3 rounded-l-lg">#</th>
+                                <th class="py-2.5 px-3">ชื่อ-สกุล</th>
+                                <th class="py-2.5 px-3">หมู่บ้าน</th>
+                                <th class="py-2.5 px-3">คณะทำงาน (อสม.)</th>
+                                <th class="py-2.5 px-3">ค่า</th>
+                                <th class="py-2.5 px-3 rounded-r-lg">รอบล่าสุด</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">${rows}${empty}</tbody>
+                    </table>
+                </div>
+            </div>`;
+    };
+
+    container.innerHTML = groupCard('fat') + groupCard('visceral') + groupCard('muscle');
+
+    container.querySelectorAll('.focusgroup-row').forEach(tr => {
+        tr.addEventListener('click', () => viewTargetProfile(parseInt(tr.getAttribute('data-id'))));
+    });
+}
+
+function buildFocusGroupText() {
+    const groups = buildFocusGroupData();
+    const villageFilter = (document.getElementById('focusgroup-filter-village') || {}).value || 'all';
+    const villageLabel = villageFilter === 'all' ? 'ทุกหมู่บ้าน' : villageFilter;
+    const dateText = new Date().toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    const lines = [];
+    lines.push('NCD Focus PTN - รายงานกลุ่ม Focus Group (องค์ประกอบร่างกาย)');
+    lines.push(`หมู่บ้าน: ${villageLabel} | วันที่ ${dateText}`);
+    lines.push('==========================================');
+
+    ['fat', 'visceral', 'muscle'].forEach(key => {
+        const meta = focusGroupMeta[key];
+        const items = groups[key];
+        lines.push('');
+        lines.push(`${meta.title} (${items.length} คน)`);
+        if (items.length === 0) {
+            lines.push('- ไม่มีบุคคลในกลุ่มนี้');
+        } else {
+            items.forEach((it, idx) => {
+                lines.push(`${idx + 1}. ${it.target.name} | ${it.village} | ${it.worker} | ${meta.format(it.value)}`);
+            });
+        }
+    });
+
+    lines.push('');
+    lines.push('หมายเหตุ: ใช้ผลติดตามล่าสุดของแต่ละคน เกณฑ์เดียวกับเครื่องมือแปลผล');
+    return lines.join('\n');
+}
+
+function fallbackCopyText(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try {
+        ok = document.execCommand('copy');
+    } catch (err) {
+        ok = false;
+    }
+    document.body.removeChild(ta);
+    if (ok) showToast('คัดลอกข้อความรายงานแล้ว นำไปวางใน Line group ได้เลย');
+    else showToast('คัดลอกไม่สำเร็จ กรุณาลองอีกครั้ง', 'danger');
+}
+
+async function copyFocusGroupToClipboard() {
+    const text = buildFocusGroupText();
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+            showToast('คัดลอกข้อความรายงานแล้ว นำไปวางใน Line group ได้เลย');
+            return;
+        }
+    } catch (err) {
+        console.warn('Clipboard API ล้มเหลว ใช้ fallback:', err);
+    }
+    fallbackCopyText(text);
+}
+
+function exportFocusGroupExcel() {
+    if (typeof XLSX === 'undefined') {
+        showToast('โหลดไลบรารี Excel ไม่สำเร็จ กรุณาเช็คอินเทอร์เน็ตแล้วลองใหม่', 'danger');
+        return;
+    }
+
+    const groups = buildFocusGroupData();
+    const wb = XLSX.utils.book_new();
+    const headerRow = ['ลำดับ', 'ชื่อ-สกุล', 'หมู่บ้าน', 'คณะทำงาน (อสม.)', 'ค่า', 'รอบล่าสุด'];
+
+    ['fat', 'visceral', 'muscle'].forEach(key => {
+        const meta = focusGroupMeta[key];
+        const rows = [headerRow];
+        groups[key].forEach((it, idx) => {
+            rows.push([
+                idx + 1,
+                it.target.name,
+                it.village,
+                it.worker,
+                meta.format(it.value),
+                it.round
+            ]);
+        });
+        const ws = XLSX.utils.aoa_to_sheet(rows);
+        ws['!cols'] = [{ wch: 5 }, { wch: 28 }, { wch: 18 }, { wch: 22 }, { wch: 12 }, { wch: 18 }];
+        XLSX.utils.book_append_sheet(wb, ws, meta.title.slice(0, 31));
+    });
+
+    XLSX.writeFile(wb, `รายงาน_Focus_Group_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast('ส่งออกไฟล์ Excel เรียบร้อยแล้ว');
 }
 
 function renderVillageProgress(stats = {}) {
@@ -2140,6 +2377,14 @@ function setupEventListeners() {
     });
     const registryExportBtn = document.getElementById('registry-export-btn');
     if (registryExportBtn) registryExportBtn.addEventListener('click', exportRegistryCSV);
+
+    // Focus Group report filters + copy/export
+    const focusGroupVillageFilter = document.getElementById('focusgroup-filter-village');
+    if (focusGroupVillageFilter) focusGroupVillageFilter.addEventListener('change', renderFocusGroupView);
+    const focusGroupCopyBtn = document.getElementById('focusgroup-copy-btn');
+    if (focusGroupCopyBtn) focusGroupCopyBtn.addEventListener('click', copyFocusGroupToClipboard);
+    const focusGroupExcelBtn = document.getElementById('focusgroup-excel-btn');
+    if (focusGroupExcelBtn) focusGroupExcelBtn.addEventListener('click', exportFocusGroupExcel);
 
     const interpVillageFilter = document.getElementById('interp-village-filter');
     if (interpVillageFilter) {
