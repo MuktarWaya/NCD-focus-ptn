@@ -86,9 +86,23 @@ function doPost(e) {
     if (!configuredPasscode) {
       return errorResponse("ยังไม่ได้ตั้งค่า API_PASSCODE ใน Script properties");
     }
+
+    var adminPasscode = PropertiesService.getScriptProperties().getProperty('ADMIN_PASSCODE');
+    var isAdmin = Boolean(adminPasscode && requestData.passcode === adminPasscode);
+    if (requestData.action === 'login') {
+      if (isAdmin) return successResponse({ role: 'admin' });
+      if (requestData.passcode === configuredPasscode) return successResponse({ role: 'user' });
+      return errorResponse('รหัสผ่านไม่ถูกต้อง');
+    }
+
+    var adminActions = ['setupSheets', 'migrateMockVillages', 'backfillPingpong', 'bulkUpdateTargetLocations',
+      'sendDailyTelegramSummary', 'setupDailyNotificationTrigger', 'authorizeNotificationServices'];
+    if (adminActions.indexOf(requestData.action) !== -1 && !isAdmin) {
+      return errorResponse('เฉพาะผู้ดูแลระบบเท่านั้น');
+    }
     
     // ตรวจสอบรหัสผ่าน API_PASSCODE
-    if (requestData.passcode !== configuredPasscode) {
+    if (requestData.passcode !== configuredPasscode && !isAdmin) {
       return errorResponse("รหัสผ่านไม่ถูกต้อง (Invalid Passcode)");
     }
     

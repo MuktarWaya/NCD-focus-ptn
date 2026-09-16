@@ -114,18 +114,12 @@
 </head>
 <body class="bg-background-base text-on-surface antialiased font-body-md h-full flex flex-col overflow-hidden">
 
-    <!-- Demo Mode Banner -->
-    <div id="demo-banner" class="bg-amber-500 text-white px-4 py-2 flex items-center justify-between text-sm font-medium z-50 shadow-md">
-        <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined">warning</span>
-            <span>ขณะนี้แอปทำงานใน <strong>"โหมดทดลอง (Demo Mode)"</strong> ใช้ข้อมูลจำลองในเครื่อง สามารถเชื่อมต่อฐานข้อมูล Google Sheets ได้ที่เมนู <strong>"ตั้งค่า API"</strong></span>
-        </div>
-        <button id="close-demo-banner" class="text-white hover:text-amber-100 p-1 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors">
-            <span class="material-symbols-outlined text-[18px]">close</span>
-        </button>
-    </div>
-
     <!-- Login Passcode Screen -->
+    <div id="connection-error" role="alert" class="hidden bg-rose-100 text-rose-900 p-4 border-b border-rose-300">
+        <p id="connection-error-message"></p>
+        <button id="retry-connection" type="button" class="underline font-bold mt-2">เชื่อมต่อใหม่</button>
+        <span> หากยังมีปัญหา กรุณาติดต่อผู้ดูแลระบบ</span>
+    </div>
     <div id="login-screen" class="fixed inset-0 bg-background-base/80 backdrop-blur-xl flex items-center justify-center z-50 p-4">
         <div class="glass-floating rounded-2xl p-8 max-w-md w-full border border-white/50 shadow-xl flex flex-col items-center">
             <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-6">
@@ -189,7 +183,7 @@
                     <span class="material-symbols-outlined">analytics</span>
                     <span class="font-body-md text-sm">แปลผลร่างกาย (Scale Interpreter)</span>
                 </a>
-                <a href="#" class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-view="settings-view">
+                <a href="#" hidden class="nav-item flex items-center gap-3 px-4 py-3 rounded-xl transition-all" data-view="settings-view">
                     <span class="material-symbols-outlined">settings</span>
                     <span class="font-body-md text-sm">ตั้งค่า API เชื่อมต่อ</span>
                 </a>
@@ -234,7 +228,7 @@
                     </button>
                     <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/40 shadow-sm bg-white/50" id="conn-status-indicator">
                         <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                        <span class="text-xs font-bold text-on-surface-variant status-text">Demo Mode</span>
+                        <span class="text-xs font-bold text-on-surface-variant status-text">ยังไม่พร้อมบันทึก</span>
                     </div>
                 </div>
             </header>
@@ -823,7 +817,7 @@
                             <div class="bg-sky-50 border border-sky-100 rounded-xl p-4 text-xs text-sky-800 flex items-start gap-2">
                                 <span class="material-symbols-outlined text-sky-500 text-[18px]">info</span>
                                 <div>
-                                    <strong>คำแนะนำ:</strong> หากคุณยังไม่ได้ตั้งค่า API ระบบจะใช้ <strong>Demo Mode</strong> ที่จัดเตรียมข้อมูลกลุ่มเป้าหมายตัวอย่างไว้ให้ทดลองเล่นโดยอัตโนมัติ
+                                    <strong>สำหรับผู้ดูแลระบบ:</strong> ระบบใช้ข้อมูลจริงเท่านั้น หากเชื่อมต่อไม่ได้จะหยุดการบันทึก การตั้งค่าหน้านี้มีผลเฉพาะเบราว์เซอร์นี้ การเปลี่ยน URL สำหรับผู้ใช้ทุกคนต้องอัปเดตการตั้งค่าเริ่มต้นและเผยแพร่หน้าเว็บใหม่
                                 </div>
                             </div>
 
@@ -831,10 +825,6 @@
                                 <button type="submit" class="bg-primary text-on-primary px-5 py-2.5 rounded-xl font-semibold text-sm shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-[18px]">save</span>
                                     <span>บันทึกการเชื่อมต่อ</span>
-                                </button>
-                                <button type="button" class="bg-white border border-outline-variant/60 hover:bg-slate-50 text-on-surface px-5 py-2.5 rounded-xl font-semibold text-sm active:scale-98 transition-all flex items-center gap-1.5" id="btn-reset-demo">
-                                    <span class="material-symbols-outlined text-[18px]">restart_alt</span>
-                                    <span>กลับสู่โหมดทดลอง (Demo)</span>
                                 </button>
                             </div>
                         </form>
@@ -1060,7 +1050,7 @@
         <a href="#" class="mobile-nav-item" data-view="targets-view"><span class="material-symbols-outlined">groups</span><span>รายชื่อ</span></a>
         <a href="#" class="mobile-nav-item" data-view="registry-view"><span class="material-symbols-outlined">sports_tennis</span><span>ทะเบียนสี</span></a>
         <a href="#" class="mobile-nav-item" data-view="interpreter-view"><span class="material-symbols-outlined">analytics</span><span>แปลผล</span></a>
-        <a href="#" class="mobile-nav-item" data-view="settings-view"><span class="material-symbols-outlined">settings</span><span>ตั้งค่า</span></a>
+        <a href="#" hidden class="mobile-nav-item" data-view="settings-view"><span class="material-symbols-outlined">settings</span><span>ตั้งค่า</span></a>
     </nav>
 
      <!-- ==================== MODAL OVERLAYS ==================== -->

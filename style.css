@@ -585,3 +585,4 @@ table tbody tr:hover { background: var(--brand-tint); }
         scroll-behavior: auto !important;
     }
 }
+[hidden] { display: none !important; }

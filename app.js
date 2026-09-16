@@ -63,7 +63,9 @@ const MOCK_WORKERS = [
 
 const state = {
     currentView: 'dashboard-view',
-    connectionMode: 'demo', // 'demo' or 'online'
+    connectionMode: 'online', // Production only: never fall back to simulated data.
+    connectionReady: false,
+    isAdmin: false,
     gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
     apiPasscode: DEFAULT_API_PASSCODE,
     
@@ -107,13 +109,9 @@ document.addEventListener('DOMContentLoaded', () => {
 function loadSettings() {
     const savedUrl = localStorage.getItem('ncd_gas_url');
     const savedPasscode = localStorage.getItem('ncd_api_passcode');
-    const savedMode = localStorage.getItem('ncd_connection_mode');
     
     if (savedUrl) {
         state.gasUrl = savedUrl;
-    }
-    if (state.gasUrl) {
-        document.getElementById('setting-gas-url').value = state.gasUrl;
     }
     
     if (savedPasscode === '123456') {
@@ -121,66 +119,52 @@ function loadSettings() {
     } else if (savedPasscode) {
         state.apiPasscode = savedPasscode;
     }
-    if (state.apiPasscode) {
-        document.getElementById('setting-passcode').value = state.apiPasscode;
-    }
     
-    const hasApiSettings = Boolean(state.gasUrl && state.apiPasscode);
-    state.connectionMode = hasApiSettings ? 'online' : (savedMode || 'demo');
-
-    if (state.connectionMode === 'online' && (!state.gasUrl || !state.apiPasscode)) {
-        state.connectionMode = 'demo';
-        localStorage.setItem('ncd_connection_mode', 'demo');
-    }
+    state.connectionMode = 'online';
+    localStorage.removeItem('ncd_connection_mode');
+    document.querySelectorAll('[data-view="settings-view"]').forEach(el => el.hidden = true);
+    document.getElementById('setting-gas-url').value = '';
+    document.getElementById('setting-passcode').value = '';
 
     updateConnectionIndicator();
 }
 
-function saveSettings(url, passcode) {
+async function saveSettings(url, passcode) {
+    if (!state.isAdmin) return showToast('เฉพาะผู้ดูแลระบบเท่านั้น', 'danger');
     if (!url || !passcode) {
         showToast("กรุณากรอก URL และรหัสผ่าน API ให้ครบถ้วน", "danger");
         return;
     }
 
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url)) {
+        return showToast('กรุณาใช้ Google Apps Script Web App URL ที่ลงท้าย /exec', 'danger');
+    }
+    state.connectionReady = false;
     state.gasUrl = url;
     state.apiPasscode = passcode;
     state.connectionMode = 'online';
     
     localStorage.setItem('ncd_gas_url', url);
     localStorage.setItem('ncd_api_passcode', passcode);
-    localStorage.setItem('ncd_connection_mode', 'online');
     
     updateConnectionIndicator();
-    showToast("บันทึกการตั้งค่าการเชื่อมต่อสำเร็จ!");
-    refreshData();
+    if (await refreshData()) showToast('เชื่อมต่อและโหลดข้อมูลจริงสำเร็จ');
 }
 
-function resetToDemo() {
-    switchToDemoMode();
-    
-    updateConnectionIndicator();
-    showToast("กลับสู่โหมดทดลองใช้ (Demo Mode)");
-    refreshData();
-}
-
-function switchToDemoMode() {
-    state.connectionMode = 'demo';
-    localStorage.setItem('ncd_connection_mode', 'demo');
-}
 
 function updateConnectionIndicator() {
     const indicator = document.getElementById('conn-status-indicator');
-    const demoBanner = document.getElementById('demo-banner');
     
-    if (state.connectionMode === 'online') {
+    if (state.connectionReady) {
         indicator.className = 'connection-status online';
         indicator.querySelector('.status-text').textContent = 'Connected (Sheets)';
-        demoBanner.classList.add('hidden');
     } else {
         indicator.className = 'connection-status offline';
-        indicator.querySelector('.status-text').textContent = 'Demo Mode';
-        demoBanner.classList.remove('hidden');
+        indicator.querySelector('.status-text').textContent = 'ยังไม่พร้อมบันทึก';
     }
+    document.querySelectorAll('#target-form [type="submit"], #quarterly-form [type="submit"], #daily-form [type="submit"]').forEach(button => {
+        button.disabled = !state.connectionReady;
+    });
 }
 
 function getTargetVillage(target) {
@@ -318,27 +302,23 @@ function toggleTheme() {
 // --- Data Fetching and Parsing ---
 async function refreshData() {
     showSpinner(true);
+    state.connectionReady = false;
+    updateConnectionIndicator();
     try {
-        if (state.connectionMode === 'online' && state.gasUrl) {
-            await fetchFromAPI();
-        } else {
-            await fetchFromLocalCSVs();
-        }
+        await fetchFromAPI();
         
         // Render initial view
         switchView(state.currentView);
+        state.connectionReady = true;
+        document.getElementById('connection-error').classList.add('hidden');
+        return true;
     } catch (err) {
         console.error("Error loading data:", err);
         showToast("ไม่สามารถโหลดข้อมูลได้: " + err.message, "danger");
-        // Fallback to demo mode if API failed
-        if (state.connectionMode === 'online') {
-            showToast("สลับเข้าสู่โหมดทดลองใช้เนื่องจากเชื่อมต่อล้มเหลว", "warning");
-            switchToDemoMode();
-            updateConnectionIndicator();
-            await fetchFromLocalCSVs();
-            switchView(state.currentView);
-        }
+        reportConnectionError(err);
+        return false;
     } finally {
+        updateConnectionIndicator();
         showSpinner(false);
     }
 }
@@ -350,6 +330,7 @@ async function fetchFromAPI() {
     // 1. Get Targets
     const targetsJSON = await postToAPI('getTargets', {});
     if (!targetsJSON.success) throw new Error(targetsJSON.error);
+    if (!Array.isArray(targetsJSON.data)) throw new Error('ข้อมูลรายชื่อจากฐานข้อมูลไม่ถูกต้อง');
     state.targets = targetsJSON.data;
     state.targets.forEach(t => {
         t.id = parseInt(t.id);
@@ -362,19 +343,19 @@ async function fetchFromAPI() {
     // 2. Fetch stats and other tables by fetching details when needed,
     // but to get dashboard Stats, we query getDashboardStats API
     const statsJSON = await postToAPI('getDashboardStats', {});
+    if (!statsJSON.data || typeof statsJSON.data !== 'object') throw new Error('ข้อมูลสรุปจากฐานข้อมูลไม่ถูกต้อง');
     if (statsJSON.success) {
         state.apiDashboardStats = statsJSON.data;
     }
 
     // 3. Load all quarterly rows (incl. stored pingpong) for registry / distribution
-    try {
+    {
         const quarterlyJSON = await postToAPI('getAllQuarterly', {});
+        if (!Array.isArray(quarterlyJSON.data?.quarterly)) throw new Error('ข้อมูลผลติดตามจากฐานข้อมูลไม่ถูกต้อง');
         if (quarterlyJSON.success && quarterlyJSON.data && Array.isArray(quarterlyJSON.data.quarterly)) {
             state.quarterlyData = quarterlyJSON.data.quarterly;
             state.quarterlyData.forEach(normalizeTrackingRecord);
         }
-    } catch (err) {
-        console.warn('ไม่สามารถโหลดผลติดตามทั้งหมด (ทะเบียนสี/การกระจายสีจะว่าง):', err);
     }
 
     populateWorkerControls();
@@ -395,46 +376,6 @@ function normalizeTrackingRecord(record) {
     return record;
 }
 
-// Fetch database from local CSV mock files (Demo Mode)
-async function fetchFromLocalCSVs() {
-    // Helper to read and parse local files
-    const fetchCSV = async (url) => {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to load ${url}`);
-        const text = await res.text();
-        return parseCSV(text);
-    };
-
-    state.targets = await fetchCSV('data/targets.csv');
-    state.quarterlyData = await fetchCSV('data/quarterly_data.csv');
-    state.dailyLogs = await fetchCSV('data/daily_logs.csv');
-    
-    // Convert numeric fields from string
-    state.targets.forEach(t => {
-        t.id = parseInt(t.id);
-        t.age = parseInt(t.age);
-        t.height = parseFloat(t.height);
-        t.village = t.village || '';
-        t.responsible_worker = t.responsible_worker || '';
-    });
-
-    state.workerOptions = getUniqueWorkers(state.targets.map(t => t.responsible_worker)).length > 0
-        ? getUniqueWorkers(state.targets.map(t => t.responsible_worker))
-        : [...MOCK_WORKERS];
-    
-    state.quarterlyData.forEach(normalizeTrackingRecord);
-
-    state.dailyLogs.forEach(d => {
-        d.id = parseInt(d.id);
-        d.target_id = parseInt(d.target_id);
-        d.avoid_sweet = parseInt(d.avoid_sweet);
-        d.avoid_oil = parseInt(d.avoid_oil);
-        d.avoid_salt = parseInt(d.avoid_salt);
-        d.exercise_duration = parseInt(d.exercise_duration);
-        d.water = parseInt(d.water);
-        d.sleep_hours = parseFloat(d.sleep_hours);
-    });
-}
 
 async function fetchWorkerOptions() {
     state.workerOptions = [...MOCK_WORKERS];
@@ -442,6 +383,7 @@ async function fetchWorkerOptions() {
     if (state.connectionMode !== 'online') return;
 
     const workerJSON = await postToAPI('getOsmWorkers', {});
+    if (!Array.isArray(workerJSON.data)) throw new Error('ข้อมูลคณะทำงานจากฐานข้อมูลไม่ถูกต้อง');
     if (workerJSON.success && Array.isArray(workerJSON.data) && workerJSON.data.length > 0) {
         state.workerOptions = getUniqueWorkers(workerJSON.data);
     }
@@ -562,6 +504,7 @@ function populateWorkerControls() {
 
 // --- Navigation / Routing ---
 function switchView(viewId) {
+    if (viewId === 'settings-view' && !state.isAdmin) return;
     // Hide all views
     document.querySelectorAll('.view-section').forEach(view => {
         view.classList.add('hidden');
@@ -1650,12 +1593,7 @@ async function viewTargetProfile(targetId) {
                 d.sleep_hours = parseFloat(d.sleep_hours);
             });
         } else {
-            // Filter locally (Demo Mode)
-            state.selectedTargetProfile = state.targets.find(t => t.id === targetId);
-            state.selectedTargetQuarterly = state.quarterlyData.filter(q => q.target_id === targetId);
-            state.selectedTargetDailyLogs = state.dailyLogs.filter(d => d.target_id === targetId);
-            
-            state.selectedTargetQuarterly.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
+            throw new Error('ระบบใช้งานจริงต้องเชื่อมต่อฐานข้อมูลเท่านั้น');
         }
 
         state.selectedTargetQuarterly.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
@@ -1663,6 +1601,7 @@ async function viewTargetProfile(targetId) {
         switchView('profile-view');
     } catch (err) {
         console.error("Error viewing profile:", err);
+        reportConnectionError(err);
         showToast("ไม่สามารถโหลดโปรไฟล์เป้าหมายได้: " + err.message, "danger");
     } finally {
         showSpinner(false);
@@ -2206,27 +2145,39 @@ function setupEventListeners() {
     // Login form submission
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
-        loginForm.addEventListener('submit', (e) => {
+        loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const inputPasscode = document.getElementById('login-passcode').value.trim();
             const errorDiv = document.getElementById('login-error');
             
-            const expectedPasscode = state.apiPasscode || DEFAULT_API_PASSCODE;
-            if (inputPasscode === expectedPasscode) {
+            const submit = loginForm.querySelector('[type="submit"]');
+            submit.disabled = true;
+            state.isAdmin = false;
+            try {
+                const login = await postToAPI('login', {}, inputPasscode);
+                if (!['admin', 'user'].includes(login.data?.role)) throw new Error('กรุณาอัปเดต Apps Script เป็นเวอร์ชันล่าสุด');
+                state.isAdmin = login.data.role === 'admin';
+                document.querySelectorAll('[data-view="settings-view"]').forEach(el => el.hidden = !state.isAdmin);
+                if (state.isAdmin) {
+                    document.getElementById('setting-gas-url').value = state.gasUrl;
+                    document.getElementById('setting-passcode').value = state.apiPasscode;
+                }
                 sessionStorage.setItem('ncd_authenticated', 'true');
                 const loginScreen = document.getElementById('login-screen');
                 if (loginScreen) loginScreen.classList.add('hidden');
                 errorDiv.classList.add('hidden');
-                refreshData();
-                showToast("เข้าสู่ระบบสำเร็จ!");
-            } else {
+                document.getElementById('login-passcode').value = '';
+                if (await refreshData()) showToast('เข้าสู่ระบบและโหลดข้อมูลจริงสำเร็จ');
+            } catch (error) {
+                sessionStorage.removeItem('ncd_authenticated');
+                errorDiv.textContent = error.message;
                 errorDiv.classList.remove('hidden');
                 const passcodeField = document.getElementById('login-passcode');
                 if (passcodeField) {
                     passcodeField.value = '';
                     passcodeField.focus();
                 }
-            }
+            } finally { submit.disabled = false; }
         });
     }
 
@@ -2234,11 +2185,6 @@ function setupEventListeners() {
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
     document.getElementById('font-size-toggle')?.addEventListener('click', toggleFontScale);
     
-    // Close demo banner button
-    document.getElementById('close-demo-banner').addEventListener('click', () => {
-        document.getElementById('demo-banner').classList.add('hidden');
-    });
-
     // Back to list button inside profile
     document.getElementById('back-to-list-btn').addEventListener('click', () => {
         switchView('targets-view');
@@ -2306,8 +2252,12 @@ function setupEventListeners() {
         saveSettings(url, passcode);
     });
 
-    document.getElementById('btn-reset-demo').addEventListener('click', () => {
-        resetToDemo();
+    document.getElementById('retry-connection').addEventListener('click', () => {
+        if (sessionStorage.getItem('ncd_authenticated') === 'true') refreshData();
+    });
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        sessionStorage.removeItem('ncd_authenticated');
+        location.reload();
     });
 
     // --- Modal buttons and forms ---
@@ -2529,27 +2479,11 @@ function setupEventListeners() {
         
         showSpinner(true);
         try {
-            if (state.connectionMode === 'online') {
-                // Post to GAS API
+            {
                 const res = await postToAPI(action, formData);
                 if (!res.success) throw new Error(res.error);
                 
                 showToast(res.data.message || "บันทึกข้อมูลเรียบร้อยแล้ว");
-            } else {
-                // Save locally (Demo Mode simulation)
-                if (action === 'addTarget') {
-                    const newId = state.targets.length + 1;
-                    formData.id = newId;
-                    state.targets.push(formData);
-                    showToast("เพิ่มข้อมูลกลุ่มเป้าหมายใหม่สำเร็จ (โหมดทดลองใช้)");
-                } else {
-                    const idx = state.targets.findIndex(t => t.id === formData.id);
-                    if (idx !== -1) {
-                        state.targets[idx] = { ...state.targets[idx], ...formData };
-                        state.selectedTargetProfile = state.targets[idx];
-                        showToast("อัปเดตข้อมูลสำเร็จ (โหมดทดลองใช้)");
-                    }
-                }
             }
             closeModal('target-modal');
             
@@ -2633,23 +2567,11 @@ function setupEventListeners() {
         
         showSpinner(true);
         try {
-            if (state.connectionMode === 'online') {
+            {
                 const res = await postToAPI('addQuarterly', formData);
                 if (!res.success) throw new Error(res.error);
                 
                 showToast(res.data.message || "บันทึกผลการคัดกรองสำเร็จ!");
-            } else {
-                // Local simulation
-                // Check if already exists for this quarter and target, update it
-                const existingIdx = state.quarterlyData.findIndex(q => q.target_id === targetId && q.quarter === formData.quarter);
-                if (existingIdx !== -1) {
-                    state.quarterlyData[existingIdx] = { ...state.quarterlyData[existingIdx], ...formData };
-                    showToast("อัปเดตผลติดตามเรียบร้อย (โหมดทดลองใช้)");
-                } else {
-                    formData.id = state.quarterlyData.length + 1;
-                    state.quarterlyData.push(formData);
-                    showToast("บันทึกผลติดตามรอบใหม่สำเร็จ (โหมดทดลองใช้)");
-                }
             }
             closeModal('quarterly-modal');
             viewTargetProfile(targetId);
@@ -2705,16 +2627,11 @@ function setupEventListeners() {
         
         showSpinner(true);
         try {
-            if (state.connectionMode === 'online') {
+            {
                 const res = await postToAPI('addDailyLog', formData);
                 if (!res.success) throw new Error(res.error);
                 
                 showToast(res.data.message || "บันทึกพฤติกรรมรายวันสำเร็จ!");
-            } else {
-                // Local simulation
-                formData.id = state.dailyLogs.length + 1;
-                state.dailyLogs.unshift(formData); // Add to top
-                showToast("บันทึกพฤติกรรมสุขภาพรายวันเรียบร้อย (โหมดทดลองใช้)");
             }
             closeModal('daily-modal');
             viewTargetProfile(targetId);
@@ -2728,25 +2645,49 @@ function setupEventListeners() {
 }
 
 // Post request handler using POST redirect trick for GAS (Text payload with text/plain to bypass Preflight)
-async function postToAPI(action, data) {
+async function postToAPI(action, data, passcode = state.apiPasscode) {
+    const isWrite = ['addTarget', 'updateTarget', 'addQuarterly', 'addDailyLog'].includes(action);
+    if (isWrite && (state.connectionMode !== 'online' || !state.connectionReady || sessionStorage.getItem('ncd_authenticated') !== 'true')) {
+        throw new Error('ยังไม่พร้อมบันทึก กรุณาเชื่อมต่อใหม่ให้สำเร็จก่อน ข้อมูลในฟอร์มยังอยู่');
+    }
     if (!state.gasUrl || !state.apiPasscode) {
         throw new Error("ยังไม่ได้ตั้งค่า URL หรือรหัสผ่าน API");
     }
 
     const payload = {
         action: action,
-        passcode: state.apiPasscode,
+        passcode,
         data: data
     };
     
     // We send POST request without headers object to avoid triggering CORS preflight check
-    const response = await fetch(state.gasUrl, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    });
-    
-    const json = await response.json();
-    return json;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 30000);
+    try {
+        const response = await fetch(state.gasUrl, {
+            method: 'POST', body: JSON.stringify(payload), signal: controller.signal
+        });
+        if (!response.ok) throw new Error(`เซิร์ฟเวอร์ตอบ HTTP ${response.status}`);
+        const json = await response.json();
+        if (!json || json.success !== true) throw new Error(json?.error || 'คำตอบจากเซิร์ฟเวอร์ไม่ถูกต้อง');
+        return json;
+    } catch (error) {
+        const message = isWrite
+            ? 'ยังยืนยันผลการบันทึกไม่ได้ กรุณาเชื่อมต่อใหม่และตรวจรายการก่อนบันทึกซ้ำ: '
+            : 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ: ';
+        const failure = new Error(message + (error.name === 'AbortError' ? 'หมดเวลารอเซิร์ฟเวอร์' : error.message));
+        reportConnectionError(failure);
+        throw failure;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+function reportConnectionError(error) {
+    state.connectionReady = false;
+    document.getElementById('connection-error-message').textContent = error.message + ' ระบบหยุดการบันทึกและไม่มีการใช้ข้อมูลจำลอง';
+    document.getElementById('connection-error').classList.remove('hidden');
+    updateConnectionIndicator();
 }
 
 // --- UI Feedback Elements ---
