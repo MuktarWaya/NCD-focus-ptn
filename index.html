@@ -9,7 +9,7 @@
     <!-- Google Fonts: Outfit for English/Numbers & Sarabun for Thai -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Google Material Symbols Outlined -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <!-- Chart.js for data visualization -->
@@ -94,16 +94,16 @@
                         "stack-lg": "2rem"
                     },
                     fontFamily: {
-                        "sans": ["Sarabun", "Outfit", "sans-serif"],
-                        "headline": ["Outfit", "Sarabun", "sans-serif"],
-                        "body-md": ["Sarabun", "sans-serif"],
-                        "body-sm": ["Sarabun", "sans-serif"],
-                        "headline-sm": ["Outfit", "sans-serif"],
-                        "label-caps": ["Outfit", "sans-serif"],
-                        "stat-display": ["Outfit", "sans-serif"],
-                        "headline-lg": ["Outfit", "sans-serif"],
-                        "body-lg": ["Sarabun", "sans-serif"],
-                        "headline-md": ["Outfit", "sans-serif"]
+                        "sans": ["Sarabun", "Noto Sans Thai", "Tahoma", "sans-serif"],
+                        "headline": ["Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", "sans-serif"],
+                        "body-md": ["Sarabun", "Noto Sans Thai", "Tahoma", "sans-serif"],
+                        "body-sm": ["Sarabun", "Noto Sans Thai", "Tahoma", "sans-serif"],
+                        "headline-sm": ["Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", "sans-serif"],
+                        "label-caps": ["Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", "sans-serif"],
+                        "stat-display": ["Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", "sans-serif"],
+                        "headline-lg": ["Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", "sans-serif"],
+                        "body-lg": ["Sarabun", "Noto Sans Thai", "Tahoma", "sans-serif"],
+                        "headline-md": ["Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", "sans-serif"]
                     }
                 }
             }
@@ -130,7 +130,7 @@
             <form id="login-form" class="w-full space-y-4">
                 <div class="relative flex items-center">
                     <span class="material-symbols-outlined absolute left-3 text-outline">lock</span>
-                    <input type="password" id="login-passcode" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-4 py-3 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="กรอกรหัสผ่าน" required>
+                    <input type="password" id="login-passcode" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-4 py-3 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="กรอกรหัสผ่าน" aria-required="true" required>
                 </div>
                 <div id="login-error" class="hidden text-xs text-rose-500 font-medium text-center">รหัสผ่านไม่ถูกต้อง กรุณาลองอีกครั้ง</div>
                 <button type="submit" class="w-full bg-primary text-on-primary font-semibold py-3 rounded-xl hover:bg-primary-container shadow-[0_4px_12px_rgba(0,101,145,0.2)] active:scale-98 transition-all flex items-center justify-center gap-2">
@@ -145,10 +145,10 @@
     <div id="app-container" class="flex flex-1 h-full w-full relative overflow-hidden">
         
         <!-- Mobile navigation overlay -->
-        <button id="mobile-nav-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden md:hidden" type="button" aria-label="ปิดเมนู"></button>
+        <button id="mobile-nav-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-30 hidden lg:hidden" type="button" aria-label="ปิดเมนู"></button>
 
         <!-- Sidebar Navigation -->
-        <aside id="app-sidebar" class="fixed md:relative inset-y-0 left-0 flex flex-col h-full py-stack-lg px-gutter bg-surface-glass backdrop-blur-xl w-72 md:w-64 border-r border-white/40 shadow-sm z-40 shrink-0 -translate-x-full md:translate-x-0 transition-transform duration-300 ease-out">
+        <aside id="app-sidebar" class="fixed lg:relative inset-y-0 left-0 flex flex-col h-full py-stack-lg px-gutter bg-surface-glass backdrop-blur-xl w-72 lg:w-64 border-r border-white/40 shadow-sm z-40 shrink-0 -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-out">
             <div class="mb-8 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                     <span class="material-symbols-outlined text-2xl font-bold">favorite</span>
@@ -157,7 +157,7 @@
                     <h1 class="font-headline text-lg font-bold text-primary">NCDs Focus</h1>
                     <span class="text-xs text-on-surface-variant font-medium">มุ่งเป้าปัตตานี</span>
                 </div>
-                <button id="mobile-nav-close" class="md:hidden w-10 h-10 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors" type="button" aria-label="ปิดเมนู">
+                <button id="mobile-nav-close" class="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors" type="button" aria-label="ปิดเมนู">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -194,7 +194,7 @@
                         <div class="text-xs font-bold text-on-surface truncate">ผู้บันทึกข้อมูล</div>
                         <div class="text-[10px] text-on-surface-variant font-medium truncate">เจ้าหน้าที่สาธารณสุข / อสม.</div>
                     </div>
-                    <button id="logout-btn" class="text-on-surface-variant hover:text-rose-500 p-1 flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors" title="ออกจากระบบ">
+                    <button id="logout-btn" class="text-on-surface-variant hover:text-rose-500 p-1 flex items-center justify-center rounded-lg hover:bg-rose-50 transition-colors" title="ออกจากระบบ" aria-label="ออกจากระบบ">
                         <span class="material-symbols-outlined text-[20px]">logout</span>
                     </button>
                 </div>
@@ -207,7 +207,7 @@
             <!-- Header Bar -->
             <header class="flex justify-between items-center h-16 px-6 sticky top-0 z-20 border-b border-white/40 bg-surface-glass backdrop-blur-md shadow-sm shrink-0">
                 <div class="flex items-center gap-4">
-                    <button id="mobile-nav-toggle" class="md:hidden text-on-surface-variant hover:text-primary p-2 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors" type="button" aria-label="เปิดเมนู" aria-controls="app-sidebar" aria-expanded="false">
+                    <button id="mobile-nav-toggle" class="lg:hidden text-on-surface-variant hover:text-primary p-2 flex items-center justify-center rounded-lg hover:bg-surface-container-low transition-colors" type="button" aria-label="เปิดเมนู" aria-controls="app-sidebar" aria-expanded="false">
                         <span class="material-symbols-outlined">menu</span>
                     </button>
                     <div>
@@ -219,7 +219,7 @@
                     <button class="font-size-toggle" id="font-size-toggle" type="button" aria-label="ปรับขนาดตัวอักษร" title="ปรับขนาดตัวอักษร">
                         <span class="font-size-small">A</span><span class="font-size-large">A</span>
                     </button>
-                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-all" id="theme-toggle">
+                    <button class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-all" id="theme-toggle" aria-label="สลับธีมมืด/สว่าง">
                         <span class="material-symbols-outlined">dark_mode</span>
                     </button>
                     <div class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/40 shadow-sm bg-white/50" id="conn-status-indicator">
@@ -235,7 +235,7 @@
                 <!-- VIEW 1: Dashboard View -->
                 <section id="dashboard-view" class="view-section space-y-6">
                     <!-- Statistics Summary Cards -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
                         <!-- Stat 1 -->
                         <div class="glass-card rounded-2xl p-5 flex flex-col justify-between">
                             <div class="flex justify-between items-start mb-4">
@@ -293,6 +293,35 @@
                         </div>
                     </div>
 
+                    <!-- Priority: follow-up cases (above analytics) -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                            <div class="min-w-0">
+                                <h3 class="font-headline text-base font-bold text-risk-warning flex items-center gap-2">
+                                    <span class="material-symbols-outlined">notifications_active</span>
+                                    รายการที่ควรติดตาม/ประเมินซ้ำ
+                                </h3>
+                                <p class="text-xs text-on-surface-variant mt-1">พบค่าความดันหรือน้ำตาลสูงกว่าจุดคัดกรองจากผลติดตามล่าสุด</p>
+                            </div>
+                            <span class="text-xs text-on-surface-variant font-semibold shrink-0" id="urgent-count-label"></span>
+                        </div>
+                        <div class="hidden md:block overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-100/50 text-slate-600 font-semibold border-b border-slate-200">
+                                    <tr>
+                                        <th class="py-2.5 px-4 rounded-l-lg">ชื่อ-สกุล</th>
+                                        <th class="py-2.5 px-3">ประเภท</th>
+                                        <th class="py-2.5 px-3">ความดัน (BP)</th>
+                                        <th class="py-2.5 px-3">น้ำตาล (DTX)</th>
+                                        <th class="py-2.5 px-4 rounded-r-lg text-center">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dashboard-urgent-list" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                        <div class="md:hidden space-y-2" id="dashboard-urgent-cards"></div>
+                    </div>
+
                     <!-- Ping-Pong 7-color distribution -->
                     <div class="glass-card rounded-2xl p-6">
                         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
@@ -317,7 +346,7 @@
                                 <span class="material-symbols-outlined text-primary">home_work</span>
                                 ความก้าวหน้ากลุ่มเป้าหมายแยกตามหมู่บ้าน
                             </h3>
-                            <span class="text-xs text-on-surface-variant font-medium">นับเฉพาะกลุ่มเป้าหมาย 200 คน</span>
+                            <span class="text-xs text-on-surface-variant font-medium">ความคืบหน้าการติดตามรายหมู่บ้าน</span>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="village-progress-container">
                             <!-- Dynamic village cards will be rendered here -->
@@ -359,6 +388,9 @@
                             </h3>
                             <div class="h-64 relative">
                                 <canvas id="improvement-chart"></canvas>
+                                <div id="improvement-empty" class="hidden absolute inset-0 flex items-center justify-center px-4">
+                                    <span class="text-sm text-on-surface-variant text-center">ยังไม่มีข้อมูลการเปรียบเทียบผลติดตาม<br>เพื่อคำนวณอัตราการดีขึ้น</span>
+                                </div>
                             </div>
                         </div>
 
@@ -371,34 +403,8 @@
                         </div>
                     </div>
 
-                    <!-- High Risk & Recent Updates -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <!-- High Risk Alerts Table -->
-                        <div class="glass-card rounded-2xl p-6">
-                            <h3 class="font-headline text-base font-bold text-risk-danger mb-4 flex items-center gap-2">
-                                <span class="material-symbols-outlined">notifications_active</span>
-                                เป้าหมายที่ต้องการการดูแลเร่งด่วน (ค่าน้ำตาล/ความดันสูงมาก)
-                            </h3>
-                            <div class="overflow-x-auto">
-                                <table class="w-full text-left text-sm">
-                                    <thead class="bg-slate-100/50 text-slate-600 font-semibold border-b border-slate-200">
-                                        <tr>
-                                            <th class="py-2.5 px-4 rounded-l-lg">ชื่อ-สกุล</th>
-                                            <th class="py-2.5 px-3">ประเภท</th>
-                                            <th class="py-2.5 px-3">ความดัน (BP)</th>
-                                            <th class="py-2.5 px-3">น้ำตาล (DTX)</th>
-                                            <th class="py-2.5 px-4 rounded-r-lg text-center">จัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dashboard-urgent-list" class="divide-y divide-slate-100">
-                                        <!-- Dynamic rows will be inserted here -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                        <!-- Behavior statistics -->
-                        <div class="glass-card rounded-2xl p-6">
+                    <!-- Behavior statistics -->
+                    <div class="glass-card rounded-2xl p-6">
                             <h3 class="font-headline text-base font-bold text-on-surface mb-6 flex items-center gap-2">
                                 <span class="material-symbols-outlined text-primary">analytics</span>
                                 ภาพรวมจากสรุปสมุดกระดาษ (สัปดาห์ล่าสุด)
@@ -458,75 +464,107 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
                 </section>
 
                 <!-- VIEW 2: Targets List View -->
                 <section id="targets-view" class="view-section space-y-6 hidden">
-                    <!-- Advanced Filters (Glassmorphism Bar) -->
-                    <div class="glass-card rounded-2xl p-5 flex flex-col lg:flex-row gap-4 items-end">
-                        <div class="w-full lg:w-1/5 relative flex items-center">
-                            <span class="material-symbols-outlined absolute left-3 text-outline">search</span>
-                            <input type="text" id="target-search-input" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-4 py-2.5 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="ค้นหา ชื่อ บ้านเลขที่ หมู่บ้าน หรือคณะทำงาน...">
-                        </div>
-                        <div class="w-full sm:w-1/2 lg:w-1/6">
-                            <label for="filter-type" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">ประเภทกลุ่ม</label>
-                            <div class="relative">
-                                <select id="filter-type" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
-                                    <option value="all">ทั้งหมด (กลุ่มเสี่ยง/กลุ่มป่วย)</option>
-                                    <option value="กลุ่มเสี่ยง">กลุ่มเสี่ยง</option>
-                                    <option value="กลุ่มป่วย">กลุ่มป่วย</option>
-                                </select>
-                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                    <!-- Filters (search + collapsible filters + add) -->
+                    <div class="glass-card rounded-2xl p-5 flex flex-col gap-4">
+                        <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                            <div class="flex-1 relative flex items-center">
+                                <span class="material-symbols-outlined absolute left-3 text-outline">search</span>
+                                <input type="text" id="target-search-input" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl pl-10 pr-10 py-3 font-body-sm text-sm text-on-surface placeholder:text-outline-variant focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="ค้นหา ชื่อ บ้านเลขที่ หมู่บ้าน หรือคณะทำงาน...">
+                                <button type="button" id="target-search-clear" class="hidden absolute right-2 text-outline hover:text-on-surface p-1 rounded-lg" aria-label="ล้างคำค้น"><span class="material-symbols-outlined text-[18px]">close</span></button>
                             </div>
-                        </div>
-                        <div class="w-full sm:w-1/2 lg:w-1/6">
-                            <label for="filter-village" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">หมู่บ้าน</label>
-                            <div class="relative">
-                                <select id="filter-village" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
-                                    <option value="all">ทุกหมู่บ้าน</option>
-                                    <option value="หมู่ 2 บ้านตรัง">หมู่ 2 บ้านตรัง</option>
-                                    <option value="หมู่ 3 บ้านเขาวัง">หมู่ 3 บ้านเขาวัง</option>
-                                    <option value="หมู่ 4 บ้านม่วงเงิน">หมู่ 4 บ้านม่วงเงิน</option>
-                                    <option value="หมู่ 1 บ้านบองอ">หมู่ 1 บ้านบองอ</option>
-                                </select>
-                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
-                            </div>
-                        </div>
-                        <div class="w-full sm:w-1/2 lg:w-1/6">
-                            <label for="filter-worker" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">คณะทำงาน</label>
-                            <div class="relative">
-                                <select id="filter-worker" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
-                                    <option value="all">ทุกคณะทำงาน</option>
-                                </select>
-                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
-                            </div>
-                        </div>
-                        <div class="w-full sm:w-1/2 lg:w-1/6">
-                            <label for="filter-disease" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">โรค/ภาวะเสี่ยง</label>
-                            <div class="relative">
-                                <select id="filter-disease" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
-                                    <option value="all">โรคทั้งหมด</option>
-                                    <option value="DM">เบาหวาน (DM)</option>
-                                    <option value="HT">ความดัน (HT)</option>
-                                    <option value="Obesity">โรคอ้วน (BMI >= 25)</option>
-                                    <option value="Dyslipidemia">ไขมันในเลือดสูง (Dyslipidemia)</option>
-                                </select>
-                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
-                            </div>
-                        </div>
-                        <div class="w-full lg:w-auto shrink-0">
-                            <button class="w-full lg:w-auto bg-primary text-on-primary px-6 py-2.5 rounded-xl font-semibold shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all flex items-center justify-center gap-2" id="btn-add-target">
+                            <button type="button" id="targets-filter-toggle" class="lg:hidden shrink-0 bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-3 text-sm font-semibold text-on-surface flex items-center justify-center gap-2" aria-expanded="false" aria-controls="targets-filter-panel">
+                                <span class="material-symbols-outlined text-[18px]">tune</span>
+                                <span>ตัวกรอง</span>
+                            </button>
+                            <button class="shrink-0 bg-primary text-on-primary px-6 py-3 rounded-xl font-semibold shadow-[0_4px_12px_rgba(0,101,145,0.2)] hover:bg-primary-container active:scale-98 transition-all flex items-center justify-center gap-2" id="btn-add-target">
                                 <span class="material-symbols-outlined text-[20px]">person_add</span>
                                 <span>เพิ่มเป้าหมายใหม่</span>
                             </button>
                         </div>
+                        <div id="targets-filter-panel" class="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div>
+                                <label for="filter-type" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">ประเภทกลุ่ม</label>
+                                <div class="relative">
+                                    <select id="filter-type" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                        <option value="all">ทั้งหมด (กลุ่มเสี่ยง/กลุ่มป่วย)</option>
+                                        <option value="กลุ่มเสี่ยง">กลุ่มเสี่ยง</option>
+                                        <option value="กลุ่มป่วย">กลุ่มป่วย</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="filter-village" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">หมู่บ้าน</label>
+                                <div class="relative">
+                                    <select id="filter-village" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                        <option value="all">ทุกหมู่บ้าน</option>
+                                        <option value="หมู่ 2 บ้านตรัง">หมู่ 2 บ้านตรัง</option>
+                                        <option value="หมู่ 3 บ้านเขาวัง">หมู่ 3 บ้านเขาวัง</option>
+                                        <option value="หมู่ 4 บ้านม่วงเงิน">หมู่ 4 บ้านม่วงเงิน</option>
+                                        <option value="หมู่ 1 บ้านบองอ">หมู่ 1 บ้านบองอ</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="filter-worker" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">คณะทำงาน</label>
+                                <div class="relative">
+                                    <select id="filter-worker" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                        <option value="all">ทุกคณะทำงาน</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label for="filter-disease" class="block font-label-caps text-[10px] font-bold text-outline uppercase tracking-wider mb-1.5">โรค/ภาวะเสี่ยง</label>
+                                <div class="relative">
+                                    <select id="filter-disease" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all">
+                                        <option value="all">โรคทั้งหมด</option>
+                                        <option value="DM">เบาหวาน (DM)</option>
+                                        <option value="HT">ความดัน (HT)</option>
+                                        <option value="Obesity">โรคอ้วน (BMI >= 25)</option>
+                                        <option value="Dyslipidemia">ไขมันในเลือดสูง (Dyslipidemia)</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Targets Grid Container (Bento layout) -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="targets-cards-container">
-                        <!-- Dynamic cards will be rendered here by app.js -->
+                    <!-- Result count -->
+                    <div id="targets-result-count" class="flex items-center justify-between text-sm text-on-surface-variant font-semibold px-1"></div>
+
+                    <!-- Desktop table (>=768px) -->
+                    <div id="targets-table-wrap" class="hidden xl:block glass-card rounded-2xl overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm border-collapse">
+                                <thead>
+                                    <tr class="text-left text-on-surface-variant border-b border-outline-variant/40 bg-slate-50/60">
+                                        <th class="py-3 px-4 font-label-caps text-[11px] uppercase tracking-wider font-bold">ชื่อ-สกุล</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold">อายุ</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold">หมู่บ้าน</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold">ประเภท</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold">BP ล่าสุด</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold">DTX ล่าสุด</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold">สถานะ</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold">ติดตามล่าสุด</th>
+                                        <th class="py-3 px-3 font-label-caps text-[11px] uppercase tracking-wider font-bold text-right">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="targets-table-body" class="divide-y divide-slate-100">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="targets-empty" class="hidden p-10 text-center text-on-surface-variant font-semibold"></div>
                     </div>
+
+                    <!-- Mobile patient cards (<768px) -->
+                    <div id="targets-mobile-list" class="xl:hidden grid grid-cols-1 md:grid-cols-2 gap-3"></div>
 
                     <!-- Pagination -->
                     <div class="flex justify-between items-center bg-white/50 border border-white/60 rounded-2xl p-4 shadow-sm" id="targets-pagination">
@@ -695,6 +733,20 @@
                         </div>
                     </div>
 
+                    <!-- Clinical Snapshot (latest follow-up) -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <div class="flex items-center justify-between gap-3 mb-4">
+                            <h3 class="font-headline text-base font-bold text-on-surface flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">monitor_heart</span>
+                                ผลติดตามล่าสุด
+                            </h3>
+                            <span id="profile-latest-date" class="text-xs text-on-surface-variant font-semibold"></span>
+                        </div>
+                        <div id="profile-snapshot" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                            <!-- dynamic snapshot rendered by app.js -->
+                        </div>
+                    </div>
+
                     <div class="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
                         <div>
                             <h2 class="font-headline text-lg font-bold text-on-surface">สมุดติดตามสุขภาพ 24 สัปดาห์</h2>
@@ -722,10 +774,6 @@
                                 <div class="rounded-xl bg-rose-50 border border-rose-100 p-3 col-span-2"><strong class="block text-rose-600">ค่าแล็บใหญ่</strong> ตรวจเฉพาะเริ่มต้น สัปดาห์ 12 และ 24</div>
                             </div>
                         </details>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="quarterly-timeline">
-                            <!-- Dynamic 2-week tracking cards rendered by app.js -->
-                        </div>
 
                         <!-- Trend Charts -->
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -759,10 +807,20 @@
                                 <canvas id="chart-body-composition"></canvas>
                             </div>
                         </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5" id="quarterly-timeline">
+                            <!-- Dynamic 2-week tracking cards rendered by app.js -->
+                        </div>
                     </div>
 
-                    <!-- ข้อมูลรายวันเดิมยังคงอยู่ในฐานข้อมูล แต่ไม่เปิดให้กรอกหรือแสดงในระบบใหม่ -->
-                    <div class="tab-content hidden" id="tab-daily" aria-hidden="true">
+                    <!-- Daily behavior logs -->
+                    <div id="tab-daily" class="space-y-6">
+                        <div class="flex items-center gap-3 border-b border-slate-200 pb-3 pt-2">
+                            <div>
+                                <h2 class="font-headline text-lg font-bold text-on-surface">พฤติกรรมสุขภาพรายวัน</h2>
+                                <p class="text-xs text-on-surface-variant mt-1">บันทึกพฤติกรรมรายวันของบุคคลนี้</p>
+                            </div>
+                        </div>
                         <div class="glass-card rounded-2xl p-6">
                             <h3 class="font-headline text-base font-bold text-on-surface mb-4">ประวัติการบันทึกพฤติกรรมสุขภาพรายวัน</h3>
                             <div class="overflow-x-auto">
@@ -1007,9 +1065,10 @@
 
     <nav class="mobile-bottom-nav" aria-label="เมนูหลักบนมือถือ">
         <a href="#" class="mobile-nav-item active" data-view="dashboard-view"><span class="material-symbols-outlined">dashboard</span><span>หน้าหลัก</span></a>
-        <a href="#" class="mobile-nav-item" data-view="targets-view"><span class="material-symbols-outlined">groups</span><span>รายชื่อ</span></a>
-        <a href="#" class="mobile-nav-item" data-view="registry-view"><span class="material-symbols-outlined">sports_tennis</span><span>ทะเบียนสี</span></a>
-        <a href="#" class="mobile-nav-item" data-view="interpreter-view"><span class="material-symbols-outlined">analytics</span><span>แปลผล</span></a>
+        <a href="#" class="mobile-nav-item" data-view="targets-view"><span class="material-symbols-outlined">groups</span><span>กลุ่มเป้าหมาย</span></a>
+        <button type="button" class="mobile-nav-item mobile-nav-primary" id="quick-record-btn" aria-label="บันทึกผลติดตาม"><span class="material-symbols-outlined">add_circle</span><span>บันทึกผล</span></button>
+        <a href="#" class="mobile-nav-item" data-view="registry-view"><span class="material-symbols-outlined">sports_tennis</span><span>ทะเบียน</span></a>
+        <button type="button" class="mobile-nav-item" id="more-menu-btn" aria-label="เมนูเพิ่มเติม" aria-haspopup="true"><span class="material-symbols-outlined">menu</span><span>อื่น ๆ</span></button>
     </nav>
 
      <!-- ==================== MODAL OVERLAYS ==================== -->
@@ -1019,7 +1078,7 @@
         <div class="glass-floating rounded-2xl max-w-lg w-full border border-white/50 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                 <h3 id="target-modal-title" class="font-headline font-bold text-primary">เพิ่มข้อมูลกลุ่มเป้าหมายใหม่</h3>
-                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors" aria-label="ปิดหน้าต่าง">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -1029,12 +1088,12 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label for="form-target-name" class="block text-xs font-semibold text-slate-700">ชื่อ-สกุล *</label>
-                            <input type="text" id="form-target-name" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="นาย/นาง/นางสาว สมจิต มั่นคง" required>
+                            <input type="text" id="form-target-name" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="นาย/นาง/นางสาว สมจิต มั่นคง" aria-required="true" required>
                         </div>
                         <div class="space-y-1">
                             <label for="form-target-type" class="block text-xs font-semibold text-slate-700">ประเภทกลุ่ม *</label>
                             <div class="relative">
-                                <select id="form-target-type" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <select id="form-target-type" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                                     <option value="กลุ่มเสี่ยง">กลุ่มเสี่ยง</option>
                                     <option value="กลุ่มป่วย">กลุ่มป่วย</option>
                                 </select>
@@ -1046,23 +1105,23 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label for="form-target-age" class="block text-xs font-semibold text-slate-700">อายุ (ปี) *</label>
-                            <input type="number" id="form-target-age" min="1" max="120" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                            <input type="number" id="form-target-age" min="1" max="120" inputmode="numeric" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                         </div>
                         <div class="space-y-1">
                             <label for="form-target-height" class="block text-xs font-semibold text-slate-700">ส่วนสูง (ซม.) *</label>
-                            <input type="number" id="form-target-height" step="0.1" min="100" max="220" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                            <input type="number" id="form-target-height" step="0.1" min="100" max="220" inputmode="decimal" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div class="space-y-1">
                             <label for="form-target-address" class="block text-xs font-semibold text-slate-700">บ้านเลขที่ *</label>
-                            <input type="text" id="form-target-address" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="24/1" required>
+                            <input type="text" id="form-target-address" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="24/1" aria-required="true" required>
                         </div>
                         <div class="space-y-1">
                             <label for="form-target-village" class="block text-xs font-semibold text-slate-700">หมู่บ้าน *</label>
                             <div class="relative">
-                                <select id="form-target-village" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <select id="form-target-village" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                                     <option value="">เลือกหมู่บ้าน</option>
                                     <option value="หมู่ 2 บ้านตรัง">หมู่ 2 บ้านตรัง</option>
                                     <option value="หมู่ 3 บ้านเขาวัง">หมู่ 3 บ้านเขาวัง</option>
@@ -1077,7 +1136,7 @@
                     <div class="space-y-1">
                         <label for="form-target-worker" class="block text-xs font-semibold text-slate-700">คณะทำงานที่รับผิดชอบ *</label>
                         <div class="relative">
-                            <select id="form-target-worker" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                            <select id="form-target-worker" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 font-body-sm text-sm text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                                 <option value="">เลือกคณะทำงาน</option>
                             </select>
                             <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
@@ -1122,7 +1181,7 @@
                     <h3 class="font-headline font-bold text-primary">บันทึกผลติดตามทุก 2 สัปดาห์</h3>
                     <p class="text-[11px] text-on-surface-variant mt-0.5">ผลตรวจร่างกาย 1 ชุด + สรุปจากสมุดกระดาษ 2 สัปดาห์</p>
                 </div>
-                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors" aria-label="ปิดหน้าต่าง">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -1136,7 +1195,7 @@
                             <div class="space-y-1">
                                 <label for="form-q-round" class="block text-xs font-semibold text-slate-700">ครั้งที่ติดตาม *</label>
                                 <div class="relative">
-                                    <select id="form-q-round" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                    <select id="form-q-round" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                                         <option value="W0">ครั้งที่ 1 (เริ่มต้น)</option>
                                         <option value="W2">ครั้งที่ 2 (สัปดาห์ 2)</option>
                                         <option value="W4">ครั้งที่ 3 (สัปดาห์ 4)</option>
@@ -1156,7 +1215,7 @@
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-date" class="block text-xs font-semibold text-slate-700">วันที่เก็บข้อมูล *</label>
-                                <input type="text" id="form-q-date" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 26/06/2026" required>
+                                <input type="text" id="form-q-date" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 26/06/2026" aria-required="true" required>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-height" class="block text-xs font-semibold text-slate-700">ส่วนสูง ณ วันเก็บข้อมูล (ซม.)</label>
@@ -1170,20 +1229,20 @@
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div class="space-y-1">
                                 <label for="form-q-weight" class="block text-xs font-semibold text-slate-700">น้ำหนัก (กก.) *</label>
-                                <input type="number" id="form-q-weight" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <input type="number" id="form-q-weight" step="0.1" inputmode="decimal" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                                 <div id="form-q-badge-bmi" class="text-[10px] font-bold mt-1 text-slate-400">BMI: -</div>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-waist" class="block text-xs font-semibold text-slate-700">รอบเอว (ซม.) *</label>
-                                <input type="number" id="form-q-waist" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <input type="number" id="form-q-waist" step="0.1" inputmode="decimal" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-bp" class="block text-xs font-semibold text-slate-700">ความดัน (เช่น 120/80) *</label>
-                                <input type="text" id="form-q-bp" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="SYS/DIA" required>
+                                <input type="text" id="form-q-bp" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="SYS/DIA" aria-required="true" required>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-dtx" class="block text-xs font-semibold text-slate-700">ระดับน้ำตาล DTX (มก./ดล.) *</label>
-                                <input type="number" id="form-q-dtx" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <input type="number" id="form-q-dtx" inputmode="numeric" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                             </div>
                         </div>
                     </div>
@@ -1194,22 +1253,22 @@
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                             <div class="space-y-1">
                                 <label for="form-q-fat" class="block text-xs font-semibold text-slate-700">ไขมันในร่างกาย (%)</label>
-                                <input type="number" id="form-q-fat" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-fat" inputmode="decimal" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                                 <div id="form-q-badge-fat" class="text-[10px] font-bold mt-1 text-slate-400">ไขมัน: -</div>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-muscle" class="block text-xs font-semibold text-slate-700">มวลกล้ามเนื้อ (%)</label>
-                                <input type="number" id="form-q-muscle" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-muscle" inputmode="decimal" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                                 <div id="form-q-badge-muscle" class="text-[10px] font-bold mt-1 text-slate-400">กล้ามเนื้อ: -</div>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-visceral" class="block text-xs font-semibold text-slate-700">ไขมันช่องท้อง (ระดับ)</label>
-                                <input type="number" id="form-q-visceral" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-visceral" inputmode="numeric" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                                 <div id="form-q-badge-visceral" class="text-[10px] font-bold mt-1 text-slate-400">ช่องท้อง: -</div>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-bodyage" class="block text-xs font-semibold text-slate-700">อายุร่างกาย (ปี)</label>
-                                <input type="number" id="form-q-bodyage" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-bodyage" inputmode="numeric" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                             </div>
                         </div>
                     </div>
@@ -1232,21 +1291,21 @@
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="space-y-1">
                                         <label for="form-q-w1-exercise" class="block text-xs font-semibold">ออกกำลังกายรวม (นาที) *</label>
-                                        <input type="number" id="form-q-w1-exercise" min="0" max="10080" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" required>
+                                        <input type="number" id="form-q-w1-exercise" inputmode="numeric" min="0" max="10080" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" aria-required="true" required>
                                     </div>
                                     <div class="space-y-1">
                                         <label for="form-q-w1-menu" class="block text-xs font-semibold">วันเมนูสุขภาพ (0–7) *</label>
-                                        <input type="number" id="form-q-w1-menu" min="0" max="7" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" required>
+                                        <input type="number" id="form-q-w1-menu" inputmode="numeric" min="0" max="7" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" aria-required="true" required>
                                     </div>
                                     <div class="space-y-1 col-span-2 sm:col-span-1">
                                         <label for="form-q-w1-sleep" class="block text-xs font-semibold">นอนเฉลี่ย (ชม./วัน) *</label>
-                                        <input type="number" id="form-q-w1-sleep" min="0" max="24" step="0.01" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" required>
+                                        <input type="number" id="form-q-w1-sleep" inputmode="decimal" min="0" max="24" step="0.01" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" aria-required="true" required>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-2 mt-3">
-                                    <div><label for="form-q-w1-sweet" class="block text-[10px] font-bold mb-1">เลี่ยงหวาน</label><input type="number" id="form-q-w1-sweet" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" required></div>
-                                    <div><label for="form-q-w1-oil" class="block text-[10px] font-bold mb-1">เลี่ยงมัน</label><input type="number" id="form-q-w1-oil" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" required></div>
-                                    <div><label for="form-q-w1-salt" class="block text-[10px] font-bold mb-1">เลี่ยงเค็ม</label><input type="number" id="form-q-w1-salt" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" required></div>
+                                    <div><label for="form-q-w1-sweet" class="block text-[10px] font-bold mb-1">เลี่ยงหวาน</label><input type="number" id="form-q-w1-sweet" inputmode="numeric" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" aria-required="true" required></div>
+                                    <div><label for="form-q-w1-oil" class="block text-[10px] font-bold mb-1">เลี่ยงมัน</label><input type="number" id="form-q-w1-oil" inputmode="numeric" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" aria-required="true" required></div>
+                                    <div><label for="form-q-w1-salt" class="block text-[10px] font-bold mb-1">เลี่ยงเค็ม</label><input type="number" id="form-q-w1-salt" inputmode="numeric" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" aria-required="true" required></div>
                                 </div>
                             </section>
 
@@ -1258,21 +1317,21 @@
                                 <div class="grid grid-cols-2 gap-3">
                                     <div class="space-y-1">
                                         <label for="form-q-w2-exercise" class="block text-xs font-semibold">ออกกำลังกายรวม (นาที) *</label>
-                                        <input type="number" id="form-q-w2-exercise" min="0" max="10080" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" required>
+                                        <input type="number" id="form-q-w2-exercise" inputmode="numeric" min="0" max="10080" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" aria-required="true" required>
                                     </div>
                                     <div class="space-y-1">
                                         <label for="form-q-w2-menu" class="block text-xs font-semibold">วันเมนูสุขภาพ (0–7) *</label>
-                                        <input type="number" id="form-q-w2-menu" min="0" max="7" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" required>
+                                        <input type="number" id="form-q-w2-menu" inputmode="numeric" min="0" max="7" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" aria-required="true" required>
                                     </div>
                                     <div class="space-y-1 col-span-2 sm:col-span-1">
                                         <label for="form-q-w2-sleep" class="block text-xs font-semibold">นอนเฉลี่ย (ชม./วัน) *</label>
-                                        <input type="number" id="form-q-w2-sleep" min="0" max="24" step="0.01" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" required>
+                                        <input type="number" id="form-q-w2-sleep" inputmode="decimal" min="0" max="24" step="0.01" class="weekly-summary-input w-full rounded-xl border-outline-variant/60 bg-white/80 px-3 py-2" aria-required="true" required>
                                     </div>
                                 </div>
                                 <div class="grid grid-cols-3 gap-2 mt-3">
-                                    <div><label for="form-q-w2-sweet" class="block text-[10px] font-bold mb-1">เลี่ยงหวาน</label><input type="number" id="form-q-w2-sweet" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" required></div>
-                                    <div><label for="form-q-w2-oil" class="block text-[10px] font-bold mb-1">เลี่ยงมัน</label><input type="number" id="form-q-w2-oil" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" required></div>
-                                    <div><label for="form-q-w2-salt" class="block text-[10px] font-bold mb-1">เลี่ยงเค็ม</label><input type="number" id="form-q-w2-salt" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" required></div>
+                                    <div><label for="form-q-w2-sweet" class="block text-[10px] font-bold mb-1">เลี่ยงหวาน</label><input type="number" id="form-q-w2-sweet" inputmode="numeric" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" aria-required="true" required></div>
+                                    <div><label for="form-q-w2-oil" class="block text-[10px] font-bold mb-1">เลี่ยงมัน</label><input type="number" id="form-q-w2-oil" inputmode="numeric" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" aria-required="true" required></div>
+                                    <div><label for="form-q-w2-salt" class="block text-[10px] font-bold mb-1">เลี่ยงเค็ม</label><input type="number" id="form-q-w2-salt" inputmode="numeric" min="1" max="5" step="0.01" class="weekly-summary-input w-full rounded-lg border-outline-variant/60 bg-white/80 px-2 py-2" aria-required="true" required></div>
                                 </div>
                             </section>
                         </div>
@@ -1285,29 +1344,29 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div class="space-y-1">
                                 <label for="form-q-hba1c" class="block text-xs font-semibold text-slate-700">HbA1C (%)</label>
-                                <input type="number" id="form-q-hba1c" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-hba1c" inputmode="decimal" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-egfr" class="block text-xs font-semibold text-slate-700">eGFR (มล./นาที/1.73 ตร.ม.)</label>
-                                <input type="number" id="form-q-egfr" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-egfr" inputmode="decimal" step="0.1" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-creatinine" class="block text-xs font-semibold text-slate-700">Creatinine (มก./ดล.)</label>
-                                <input type="number" id="form-q-creatinine" step="0.01" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-creatinine" inputmode="decimal" step="0.01" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                             </div>
                         </div>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
                             <div class="space-y-1">
                                 <label for="form-q-trigly" class="block text-xs font-semibold text-slate-700">Triglyceride (มก./ดล.)</label>
-                                <input type="number" id="form-q-trigly" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-trigly" inputmode="numeric" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-ldl" class="block text-xs font-semibold text-slate-700">LDL-C (มก./ดล.)</label>
-                                <input type="number" id="form-q-ldl" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-ldl" inputmode="numeric" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                             </div>
                             <div class="space-y-1">
                                 <label for="form-q-chol" class="block text-xs font-semibold text-slate-700">Cholesterol ทั้งหมด (มก./ดล.)</label>
-                                <input type="number" id="form-q-chol" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
+                                <input type="number" id="form-q-chol" inputmode="numeric" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all">
                             </div>
                         </div>
                     </div>
@@ -1330,7 +1389,7 @@
         <div class="glass-floating rounded-2xl max-w-md w-full border border-white/50 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50/50">
                 <h3>บันทึกพฤติกรรมสุขภาพรายวัน</h3>
-                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
+                <button class="close-modal-btn text-slate-500 hover:text-slate-700 p-1 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors" aria-label="ปิดหน้าต่าง">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
@@ -1340,12 +1399,12 @@
                     <div class="grid grid-cols-3 gap-4">
                         <div class="space-y-1">
                             <label for="form-d-week" class="block text-xs font-semibold text-slate-700">สัปดาห์ที่ *</label>
-                            <input type="text" id="form-d-week" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น สัปดาห์ที่ 1" required>
+                            <input type="text" id="form-d-week" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น สัปดาห์ที่ 1" aria-required="true" required>
                         </div>
                         <div class="space-y-1">
                             <label for="form-d-day" class="block text-xs font-semibold text-slate-700">วัน *</label>
                             <div class="relative">
-                                <select id="form-d-day" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" required>
+                                <select id="form-d-day" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface appearance-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" aria-required="true" required>
                                     <option value="จันทร์">จันทร์</option>
                                     <option value="อังคาร">อังคาร</option>
                                     <option value="พุธ">พุธ</option>
@@ -1359,7 +1418,7 @@
                         </div>
                         <div class="space-y-1">
                             <label for="form-d-date" class="block text-xs font-semibold text-slate-700">วันที่ *</label>
-                            <input type="text" id="form-d-date" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 26/06/2026" required>
+                            <input type="text" id="form-d-date" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="เช่น 26/06/2026" aria-required="true" required>
                         </div>
                     </div>
 
@@ -1368,15 +1427,15 @@
                         <div class="grid grid-cols-3 gap-4">
                             <div class="space-y-1">
                                 <label for="form-d-sweet" class="block text-xs font-semibold text-slate-700">เลี่ยงหวาน *</label>
-                                <input type="number" id="form-d-sweet" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" required>
+                                <input type="number" id="form-d-sweet" inputmode="numeric" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" aria-required="true" required>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-d-oil" class="block text-xs font-semibold text-slate-700">เลี่ยงมัน *</label>
-                                <input type="number" id="form-d-oil" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" required>
+                                <input type="number" id="form-d-oil" inputmode="numeric" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" aria-required="true" required>
                             </div>
                             <div class="space-y-1">
                                 <label for="form-d-salt" class="block text-xs font-semibold text-slate-700">เลี่ยงเค็ม *</label>
-                                <input type="number" id="form-d-salt" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" required>
+                                <input type="number" id="form-d-salt" inputmode="numeric" min="1" max="5" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="3" aria-required="true" required>
                             </div>
                         </div>
                     </div>
@@ -1395,17 +1454,17 @@
                                 </div>
                                 <div class="space-y-1">
                                     <label for="form-d-exduration" class="block text-xs font-semibold text-slate-700">ระยะเวลา (นาที)</label>
-                                    <input type="number" id="form-d-exduration" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="0">
+                                    <input type="number" id="form-d-exduration" inputmode="numeric" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="0">
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="space-y-1">
                                     <label for="form-d-water" class="block text-xs font-semibold text-slate-700">ดื่มน้ำสะอาด (แก้ว)</label>
-                                    <input type="number" id="form-d-water" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="8">
+                                    <input type="number" id="form-d-water" inputmode="numeric" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="8">
                                 </div>
                                 <div class="space-y-1">
                                     <label for="form-d-sleep" class="block text-xs font-semibold text-slate-700">นอนหลับพักผ่อน (ชั่วโมง)</label>
-                                    <input type="number" id="form-d-sleep" step="0.5" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="7">
+                                    <input type="number" id="form-d-sleep" inputmode="decimal" step="0.5" min="0" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-3 py-2 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" value="7">
                                 </div>
                             </div>
                         </div>

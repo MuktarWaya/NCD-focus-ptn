@@ -12,6 +12,8 @@
 :root {
     /* Brand — medical teal (from prototype) */
     --brand: #0f766e;
+    --brand-2: #14b8a6;
+    --brand-3: #0d9488;
     --brand-hover: #115e59;
     --brand-deep: #134e4a;
     --brand-soft: #ccfbf1;
@@ -53,6 +55,42 @@
 }
 
 /* ---------------------------------------------------------------------------
+   1b. Standardized design tokens (Phase 1) — reusable aliases
+   --------------------------------------------------------------------------- */
+:root {
+    --color-brand-primary: var(--brand);
+    --color-brand-secondary: var(--brand-2);
+    --color-brand-tertiary: var(--brand-3);
+
+    --color-risk-normal: #16a34a;
+    --color-risk-watch: #eab308;
+    --color-risk-warning: #d97706;
+    --color-risk-danger: #dc2626;
+
+    --surface-page: #e8f0f2;
+    --surface-card: rgba(255, 255, 255, 0.86);
+    --surface-elevated: #ffffff;
+
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+
+    --radius-sm: 12px;
+    --radius-md: 16px;
+    --radius-lg: 22px;
+    --radius-xl: 28px;
+
+    --shadow-sm: 0 4px 14px -6px rgba(15, 42, 60, 0.14);
+    --shadow-md: 0 10px 34px -18px rgba(15, 42, 60, 0.28);
+    --shadow-lg: 0 22px 48px -22px rgba(15, 118, 110, 0.35);
+
+    /* Mobile shell (Phase 2) */
+    --mobile-nav-height: 76px;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --quick-action-lift: 12px;
+}
+
+/* ---------------------------------------------------------------------------
    2. Base
    --------------------------------------------------------------------------- */
 html { scroll-behavior: smooth; }
@@ -61,12 +99,19 @@ body {
     color: var(--ink) !important;
     background-color: var(--page) !important;
     background-image:
-        radial-gradient(90% 60% at 50% -5%, #f7fbfb 0%, var(--page) 60%),
-        radial-gradient(60% 40% at 100% 0%, #eafaf6 0%, transparent 60%) !important;
+        radial-gradient(120% 90% at 100% -10%, #d3f6ef 0%, transparent 55%),
+        radial-gradient(90% 70% at -10% 0%, #e3f4fb 0%, transparent 50%),
+        linear-gradient(180deg, #eef4f6 0%, var(--page) 40%) !important;
     background-attachment: fixed;
     font-size: 16px;
     line-height: 1.55;
     transition: background-color 0.3s ease;
+}
+
+/* Phase 1 — Kanit for headings / emphasis (Sarabun remains body) */
+h1, h2, h3, h4, .font-headline, .font-headline-sm, .font-headline-md, .font-headline-lg,
+.font-stat-display, .font-label-caps {
+    font-family: "Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", sans-serif;
 }
 
 button, input, select, textarea { font: inherit; }
@@ -203,18 +248,29 @@ summary:focus-visible {
    7. Sidebar + navigation
    --------------------------------------------------------------------------- */
 #app-sidebar {
-    background: rgba(255, 255, 255, 0.8) !important;
-    border-right: 1px solid rgba(148, 163, 184, 0.22) !important;
+    background: linear-gradient(180deg, #07495c 0%, #086b75 44%, #0f766e 100%) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
+    color: #ecfeff;
 }
 /* Brand chip in the sidebar header */
 #app-sidebar > div:first-child > div:first-child {
-    background: var(--brand) !important;
-    color: #fff !important;
+    background: linear-gradient(135deg, #ecfeff, #99f6e4 45%, #2dd4bf) !important;
+    color: #0f766e !important;
     border-radius: 13px !important;
-    box-shadow: var(--shadow-btn);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
+/* Sidebar text on dark teal */
+#app-sidebar h1 { color: #ffffff !important; }
+#app-sidebar .text-on-surface-variant { color: rgba(255, 255, 255, 0.78) !important; }
+#app-sidebar .text-on-surface { color: #ffffff !important; }
+#app-sidebar .text-slate-700 { color: #cfeef3 !important; }
+#app-sidebar .bg-slate-200 { background: rgba(255, 255, 255, 0.16) !important; }
+#app-sidebar .hover\:bg-rose-50:hover { background: rgba(255, 255, 255, 0.12) !important; }
+#app-sidebar #logout-btn { color: rgba(255, 255, 255, 0.78) !important; }
+#app-sidebar #logout-btn:hover { color: #fda4af !important; }
+#app-sidebar #mobile-nav-close { color: rgba(255, 255, 255, 0.85) !important; }
 
 .nav-item {
     display: flex;
@@ -223,20 +279,22 @@ summary:focus-visible {
     min-height: 50px;
     padding: 0.7rem 1rem;
     border-radius: var(--r-btn);
-    color: var(--ink-soft) !important;
+    color: rgba(236, 254, 255, 0.88) !important;
     font-weight: 600;
     border: 1px solid transparent;
     transition: all 0.2s var(--ease);
 }
 .nav-item:hover {
-    color: var(--brand) !important;
-    background: var(--brand-tint) !important;
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: rgba(255, 255, 255, 0.16) !important;
+    transform: translateX(3px);
 }
 .nav-item.active {
-    color: var(--brand) !important;
-    background: var(--brand-soft) !important;
-    border-color: var(--brand-line) !important;
-    border-right: 4px solid var(--brand) !important;
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.16) !important;
+    border-color: rgba(255, 255, 255, 0.24) !important;
+    border-right: 4px solid #5eead4 !important;
     font-weight: 700;
 }
 
@@ -278,8 +336,8 @@ header {
 }
 .font-size-toggle:hover { background: var(--brand-soft); }
 .font-size-toggle:active { transform: scale(0.94); }
-.font-size-small { font: 700 13px "Outfit", sans-serif; }
-.font-size-large { font: 800 19px "Outfit", sans-serif; }
+.font-size-small { font: 700 13px "Kanit", sans-serif; }
+.font-size-large { font: 800 19px "Kanit", sans-serif; }
 
 /* ---------------------------------------------------------------------------
    9. Main region
@@ -290,18 +348,18 @@ main { padding: var(--page-padding) !important; }
    10. Buttons
    --------------------------------------------------------------------------- */
 button {
-    min-height: 44px;
+    min-height: 48px;
     border-radius: var(--r-btn) !important;
     transition: transform 0.15s var(--ease), background-color 0.2s ease, box-shadow 0.2s ease;
 }
 button:active { transform: scale(0.97); }
 button.bg-primary,
-button[class*="bg-primary"] {
+button[class~="bg-primary"] {
     background: var(--brand) !important;
     box-shadow: var(--shadow-btn) !important;
 }
 button.bg-primary:hover,
-button[class*="bg-primary"]:hover { background: var(--brand-hover) !important; }
+button[class~="bg-primary"]:hover { background: var(--brand-hover) !important; }
 
 /* ---------------------------------------------------------------------------
    11. Inputs / selects / labels
@@ -335,19 +393,21 @@ label { color: var(--ink-soft) !important; }
 .badge-patient { background: var(--crit-soft) !important; color: var(--crit-ink) !important; border: 1px solid #fca5a5; }
 
 /* ---------------------------------------------------------------------------
-   13. Target cards (dynamic) + village/worker progress cards
+   13. Target cards (mobile patient cards) + village/worker progress cards
    --------------------------------------------------------------------------- */
-#targets-cards-container > div {
+.target-card {
     border-radius: var(--r-card) !important;
     border: 1px solid rgba(148, 163, 184, 0.22) !important;
     background: var(--surface) !important;
     animation: popIn 0.35s var(--ease) both;
     transition: transform 0.2s var(--ease), box-shadow 0.25s var(--ease);
 }
-#targets-cards-container > div:hover {
-    transform: translateY(-4px);
+.target-card:hover {
+    transform: translateY(-2px);
     box-shadow: var(--shadow-lift) !important;
 }
+#targets-table-wrap { border-radius: var(--r-card) !important; }
+#targets-table-body tr:hover { background: var(--brand-tint); }
 
 #village-progress-container > div,
 #worker-progress-container > div {
@@ -374,7 +434,7 @@ label { color: var(--ink-soft) !important; }
    15. Tables
    --------------------------------------------------------------------------- */
 table thead th {
-    font-family: "Outfit", "Sarabun", sans-serif;
+    font-family: "Kanit", "Noto Sans Thai", "Tahoma", "Sarabun", sans-serif;
     letter-spacing: 0.01em;
 }
 table tbody tr { transition: background-color 0.15s ease; }
@@ -503,7 +563,7 @@ table tbody tr:hover { background: var(--brand-tint); }
 .dark table tbody tr:hover { background: rgba(20, 184, 166, 0.1); }
 .dark #village-progress-container > div,
 .dark #worker-progress-container > div,
-.dark #targets-cards-container > div {
+.dark .target-card {
     background: rgba(15, 23, 42, 0.6) !important;
     border-color: rgba(148, 163, 184, 0.16) !important;
 }
@@ -526,9 +586,9 @@ table tbody tr:hover { background: var(--brand-tint); }
     #view-subtitle { display: none; }
     #conn-status-indicator { padding-inline: 9px !important; }
     #conn-status-indicator .status-text { display: none; }
-    main { padding-bottom: 96px !important; }
+    main { padding-bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom) + 24px) !important; }
 
-    #dashboard-view > div:first-child { gap: 10px !important; }
+    #dashboard-view > div:first-child { gap: 10px !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
     #dashboard-view > div:first-child > .glass-card { padding: 16px 12px !important; }
     #dashboard-view > div:first-child .font-stat-display { font-size: 2.05rem !important; }
 
@@ -536,12 +596,12 @@ table tbody tr:hover { background: var(--brand-tint); }
 
     .mobile-bottom-nav {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         position: fixed;
         z-index: 45;
         left: 0; right: 0; bottom: 0;
         padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
-        background: rgba(255, 255, 255, 0.94);
+        background: rgba(255, 255, 255, 0.96);
         border-top: 1px solid var(--line);
         box-shadow: 0 -8px 25px rgba(15, 23, 42, 0.08);
         backdrop-filter: blur(16px);
@@ -557,14 +617,33 @@ table tbody tr:hover { background: var(--brand-tint); }
         color: #94a3b8;
         text-decoration: none;
         border-radius: 12px;
-        font-size: 0.75rem;
+        font-size: 11px;
+        line-height: 1.15;
         font-weight: 700;
+        background: transparent;
+        border: none;
+        cursor: pointer;
         transition: color 0.15s ease, background 0.15s ease;
+    }
+    .mobile-nav-item > span:last-child {
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     .mobile-nav-item .material-symbols-outlined { font-size: 23px; }
     .mobile-nav-item.active { color: var(--brand); background: var(--brand-tint); }
+    .mobile-nav-primary {
+        transform: translateY(calc(var(--quick-action-lift) * -1));
+        background: linear-gradient(135deg, var(--brand-2), var(--brand-3)) !important;
+        color: #ffffff !important;
+        border-radius: 18px !important;
+        box-shadow: 0 10px 24px rgba(13, 148, 136, 0.28);
+        min-height: 56px;
+    }
+    .mobile-nav-primary .material-symbols-outlined { font-size: 26px; }
 
-    .font-size-toggle { min-width: 58px; }
+    .font-size-toggle { min-width: 48px; gap: 4px; padding: 0 6px; }
 
     .modal-overlay { align-items: flex-end !important; padding: 8px !important; }
     .modal-overlay > div {
@@ -586,3 +665,125 @@ table tbody tr:hover { background: var(--brand-tint); }
     }
 }
 [hidden] { display: none !important; }
+
+/* ---------------------------------------------------------------------------
+   25. Phase 2.1 — Shell hardening: touch targets, drawer grouping
+   --------------------------------------------------------------------------- */
+#mobile-nav-toggle,
+#mobile-nav-close,
+#theme-toggle,
+#logout-btn {
+    min-width: 48px;
+    min-height: 48px;
+}
+#font-size-toggle { min-height: 48px; height: 48px; }
+#back-to-list-btn { min-height: 48px; }
+.close-modal-btn { min-width: 48px; min-height: 48px; }
+
+/* On mobile the drawer ("อื่น ๆ") shows only secondary items —
+   primary views stay in the bottom navigation. Desktop sidebar is unaffected. */
+@media (max-width: 767px) {
+    #app-sidebar .nav-item[data-view="dashboard-view"],
+    #app-sidebar .nav-item[data-view="targets-view"],
+    #app-sidebar .nav-item[data-view="registry-view"] {
+        display: none;
+    }
+}
+
+/* ---------------------------------------------------------------------------
+   26. Phase 2.2 — responsive shell fix: overflow, density, login wrap
+   --------------------------------------------------------------------------- */
+/* Prevent grid/flex children from forcing horizontal overflow */
+#dashboard-view > div:first-child > *,
+.glass-card,
+.panel,
+.village-progress-container,
+#pingpong-dist-legend > *,
+#pingpong-dist-bar {
+    min-width: 0;
+}
+
+/* Let long headings wrap instead of clipping */
+.glass-card h3,
+.glass-card h4,
+.panel h3,
+.panel h4,
+#view-title {
+    overflow-wrap: break-word;
+    min-width: 0;
+}
+
+/* Login screen must never overflow on small phones */
+#login-screen h2,
+#login-screen p {
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+/* At very narrow widths the KPI 2x2 grid keeps full-width cells with no clip */
+@media (max-width: 767px) {
+    #dashboard-view > div:first-child > * {
+        min-width: 0;
+        overflow: hidden;
+    }
+    #dashboard-view > div:first-child .stat-title,
+    #dashboard-view > div:first-child .stat-sub,
+    .font-label-caps {
+        overflow-wrap: break-word;
+    }
+    .glass-card { overflow-wrap: break-word; }
+    header .flex.items-center.gap-3 { flex-wrap: wrap; }
+}
+
+/* ---------------------------------------------------------------------------
+   27. Phase 3 — dashboard shell polish: connection dot, KPI label contrast
+   --------------------------------------------------------------------------- */
+/* Connection indicator as a clean dot+label pill (className swapped by JS) */
+.connection-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 38px;
+    padding: 0 12px !important;
+    border-radius: 9999px;
+    background: var(--brand-tint) !important;
+    border: 1px solid var(--brand-line) !important;
+}
+.connection-status > span:first-child {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+    flex: 0 0 auto;
+}
+.connection-status.online > span:first-child { background: #22c55e !important; }
+.connection-status.offline > span:first-child { background: #ef4444 !important; }
+
+/* KPI label contrast (outdoor readability) */
+#dashboard-view > div:first-child .font-label-caps { color: var(--ink-soft) !important; }
+
+/* Mobile: connection indicator is just a compact dot (no mint pill residue) */
+@media (max-width: 767px) {
+    .connection-status {
+        padding: 0 !important;
+        min-height: 0 !important;
+        background: transparent !important;
+        border: none !important;
+    }
+    .connection-status .status-text { display: none !important; }
+}
+
+/* ---------------------------------------------------------------------------
+   28. Phase 6 — form field mobile usability (>=16px prevents iOS auto-zoom)
+   --------------------------------------------------------------------------- */
+.modal-overlay input,
+.modal-overlay select,
+.modal-overlay textarea {
+    font-size: 16px !important;
+    min-height: 52px;
+}
+@media (max-width: 767px) {
+    .modal-overlay > div {
+        max-height: calc(100vh - 16px) !important;
+    }
+}

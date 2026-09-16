@@ -407,6 +407,29 @@ function displayValue(value, fallback = '-') {
     return escapeHTML(value);
 }
 
+// Display-only Thai date formatter (does not mutate state/data)
+const THAI_MONTHS_SHORT = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+function formatThaiDate(value) {
+    if (value === undefined || value === null || value === '') return '—';
+    let d;
+    if (value instanceof Date) {
+        d = value;
+    } else if (typeof value === 'string' && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(value.trim())) {
+        const parts = value.trim().split('/');
+        d = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+    } else {
+        d = new Date(value);
+    }
+    if (isNaN(d.getTime())) return '—';
+    return `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear() + 543}`;
+}
+
+// Display-only age (avoid "NaN ปี"); presentation layer only
+function displayAge(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : '—';
+}
+
 function getUniqueWorkers(values) {
     const seen = new Set();
     return values
@@ -476,12 +499,15 @@ function switchView(viewId) {
         activeView.classList.remove('hidden');
     }
     
-    // Update active nav item
+    // Update active nav item (profile keeps its parent "targets" context)
+    const navActiveId = viewId === 'profile-view' ? 'targets-view' : viewId;
     document.querySelectorAll('.nav-item, .mobile-nav-item').forEach(item => {
-        if (item.getAttribute('data-view') === viewId) {
-            item.classList.add('active');
+        const isActive = item.getAttribute('data-view') === navActiveId;
+        item.classList.toggle('active', isActive);
+        if (isActive) {
+            item.setAttribute('aria-current', 'page');
         } else {
-            item.classList.remove('active');
+            item.removeAttribute('aria-current');
         }
     });
 
@@ -522,12 +548,16 @@ function closeMobileNav() {
     setMobileNavOpen(false);
 }
 
+function isMobileViewport() {
+    return Boolean(window.matchMedia && window.matchMedia('(max-width: 767px)').matches);
+}
+
 function updateHeaderTitles(viewId) {
     const title = document.getElementById('view-title');
     const subtitle = document.getElementById('view-subtitle');
     
     if (viewId === 'dashboard-view') {
-        title.textContent = 'แผงควบคุม (Dashboard)';
+        title.textContent = isMobileViewport() ? 'แผงควบคุม' : 'แผงควบคุม (Dashboard)';
         subtitle.textContent = 'สรุปสถิติสถานะสุขภาพและการเปลี่ยนแปลงพฤติกรรมภาพรวม';
     } else if (viewId === 'targets-view') {
         title.textContent = 'รายชื่อกลุ่มเป้าหมาย';
@@ -1052,14 +1082,15 @@ function renderVillageProgress(stats = {}) {
     const villageSummary = Array.isArray(stats.villageSummary) ? stats.villageSummary : calculateVillageSummary();
     container.innerHTML = villageSummary.map(item => {
         const progressWidth = Math.min(Math.max(item.progressRate, 0), 100);
+        const hasRemaining = item.remaining > 0;
         return `
             <div class="bg-white/50 border border-white/60 rounded-xl p-4 shadow-sm">
                 <div class="flex items-start justify-between gap-3 mb-3">
-                    <div>
+                    <div class="min-w-0">
                         <h4 class="font-headline font-bold text-primary text-base">${displayValue(item.village)}</h4>
                         <p class="text-xs text-on-surface-variant">กลุ่มเป้าหมาย ${item.total} คน</p>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right shrink-0">
                         <div class="font-stat-display text-2xl font-extrabold text-on-surface">${item.progressRate}%</div>
                         <span class="text-[10px] text-on-surface-variant font-semibold">มีข้อมูลติดตาม</span>
                     </div>
@@ -1067,22 +1098,22 @@ function renderVillageProgress(stats = {}) {
                 <div class="w-full h-2.5 bg-outline-variant/30 rounded-full overflow-hidden mb-3">
                     <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: ${progressWidth}%"></div>
                 </div>
-                <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="rounded-lg ${hasRemaining ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50 border border-emerald-100'} p-2.5 mb-2 flex items-center justify-between">
+                    <span class="text-xs font-semibold ${hasRemaining ? 'text-amber-800' : 'text-emerald-800'}">ยังไม่ครบ (ต้องติดตาม)</span>
+                    <strong class="${hasRemaining ? 'text-risk-warning' : 'text-emerald-700'} text-lg">${item.remaining} คน</strong>
+                </div>
+                <div class="grid grid-cols-3 gap-2 text-xs">
                     <div class="rounded-lg bg-slate-50/80 p-2">
                         <span class="block text-on-surface-variant">ติดตามแล้ว</span>
-                        <strong class="text-on-surface">${item.followed} คน</strong>
-                    </div>
-                    <div class="rounded-lg bg-slate-50/80 p-2">
-                        <span class="block text-on-surface-variant">ยังไม่ครบ</span>
-                        <strong class="text-risk-warning">${item.remaining} คน</strong>
+                        <strong class="text-on-surface">${item.followed}</strong>
                     </div>
                     <div class="rounded-lg bg-slate-50/80 p-2">
                         <span class="block text-on-surface-variant">กลุ่มเสี่ยง</span>
-                        <strong class="text-risk-warning">${item.risk} คน</strong>
+                        <strong class="text-risk-warning">${item.risk}</strong>
                     </div>
                     <div class="rounded-lg bg-slate-50/80 p-2">
                         <span class="block text-on-surface-variant">กลุ่มป่วย</span>
-                        <strong class="text-risk-danger">${item.patient} คน</strong>
+                        <strong class="text-risk-danger">${item.patient}</strong>
                     </div>
                 </div>
             </div>
@@ -1179,9 +1210,21 @@ function drawRatioChart(risk, patient) {
 }
 
 function drawImprovementChart(bmi, bp, dtx) {
-    const ctx = document.getElementById('improvement-chart').getContext('2d');
+    const canvas = document.getElementById('improvement-chart');
+    const empty = document.getElementById('improvement-empty');
     if (state.charts.improvement) state.charts.improvement.destroy();
     
+    const values = [parseFloat(bmi) || 0, parseFloat(bp) || 0, parseFloat(dtx) || 0];
+    const hasData = values.some(v => v > 0);
+    if (!hasData) {
+        if (canvas) canvas.classList.add('hidden');
+        if (empty) empty.classList.remove('hidden');
+        return;
+    }
+    if (canvas) canvas.classList.remove('hidden');
+    if (empty) empty.classList.add('hidden');
+    
+    const ctx = canvas.getContext('2d');
     const isDark = document.body.classList.contains('dark');
     
     state.charts.improvement = new Chart(ctx, {
@@ -1221,7 +1264,8 @@ function drawImprovementChart(bmi, bp, dtx) {
 
 function renderUrgentTargetsTable() {
     const tbody = document.getElementById('dashboard-urgent-list');
-    tbody.innerHTML = '';
+    const cards = document.getElementById('dashboard-urgent-cards');
+    const countLabel = document.getElementById('urgent-count-label');
     
     // Find urgent targets (BP > 140/90 or DTX > 160) from latest quarterly data
     const latestLogs = {};
@@ -1266,36 +1310,81 @@ function renderUrgentTargetsTable() {
     
     const displayList = urgent.slice(0, 5); // top 5
     
-    if (displayList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">ไม่พบเป้าหมายที่มีวิกฤตสุขภาพในระบบ</td></tr>`;
-        return;
+    if (countLabel) {
+        const total = urgent.length;
+        if (total === 0) {
+            countLabel.textContent = '';
+        } else if (total > displayList.length) {
+            countLabel.textContent = `พบ ${total} ราย • แสดง ${displayList.length} รายแรก`;
+        } else {
+            countLabel.textContent = `พบ ${total} ราย`;
+        }
     }
     
-    displayList.forEach(item => {
-        const tr = document.createElement('tr');
-        
-        const bpClass = (item.sys >= 140 || item.dia >= 90) ? 'text-danger font-bold' : '';
-        const dtxClass = item.dtx >= 160 ? 'text-danger font-bold' : '';
-        const badgeClass = item.target.type === 'กลุ่มเสี่ยง' ? 'badge-risk' : 'badge-patient';
-        
-        tr.innerHTML = `
-            <td class="py-3 px-4"><strong>${displayValue(item.target.name)}</strong></td>
-            <td class="py-3 px-3"><span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] ${badgeClass}">${displayValue(item.target.type)}</span></td>
-            <td class="py-3 px-3"><span class="${bpClass}">${displayValue(item.bp)}</span></td>
-            <td class="py-3 px-3"><span class="${dtxClass}">${displayValue(item.dtx)} มก.</span></td>
-            <td class="py-3 px-4 text-center">
-                <button class="text-primary hover:text-primary-container font-semibold inline-flex items-center gap-1 view-profile-btn" data-id="${item.target.id}">
-                    <span class="material-symbols-outlined text-[18px]">visibility</span>
-                    <span>ดูข้อมูล</span>
-                </button>
-            </td>
-        `;
-        
-        tbody.appendChild(tr);
-    });
-
-    // Add event click to "ดูข้อมูล" buttons
-    tbody.querySelectorAll('.view-profile-btn').forEach(btn => {
+    const emptyRow = `<tr><td colspan="5" class="py-6 text-center text-sm text-on-surface-variant"><span class="material-symbols-outlined align-middle text-[18px]">check_circle</span> ไม่พบรายการที่ต้องติดตามเร่งด่วน</td></tr>`;
+    const emptyCard = `<div class="rounded-xl bg-emerald-50/60 border border-emerald-100 p-4 text-sm text-emerald-800 flex items-center gap-2"><span class="material-symbols-outlined text-[20px]">check_circle</span> ไม่พบรายการที่ต้องติดตามเร่งด่วน</div>`;
+    
+    // Desktop table
+    if (tbody) {
+        tbody.innerHTML = '';
+        if (displayList.length === 0) {
+            tbody.innerHTML = emptyRow;
+        } else {
+            displayList.forEach(item => {
+                const tr = document.createElement('tr');
+                const bpClass = (item.sys >= 140 || item.dia >= 90) ? 'text-danger font-bold' : '';
+                const dtxClass = item.dtx >= 160 ? 'text-danger font-bold' : '';
+                const badgeClass = item.target.type === 'กลุ่มเสี่ยง' ? 'badge-risk' : 'badge-patient';
+                
+                tr.innerHTML = `
+                    <td class="py-3 px-4"><strong>${displayValue(item.target.name)}</strong></td>
+                    <td class="py-3 px-3"><span class="px-2.5 py-0.5 rounded-full font-bold text-[10px] ${badgeClass}">${displayValue(item.target.type)}</span></td>
+                    <td class="py-3 px-3"><span class="${bpClass}">${displayValue(item.bp)}</span></td>
+                    <td class="py-3 px-3"><span class="${dtxClass}">${displayValue(item.dtx)} มก.</span></td>
+                    <td class="py-3 px-4 text-center">
+                        <button class="text-primary hover:text-primary-container font-semibold inline-flex items-center gap-1 view-profile-btn" data-id="${item.target.id}">
+                            <span class="material-symbols-outlined text-[18px]">visibility</span>
+                            <span>ดูข้อมูล</span>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    }
+    
+    // Mobile compact cards (same data, no table)
+    if (cards) {
+        cards.innerHTML = '';
+        if (displayList.length === 0) {
+            cards.innerHTML = emptyCard;
+        } else {
+            cards.innerHTML = displayList.map(item => {
+                const bpBad = item.sys >= 140 || item.dia >= 90;
+                const dtxBad = item.dtx >= 160;
+                return `
+                    <div class="rounded-xl bg-white/60 border border-rose-100 p-3 flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-full ${item.target.type === 'กลุ่มเสี่ยง' ? 'bg-risk-warning/15 text-risk-warning' : 'bg-risk-danger/15 text-risk-danger'} flex items-center justify-center font-bold shrink-0">
+                            ${displayValue((item.target.name || '').trim().charAt(0) || '·')}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-on-surface text-sm truncate">${displayValue(item.target.name)}</div>
+                            <div class="text-xs text-on-surface-variant mt-0.5">
+                                <span class="${bpBad ? 'text-risk-danger font-bold' : ''}">BP ${displayValue(item.bp)}</span>
+                                <span class="mx-1">·</span>
+                                <span class="${dtxBad ? 'text-risk-danger font-bold' : ''}">DTX ${displayValue(item.dtx)}</span>
+                            </div>
+                        </div>
+                        <button class="view-profile-btn text-primary font-semibold shrink-0 inline-flex items-center gap-1 text-xs" data-id="${item.target.id}">
+                            <span class="material-symbols-outlined text-[18px]">visibility</span><span>ดู</span>
+                        </button>
+                    </div>`;
+            }).join('');
+        }
+    }
+    
+    // Add event click to "ดูข้อมูล" buttons (table + cards)
+    document.querySelectorAll('#dashboard-urgent-list .view-profile-btn, #dashboard-urgent-cards .view-profile-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const id = parseInt(e.currentTarget.getAttribute('data-id'));
             viewTargetProfile(id);
@@ -1346,8 +1435,10 @@ function renderOverallBehavior() {
 
 // --- View 2: Targets List Rendering ---
 function renderTargetsList() {
-    const container = document.getElementById('targets-cards-container');
-    container.innerHTML = '';
+    const tableBody = document.getElementById('targets-table-body');
+    const mobileList = document.getElementById('targets-mobile-list');
+    const emptyState = document.getElementById('targets-empty');
+    const resultCount = document.getElementById('targets-result-count');
     
     const searchVal = document.getElementById('target-search-input').value.toLowerCase();
     const filterType = document.getElementById('filter-type').value;
@@ -1418,105 +1509,131 @@ function renderTargetsList() {
     // Page indicator text
     document.getElementById('page-indicator').textContent = `หน้า ${state.currentPage} / ${totalPages} (รวม ${totalItems} คน)`;
     
-    if (pageItems.length === 0) {
-        container.innerHTML = `<div class="panel grid-span-2" style="text-align: center; width: 100%; color: var(--text-muted); padding: 40px;">ไม่พบข้อมูลกลุ่มเป้าหมายตามที่ค้นหา</div>`;
-        return;
+    // Result count
+    if (resultCount) {
+        const hasFilter = Boolean(searchVal || filterType !== 'all' || filterVillage !== 'all' || filterWorker !== 'all' || filterDisease !== 'all');
+        resultCount.textContent = (hasFilter && totalItems !== state.targets.length)
+            ? `พบ ${totalItems} รายจาก ${state.targets.length} ราย`
+            : `พบ ${totalItems} ราย`;
     }
     
-    // Render cards
-    pageItems.forEach(t => {
-        const log = latestLogs[t.id] || {};
-        const card = document.createElement('div');
-        
-        const badgeBgClass = t.type === 'กลุ่มเสี่ยง' ? 'bg-risk-warning/15 text-risk-warning border border-risk-warning/30' : 'bg-risk-danger/15 text-risk-danger border border-risk-danger/30';
-        
-        // Status indicator color bar based on health risk
-        let dotColorClass = 'bg-emerald-500';
-        if (log.dtx >= 140 || (log.bp && parseInt(log.bp.toString().split('/')[0]) >= 140)) {
-            dotColorClass = 'bg-risk-danger'; // Red
-        } else if (log.dtx >= 110 || (log.bp && parseInt(log.bp.toString().split('/')[0]) >= 130) || log.bmi >= 25) {
-            dotColorClass = 'bg-risk-warning'; // Yellow
-        }
-        
-        const bmiVal = log.bmi ? log.bmi.toFixed(1) : '-';
-        const dtxVal = log.dtx ? log.dtx : '-';
-        const village = getTargetVillage(t);
-        const worker = getTargetWorker(t);
-        
-        // Calculate progress percents for bars
-        const bmiPercent = log.bmi ? Math.min(Math.max((log.bmi - 15) / 20 * 100, 5), 100) : 0;
-        const dtxPercent = log.dtx ? Math.min(Math.max((log.dtx - 70) / 130 * 100, 5), 100) : 0;
-        
-        // BMI Label
-        let bmiLabel = 'ปกติ';
-        let bmiColor = 'text-emerald-500';
-        let bmiBarBg = 'bg-emerald-500';
-        if (log.bmi >= 30.0) { bmiLabel = 'อ้วน'; bmiColor = 'text-rose-500'; bmiBarBg = 'bg-rose-500'; }
-        else if (log.bmi >= 25.0) { bmiLabel = 'น้ำหนักเกิน'; bmiColor = 'text-amber-500'; bmiBarBg = 'bg-amber-500'; }
-        else if (log.bmi < 18.5 && log.bmi > 0) { bmiLabel = 'น้ำหนักน้อย'; bmiColor = 'text-sky-500'; bmiBarBg = 'bg-sky-500'; }
-
-        // DTX Label
-        let dtxLabel = 'ปกติ';
-        let dtxColor = 'text-emerald-500';
-        let dtxBarBg = 'bg-emerald-500';
-        if (log.dtx >= 126) { dtxLabel = 'เบาหวาน'; dtxColor = 'text-rose-500'; dtxBarBg = 'bg-rose-500'; }
-        else if (log.dtx >= 100) { dtxLabel = 'กลุ่มเสี่ยง'; dtxColor = 'text-amber-500'; dtxBarBg = 'bg-amber-500'; }
-        
-        card.className = 'relative bg-surface-glass backdrop-blur-xl border border-white/40 shadow-[0_8px_32px_0_rgba(31,38,135,0.05)] rounded-xl overflow-hidden group hover:-translate-y-1 transition-transform duration-300';
-        card.innerHTML = `
-            <div class="vital-bar ${dotColorClass}"></div>
-            <div class="p-5 pl-6">
-                <div class="flex justify-between items-start mb-3">
-                    <span class="inline-block px-2.5 py-0.5 rounded-full font-bold text-[10px] ${badgeBgClass}">${displayValue(t.type)}</span>
-                </div>
-                <h3 class="font-headline text-lg font-bold text-on-surface mb-1">${displayValue(t.name)}</h3>
-                <p class="text-xs text-on-surface-variant flex items-center gap-1 mb-4">
-                    <span class="material-symbols-outlined text-[16px] text-primary">location_on</span>
-                    <span>บ้านเลขที่ ${displayValue(t.address)} &bull; ${displayValue(village)} &bull; อายุ ${displayValue(t.age)} ปี</span>
-                </p>
-                <p class="text-xs text-on-surface-variant flex items-center gap-1 mb-4 -mt-2">
-                    <span class="material-symbols-outlined text-[16px] text-tertiary-container">supervisor_account</span>
-                    <span>${displayValue(worker)}</span>
-                </p>
-                <div class="space-y-3">
-                    <div class="bg-white/40 rounded-lg p-3">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-xs text-on-surface-variant">BMI (${bmiVal})</span>
-                            <span class="font-bold text-[10px] ${bmiColor}">${bmiLabel}</span>
-                        </div>
-                        <div class="w-full bg-outline-variant/30 rounded-full h-2">
-                            <div class="h-2 rounded-full ${bmiBarBg}" style="width: ${bmiPercent}%"></div>
-                        </div>
-                    </div>
-                    <div class="bg-white/40 rounded-lg p-3">
-                        <div class="flex justify-between items-center mb-1">
-                            <span class="text-xs text-on-surface-variant">DTX (${dtxVal} มก.)</span>
-                            <span class="font-bold text-[10px] ${dtxColor}">${dtxLabel}</span>
-                        </div>
-                        <div class="w-full bg-outline-variant/30 rounded-full h-2">
-                            <div class="h-2 rounded-full ${dtxBarBg}" style="width: ${dtxPercent}%"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mt-4 pt-3 border-t border-slate-100/50 flex justify-end">
-                    <button class="w-full bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2 px-3 rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs view-profile-btn" data-id="${t.id}">
-                        <span class="material-symbols-outlined text-[16px]">visibility</span>
-                        <span>ดูข้อมูลสุขภาพ</span>
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(card);
+    // Empty state
+    if (totalItems === 0) {
+        const msg = state.targets.length === 0
+            ? 'ยังไม่มีรายชื่อกลุ่มเป้าหมาย'
+            : (searchVal ? 'ไม่พบรายชื่อที่ตรงกับคำค้น' : 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
+        if (tableBody) tableBody.innerHTML = '';
+        if (emptyState) { emptyState.textContent = msg; emptyState.classList.remove('hidden'); }
+        if (mobileList) mobileList.innerHTML = `<div class="text-center text-on-surface-variant font-semibold py-10 px-4">${msg}</div>`;
+        return;
+    }
+    if (emptyState) emptyState.classList.add('hidden');
+    
+    // Single source of render data (desktop table + mobile cards)
+    const renderItems = pageItems.map(t => {
+        const log = latestLogs[t.id] || null;
+        return {
+            t: t,
+            log: log,
+            pp: log ? pingpongRules.classify(log, t) : pingpongRules.colors.unknown,
+            village: getTargetVillage(t),
+            worker: getTargetWorker(t)
+        };
     });
-
-    // Add click listeners
-    container.querySelectorAll('.view-profile-btn').forEach(btn => {
+    
+    if (tableBody) tableBody.innerHTML = renderItems.map(buildTargetRow).join('');
+    if (mobileList) mobileList.innerHTML = renderItems.map(buildTargetCard).join('');
+    
+    // Event delegation (view profile + record follow-up)
+    document.querySelectorAll('#targets-table-body .view-profile-btn, #targets-table-body .record-btn, #targets-mobile-list .view-profile-btn, #targets-mobile-list .record-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const id = parseInt(e.currentTarget.getAttribute('data-id'));
-            viewTargetProfile(id);
+            if (e.currentTarget.classList.contains('record-btn')) {
+                state.selectedTargetId = id;
+                state.selectedTargetQuarterly = state.quarterlyData.filter(q => String(q.target_id) === String(id));
+                openQuarterlyModal(id);
+            } else {
+                viewTargetProfile(id);
+            }
         });
     });
+}
+
+function buildTargetRow({ t, log, pp, village }) {
+    const badge = t.type === 'กลุ่มเสี่ยง'
+        ? 'bg-risk-warning/15 text-risk-warning border-risk-warning/30'
+        : 'bg-risk-danger/15 text-risk-danger border-risk-danger/30';
+    const bp = log && log.bp ? displayValue(log.bp) : '—';
+    const dtx = log && log.dtx ? displayValue(log.dtx) : '—';
+    const date = formatThaiDate(log ? log.date : null);
+    const statusPill = log
+        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[11px] ${pp.badgeClass}"><span class="w-2 h-2 rounded-full" style="background:${pp.dot}"></span>${pp.label}</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[11px] bg-slate-100 text-slate-500 border border-slate-200"><span class="w-2 h-2 rounded-full bg-slate-300"></span>ยังไม่ติดตาม</span>`;
+    const avatarColor = t.type === 'กลุ่มเสี่ยง' ? 'bg-risk-warning/15 text-risk-warning' : 'bg-risk-danger/15 text-risk-danger';
+    return `
+        <tr class="cursor-pointer">
+            <td class="py-3 px-4">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center font-bold text-sm shrink-0">${displayValue((t.name || '').trim().charAt(0) || '·')}</span>
+                    <strong class="text-on-surface" title="${displayValue(t.name)}">${displayValue(t.name)}</strong>
+                </div>
+            </td>
+            <td class="py-3 px-3 text-on-surface-variant">${displayAge(t.age)}</td>
+            <td class="py-3 px-3 text-on-surface-variant">${displayValue(village)}</td>
+            <td class="py-3 px-3"><span class="inline-block px-2 py-0.5 rounded-full font-bold text-[11px] border ${badge}">${displayValue(t.type)}</span></td>
+            <td class="py-3 px-3 font-semibold">${bp}</td>
+            <td class="py-3 px-3 font-semibold">${dtx}</td>
+            <td class="py-3 px-3">${statusPill}</td>
+            <td class="py-3 px-3 text-on-surface-variant text-xs whitespace-nowrap">${date}</td>
+            <td class="py-3 px-3 text-right whitespace-nowrap">
+                <button class="record-btn text-primary hover:text-primary-container font-semibold inline-flex items-center gap-1 text-xs mr-2" data-id="${t.id}" aria-label="บันทึกผล"><span class="material-symbols-outlined text-[18px]">edit_note</span>บันทึกผล</button>
+                <button class="view-profile-btn text-on-surface-variant hover:text-primary font-semibold inline-flex items-center gap-1 text-xs" data-id="${t.id}" aria-label="ดูข้อมูล"><span class="material-symbols-outlined text-[18px]">visibility</span>ดูข้อมูล</button>
+            </td>
+        </tr>`;
+}
+
+function buildTargetCard({ t, log, pp, village }) {
+    const badge = t.type === 'กลุ่มเสี่ยง'
+        ? 'bg-risk-warning/15 text-risk-warning border-risk-warning/30'
+        : 'bg-risk-danger/15 text-risk-danger border-risk-danger/30';
+    const bp = log && log.bp ? displayValue(log.bp) : '—';
+    const dtx = log && log.dtx ? displayValue(log.dtx) : '—';
+    const date = formatThaiDate(log ? log.date : null);
+    const statusPill = log
+        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-[11px] ${pp.badgeClass}"><span class="w-2 h-2 rounded-full" style="background:${pp.dot}"></span>${pp.label}</span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-[11px] bg-slate-100 text-slate-500"><span class="w-2 h-2 rounded-full bg-slate-300"></span>ยังไม่ติดตาม</span>`;
+    const avatarColor = t.type === 'กลุ่มเสี่ยง' ? 'bg-risk-warning/15 text-risk-warning' : 'bg-risk-danger/15 text-risk-danger';
+    return `
+        <div class="target-card bg-white/70 backdrop-blur border border-white/60 rounded-2xl p-3.5 shadow-sm">
+            <div class="flex items-start gap-2.5">
+                <span class="w-10 h-10 rounded-full ${avatarColor} flex items-center justify-center font-bold shrink-0">${displayValue((t.name || '').trim().charAt(0) || '·')}</span>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2">
+                        <h4 class="font-headline font-bold text-on-surface text-base truncate">${displayValue(t.name)}</h4>
+                        <span class="inline-block px-2 py-0.5 rounded-full font-bold text-[10px] border ${badge} shrink-0">${displayValue(t.type)}</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mt-0.5">อายุ ${displayAge(t.age)} ปี • ${displayValue(village)}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 mt-2.5">
+                ${statusPill}
+                <span class="text-[11px] text-on-surface-variant ml-auto">ล่าสุด ${date}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-2.5">
+                <div class="rounded-lg bg-slate-50/80 p-1.5">
+                    <span class="block text-[10px] text-on-surface-variant">ความดัน (BP)</span>
+                    <strong class="text-sm text-on-surface">${bp}</strong>
+                </div>
+                <div class="rounded-lg bg-slate-50/80 p-1.5">
+                    <span class="block text-[10px] text-on-surface-variant">น้ำตาล (DTX)</span>
+                    <strong class="text-sm text-on-surface">${dtx}</strong>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-2.5">
+                <button class="view-profile-btn flex-1 bg-primary/10 hover:bg-primary/20 text-primary font-semibold py-2.5 px-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 text-xs" data-id="${t.id}"><span class="material-symbols-outlined text-[16px]">visibility</span>ดูข้อมูล</button>
+                <button class="record-btn flex-1 bg-primary text-white font-semibold py-2.5 px-3 rounded-xl transition-colors flex items-center justify-center gap-1.5 text-xs" data-id="${t.id}"><span class="material-symbols-outlined text-[16px]">edit_note</span>บันทึกผล</button>
+            </div>
+        </div>`;
 }
 
 // --- View 3: Target Profile Rendering ---
@@ -1608,12 +1725,73 @@ function renderProfileDetail() {
     avatar.style.color = t.type === 'กลุ่มเสี่ยง' ? '#f59e0b' : '#ef4444';
     avatar.style.backgroundColor = t.type === 'กลุ่มเสี่ยง' ? 'var(--color-warning-light)' : 'var(--color-danger-light)';
 
-    // 2. Render Quarterly Timeline Cards
+    // 2. Render Clinical Snapshot (latest values)
+    renderProfileSnapshot();
+    
+    // 3. Render Quarterly Timeline Cards
     renderTimelineCards();
     
-    // 3. Render Charts (Weight/BMI, BP/Sugar, Body Composition)
+    // 4. Render Charts (Weight/BMI, BP/Sugar, Body Composition)
     renderProfileCharts();
     
+    // 5. Render Daily Behavior Logs
+    renderDailyLogsTable();
+    
+}
+
+function renderProfileSnapshot() {
+    const container = document.getElementById('profile-snapshot');
+    const dateEl = document.getElementById('profile-latest-date');
+    if (!container) return;
+    const t = state.selectedTargetProfile;
+    const logs = state.selectedTargetQuarterly || [];
+    const latest = logs.length > 0 ? logs[logs.length - 1] : null;
+    
+    if (!latest) {
+        if (dateEl) dateEl.textContent = '';
+        container.innerHTML = `<div class="col-span-full text-center text-on-surface-variant py-6">
+            <span class="material-symbols-outlined text-3xl mb-1 block">inbox</span>
+            <p class="font-semibold text-sm">ยังไม่มีผลติดตาม</p>
+            <button class="record-first-btn mt-3 bg-primary text-white font-semibold py-2.5 px-5 rounded-xl inline-flex items-center gap-1.5 text-sm" data-id="${t.id}"><span class="material-symbols-outlined text-[18px]">edit_note</span>บันทึกผลครั้งแรก</button>
+        </div>`;
+        return;
+    }
+    
+    if (dateEl) dateEl.textContent = `${formatThaiDate(latest.date)} · ${roundLabel(latest.quarter)}`;
+    
+    const bp = latest.bp ? displayValue(latest.bp) : '—';
+    const dtx = latest.dtx ? displayValue(latest.dtx) : '—';
+    const weight = latest.weight ? displayValue(latest.weight) : '—';
+    const bmi = latest.bmi ? displayValue(latest.bmi) : '—';
+    const waist = latest.waist ? displayValue(latest.waist) : '—';
+    const pp = pingpongRules.classify(latest, t);
+    
+    container.innerHTML = `
+        <div class="rounded-xl bg-white/60 border border-slate-100 p-3 min-w-0">
+            <span class="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">ความดัน (BP)</span>
+            <strong class="text-lg text-on-surface">${bp} <span class="text-xs font-normal text-on-surface-variant">mmHg</span></strong>
+        </div>
+        <div class="rounded-xl bg-white/60 border border-slate-100 p-3 min-w-0">
+            <span class="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">น้ำตาล (DTX)</span>
+            <strong class="text-lg text-on-surface">${dtx} <span class="text-xs font-normal text-on-surface-variant">mg/dL</span></strong>
+        </div>
+        <div class="rounded-xl bg-white/60 border border-slate-100 p-3 min-w-0">
+            <span class="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">น้ำหนัก</span>
+            <strong class="text-lg text-on-surface">${weight} <span class="text-xs font-normal text-on-surface-variant">กก.</span></strong>
+        </div>
+        <div class="rounded-xl bg-white/60 border border-slate-100 p-3 min-w-0">
+            <span class="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">BMI</span>
+            <strong class="text-lg text-on-surface">${bmi}</strong>
+        </div>
+        <div class="rounded-xl bg-white/60 border border-slate-100 p-3 min-w-0">
+            <span class="block text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">รอบเอว</span>
+            <strong class="text-lg text-on-surface">${waist} <span class="text-xs font-normal text-on-surface-variant">ซม.</span></strong>
+        </div>
+        <div class="rounded-xl p-3 flex flex-col justify-center min-w-0 ${pp.rank >= 0 ? pp.badgeClass : 'bg-slate-100 text-slate-500 border border-slate-200'}">
+            <span class="block text-[10px] font-bold uppercase tracking-wider">ปิงปอง</span>
+            <strong class="text-base">${pp.rank >= 0 ? `${pp.label} · ${pp.sub}` : 'ยังไม่ประเมิน'}</strong>
+        </div>
+    `;
 }
 
 function getStoredWeekSummary(log, weekIndex) {
@@ -1678,6 +1856,9 @@ function renderTimelineCards() {
         
         const qName = roundLabel(log.quarter);
                       
+        // LEGACY display interpretation (pre-Phase 5) — do NOT reuse in new components.
+        // Clinical source-of-truth is pingpongRules.classify(); these inline thresholds are
+        // legacy presentation-only labels and should be migrated to pingpongRules later.
         // Status calculations for indicators
         let bpStatusText = 'ปกติ';
         let bpStatusClass = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
@@ -1708,6 +1889,7 @@ function renderTimelineCards() {
         const fatInterp = bodyCompRules.interpretBodyFat(log.body_fat, gender);
         const visceralInterp = bodyCompRules.interpretVisceralFat(log.visceral_fat);
         const muscleInterp = bodyCompRules.interpretSkeletalMuscle(log.muscle_mass, gender);
+        // LEGACY inline thresholds (pre-Phase 5, presentation-only) — report-only, not to extend
         const bodyAgePassed = log.body_age > 0 && log.body_age <= Number(state.selectedTargetProfile.age || 0);
         const waistPassed = log.waist > 0 && log.waist < (gender === 'ชาย' ? 90 : 80);
 
@@ -1738,7 +1920,7 @@ function renderTimelineCards() {
             <div class="vital-bar ${cardIndicatorColorClass}"></div>
             <div class="flex justify-between items-start mb-3 border-b border-slate-100/50 pb-2">
                 <span class="font-bold text-sm text-primary dark:text-primary-fixed">${qName}</span>
-                <span class="text-xs text-outline font-semibold">${displayValue(log.date)}</span>
+                <span class="text-xs text-outline font-semibold">${formatThaiDate(log.date)}</span>
             </div>
             ${ppBadge}
             <div class="space-y-2.5 text-xs text-on-surface-variant font-medium">
@@ -1970,7 +2152,7 @@ function renderDailyLogsTable() {
     logs.forEach(log => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><strong>${displayValue(log.date)}</strong></td>
+            <td><strong>${formatThaiDate(log.date)}</strong></td>
             <td>${displayValue(log.week)}</td>
             <td>${displayValue(log.day)}</td>
             <td><span class="tag bg-warning-light text-warning">${displayValue(log.avoid_sweet)}</span></td>
@@ -2018,7 +2200,7 @@ function closeModal(modalId) {
 
 function setupProfileActionFallbacks() {
     document.addEventListener('click', (e) => {
-        const button = e.target.closest('#btn-edit-target, #btn-add-quarterly, #btn-add-daily');
+        const button = e.target.closest('#btn-edit-target, #btn-add-quarterly, #btn-add-daily, .record-first-btn');
         if (!button) return;
 
         e.preventDefault();
@@ -2047,6 +2229,8 @@ function setupProfileActionFallbacks() {
             document.getElementById('target-modal-title').textContent = 'แก้ไขข้อมูลส่วนตัวกลุ่มเป้าหมาย';
             openModal('target-modal');
         } else if (button.id === 'btn-add-quarterly') {
+            openQuarterlyModal(state.selectedTargetId);
+        } else if (button.classList.contains('record-first-btn')) {
             openQuarterlyModal(state.selectedTargetId);
         } else if (button.id === 'btn-add-daily') {
             if (!state.selectedTargetId) {
@@ -2098,9 +2282,30 @@ function setupEventListeners() {
     document.querySelectorAll('.mobile-nav-item').forEach(item => {
         item.addEventListener('click', (e) => {
             e.preventDefault();
-            switchView(e.currentTarget.getAttribute('data-view'));
+            const viewId = e.currentTarget.getAttribute('data-view');
+            if (!viewId) return;
+            switchView(viewId);
         });
     });
+
+    // Mobile bottom-nav quick actions
+    const quickRecordBtn = document.getElementById('quick-record-btn');
+    if (quickRecordBtn) {
+        quickRecordBtn.addEventListener('click', () => {
+            if (state.currentView === 'profile-view' && state.selectedTargetId && state.selectedTargetProfile) {
+                openQuarterlyModal(state.selectedTargetId);
+                return;
+            }
+            switchView('targets-view');
+            closeMobileNav();
+            const search = document.getElementById('target-search-input');
+            if (search) search.focus();
+        });
+    }
+    const moreMenuBtn = document.getElementById('more-menu-btn');
+    if (moreMenuBtn) {
+        moreMenuBtn.addEventListener('click', () => setMobileNavOpen(true));
+    }
 
     // Login form submission
     const loginForm = document.getElementById('login-form');
@@ -2156,10 +2361,30 @@ function setupEventListeners() {
     });
 
     // Search and filters change on list
-    document.getElementById('target-search-input').addEventListener('input', () => {
+    const searchInputEl = document.getElementById('target-search-input');
+    const searchClearBtn = document.getElementById('target-search-clear');
+    searchInputEl.addEventListener('input', () => {
         state.currentPage = 1;
+        if (searchClearBtn) searchClearBtn.classList.toggle('hidden', !searchInputEl.value);
         renderTargetsList();
     });
+    if (searchClearBtn) {
+        searchClearBtn.addEventListener('click', () => {
+            searchInputEl.value = '';
+            searchClearBtn.classList.add('hidden');
+            state.currentPage = 1;
+            renderTargetsList();
+            searchInputEl.focus();
+        });
+    }
+    const filterToggleBtn = document.getElementById('targets-filter-toggle');
+    if (filterToggleBtn) {
+        filterToggleBtn.addEventListener('click', () => {
+            const panel = document.getElementById('targets-filter-panel');
+            const isHidden = panel.classList.toggle('hidden');
+            filterToggleBtn.setAttribute('aria-expanded', String(!isHidden));
+        });
+    }
     document.getElementById('filter-type').addEventListener('change', () => {
         state.currentPage = 1;
         renderTargetsList();
@@ -2423,6 +2648,8 @@ function setupEventListeners() {
             formData.id = parseInt(targetId);
         }
         
+        const submitBtn = (e.target && e.target.querySelector) ? e.target.querySelector('[type="submit"]') : null;
+        if (submitBtn) submitBtn.disabled = true;
         showSpinner(true);
         try {
             {
@@ -2444,6 +2671,7 @@ function setupEventListeners() {
             showToast("บันทึกข้อมูลล้มเหลว: " + err.message, "danger");
         } finally {
             showSpinner(false);
+            if (submitBtn) submitBtn.disabled = !state.connectionReady;
         }
     });
 
@@ -2511,6 +2739,8 @@ function setupEventListeners() {
             });
         }
         
+        const submitBtn = (e.target && e.target.querySelector) ? e.target.querySelector('[type="submit"]') : null;
+        if (submitBtn) submitBtn.disabled = true;
         showSpinner(true);
         try {
             {
@@ -2526,6 +2756,7 @@ function setupEventListeners() {
             showToast("บันทึกข้อมูลสุขภาพไม่สำเร็จ: " + err.message, "danger");
         } finally {
             showSpinner(false);
+            if (submitBtn) submitBtn.disabled = !state.connectionReady;
         }
     });
 
@@ -2571,6 +2802,8 @@ function setupEventListeners() {
             sleep_hours: parseFloat(document.getElementById('form-d-sleep').value) || 0
         };
         
+        const submitBtn = (e.target && e.target.querySelector) ? e.target.querySelector('[type="submit"]') : null;
+        if (submitBtn) submitBtn.disabled = true;
         showSpinner(true);
         try {
             {
@@ -2586,6 +2819,7 @@ function setupEventListeners() {
             showToast("ไม่สามารถบันทึกพฤติกรรมได้: " + err.message, "danger");
         } finally {
             showSpinner(false);
+            if (submitBtn) submitBtn.disabled = !state.connectionReady;
         }
     });
 }
@@ -3184,6 +3418,7 @@ function toggleWeeklySummaryInputs(enabled) {
     document.querySelectorAll('.weekly-summary-input').forEach(input => {
         input.disabled = !enabled;
         input.required = enabled;
+        input.setAttribute('aria-required', String(enabled));
     });
 }
 
