@@ -32,7 +32,7 @@ test('old demo preference cannot enable demo and settings fields are blank for u
     c.run('loadSettings()');
     assert.equal(c.run('state.connectionMode'), 'online');
     assert.equal(c.storage.has('ncd_connection_mode'), false);
-    assert.equal(c.elements.get('setting-passcode').value, '');
+    assert.equal(c.elements.has('setting-passcode'), false);
 });
 
 test('failed initial load stops writes and never reads local CSVs', async () => {
@@ -86,10 +86,15 @@ test('missing quarterly data keeps system locked even after targets loaded', asy
     assert.equal(c.run('state.connectionReady'), false);
 });
 
-test('non-admin cannot save settings', async () => {
+test('browser settings overrides are ignored and settings form is removed', () => {
     const c = client(); const old = c.run('state.gasUrl');
-    await c.run("saveSettings('https://script.google.com/macros/s/other/exec', 'other')");
+    c.storage.set('ncd_gas_url', 'https://example.com');
+    c.storage.set('ncd_api_passcode', 'stale-password');
+    c.run('loadSettings()');
     assert.equal(c.run('state.gasUrl'), old);
+    assert.equal(c.run('state.apiPasscode'), '009941');
+    assert.equal(c.run('typeof saveSettings'), 'undefined');
+    assert.ok(!fs.readFileSync(require.resolve('../index.html'), 'utf8').includes('settings-view'));
 });
 
 test('all three real submit handlers preserve form and never mutate local data when disconnected', async () => {
@@ -111,11 +116,10 @@ test('login trusts only the server role and shows immediate failure', async () =
     c.run("document.getElementById('login-passcode').value = 'wrong';");
     await c.elements.get('login-form').listeners.submit({ preventDefault() {} });
     assert.equal(c.storage.has('ncd_authenticated'), false);
-    assert.equal(c.run('state.isAdmin'), false);
     assert.match(c.elements.get('login-error').textContent, /เชื่อมต่อฐานข้อมูลไม่สำเร็จ/);
 });
 
-test('backend distinguishes admin from user and denies privileged actions to users', () => {
+test('shared login works but maintenance actions are denied even with a legacy admin password', () => {
     const properties = { API_PASSCODE: 'user-test', ADMIN_PASSCODE: 'admin-test' };
     const context = vm.createContext({
         PropertiesService: { getScriptProperties: () => ({ getProperty: k => properties[k] || '' }) },
@@ -125,9 +129,10 @@ test('backend distinguishes admin from user and denies privileged actions to use
     vm.runInContext(fs.readFileSync(require.resolve('../backend/gas_backend'), 'utf8'), context);
     const request = (passcode, action = 'login') => JSON.parse(context.doPost({ postData: { contents: JSON.stringify({ passcode, action, data: {} }) } }).text);
     assert.equal(request('user-test').data.role, 'user');
-    assert.equal(request('admin-test').data.role, 'admin');
+    assert.equal(request('admin-test').success, false);
     assert.equal(request('wrong').success, false);
     assert.equal(request('user-test', 'setupSheets').success, false);
+    assert.equal(request('admin-test', 'setupSheets').success, false);
     delete properties.ADMIN_PASSCODE;
     assert.equal(request('admin-test').success, false);
 });

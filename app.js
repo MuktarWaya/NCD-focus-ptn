@@ -65,7 +65,6 @@ const state = {
     currentView: 'dashboard-view',
     connectionMode: 'online', // Production only: never fall back to simulated data.
     connectionReady: false,
-    isAdmin: false,
     gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
     apiPasscode: DEFAULT_API_PASSCODE,
     
@@ -107,48 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- Settings & Theme Management ---
 function loadSettings() {
-    const savedUrl = localStorage.getItem('ncd_gas_url');
-    const savedPasscode = localStorage.getItem('ncd_api_passcode');
-    
-    if (savedUrl) {
-        state.gasUrl = savedUrl;
-    }
-    
-    if (savedPasscode === '123456') {
-        localStorage.setItem('ncd_api_passcode', DEFAULT_API_PASSCODE);
-    } else if (savedPasscode) {
-        state.apiPasscode = savedPasscode;
-    }
-    
-    state.connectionMode = 'online';
-    localStorage.removeItem('ncd_connection_mode');
-    document.querySelectorAll('[data-view="settings-view"]').forEach(el => el.hidden = true);
-    document.getElementById('setting-gas-url').value = '';
-    document.getElementById('setting-passcode').value = '';
-
+    state.connectionMode = "online";
+    ["ncd_gas_url", "ncd_api_passcode", "ncd_connection_mode"].forEach(key => localStorage.removeItem(key));
     updateConnectionIndicator();
-}
-
-async function saveSettings(url, passcode) {
-    if (!state.isAdmin) return showToast('เฉพาะผู้ดูแลระบบเท่านั้น', 'danger');
-    if (!url || !passcode) {
-        showToast("กรุณากรอก URL และรหัสผ่าน API ให้ครบถ้วน", "danger");
-        return;
-    }
-
-    if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(url)) {
-        return showToast('กรุณาใช้ Google Apps Script Web App URL ที่ลงท้าย /exec', 'danger');
-    }
-    state.connectionReady = false;
-    state.gasUrl = url;
-    state.apiPasscode = passcode;
-    state.connectionMode = 'online';
-    
-    localStorage.setItem('ncd_gas_url', url);
-    localStorage.setItem('ncd_api_passcode', passcode);
-    
-    updateConnectionIndicator();
-    if (await refreshData()) showToast('เชื่อมต่อและโหลดข้อมูลจริงสำเร็จ');
 }
 
 
@@ -504,7 +464,7 @@ function populateWorkerControls() {
 
 // --- Navigation / Routing ---
 function switchView(viewId) {
-    if (viewId === 'settings-view' && !state.isAdmin) return;
+    if (viewId === 'settings-view') return;
     // Hide all views
     document.querySelectorAll('.view-section').forEach(view => {
         view.classList.add('hidden');
@@ -2152,16 +2112,9 @@ function setupEventListeners() {
             
             const submit = loginForm.querySelector('[type="submit"]');
             submit.disabled = true;
-            state.isAdmin = false;
             try {
                 const login = await postToAPI('login', {}, inputPasscode);
-                if (!['admin', 'user'].includes(login.data?.role)) throw new Error('กรุณาอัปเดต Apps Script เป็นเวอร์ชันล่าสุด');
-                state.isAdmin = login.data.role === 'admin';
-                document.querySelectorAll('[data-view="settings-view"]').forEach(el => el.hidden = !state.isAdmin);
-                if (state.isAdmin) {
-                    document.getElementById('setting-gas-url').value = state.gasUrl;
-                    document.getElementById('setting-passcode').value = state.apiPasscode;
-                }
+                if (login.data?.role !== 'user') throw new Error('กรุณาอัปเดต Apps Script เป็นเวอร์ชันล่าสุด');
                 sessionStorage.setItem('ncd_authenticated', 'true');
                 const loginScreen = document.getElementById('login-screen');
                 if (loginScreen) loginScreen.classList.add('hidden');
@@ -2244,13 +2197,6 @@ function setupEventListeners() {
         renderTargetsList();
     });
 
-    // Settings Connection Form Submission
-    document.getElementById('settings-form').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const url = document.getElementById('setting-gas-url').value.trim();
-        const passcode = document.getElementById('setting-passcode').value.trim();
-        saveSettings(url, passcode);
-    });
 
     document.getElementById('retry-connection').addEventListener('click', () => {
         if (sessionStorage.getItem('ncd_authenticated') === 'true') refreshData();
