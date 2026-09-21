@@ -3,19 +3,27 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { test } = require('node:test');
 
-function client() {
+function client({ search = '', captureLogs = false } = {}) {
     const elements = new Map();
     const storage = new Map([['ncd_authenticated', 'true']]);
+    const logs = [];
     const element = id => {
         if (!elements.has(id)) elements.set(id, {
             value: '', hidden: false, textContent: '', listeners: {},
             addEventListener(type, fn) { this.listeners[type] = fn; }, focus() {},
-            classList: { add() {}, remove() {} }, querySelector() { return element(id + '-child'); }
+            classList: {
+                values: new Set(),
+                add(...names) { names.forEach(name => this.values.add(name)); },
+                remove(...names) { names.forEach(name => this.values.delete(name)); },
+                contains(name) { return this.values.has(name); }
+            },
+            querySelector() { return element(id + '-child'); }
         });
         return elements.get(id);
     };
     const context = vm.createContext({
-        console: { error() {}, warn() {} }, AbortController, setTimeout, clearTimeout,
+        console: { error() {}, warn() {}, log(...args) { if (captureLogs) logs.push(args.join(' ')); } },
+        location: { search }, AbortController, setTimeout, clearTimeout,
         trackingUtils: require('../tracking-utils'),
         document: { addEventListener() {}, getElementById: element, querySelectorAll: () => [], createElement: () => ({}), head: { appendChild() {} } },
         localStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
@@ -23,8 +31,8 @@ function client() {
         fetch: async () => { throw new Error('network down'); }
     });
     vm.runInContext(fs.readFileSync(require.resolve('../app.js'), 'utf8'), context);
-    vm.runInContext('showToast = () => {}; showSpinner = () => {}; switchView = () => {}; populateWorkerControls = () => {};', context);
-    return { context, storage, elements, run: code => vm.runInContext(code, context) };
+    vm.runInContext('showToast = () => {}; showSpinner = () => {}; switchView = () => {}; populateWorkerControls = () => {}; renderDashboardSecondary = () => {}; renderDashboardLoading = () => {};', context);
+    return { context, storage, elements, logs, run: code => vm.runInContext(code, context) };
 }
 
 test('old demo preference cannot enable demo and settings fields are blank for users', () => {
@@ -48,7 +56,7 @@ test('failed initial load stops writes and never reads local CSVs', async () => 
 });
 
 test('complete recovery permits real writes, failed write locks further writes without retry', async () => {
-    const c = client(); let requests = 0;
+    const c = client({ search: '?legacy=1' }); let requests = 0;
     c.context.fetch = async (_url, options) => {
         requests++;
         const { action } = JSON.parse(options.body);
@@ -77,13 +85,250 @@ test('HTTP errors, invalid JSON, and rejected API responses never report success
     }
 });
 
-test('missing quarterly data keeps system locked even after targets loaded', async () => {
-    const c = client();
+test('missing quarterly data keeps writes locked even after core data renders', async () => {
+    const c = client({ search: '?legacy=1' });
     c.context.fetch = async (_url, options) => ({ ok: true, json: async () => ({
         success: true, data: ['getTargets', 'getOsmWorkers'].includes(JSON.parse(options.body).action) ? [] : {}
     }) });
-    assert.equal(await c.run('refreshData()'), false);
+    // core (targets + stats) โหลดได้ → dashboard แสดงผลได้แบบ read-only
+    assert.equal(await c.run('refreshData()'), true);
+    assert.equal(c.run('state.coreDataReady'), true);
+    // แต่ quarterly ขาด → ระบบยังล็อกการบันทึก (write safety คงเดิม ไม่เปิดก่อนเวลา)
     assert.equal(c.run('state.connectionReady'), false);
+    await assert.rejects(c.run("postToAPI('addQuarterly', {})"), /ยังไม่พร้อมบันทึก/);
+});
+
+test('bootstrap endpoint is used when available and skips legacy reads', async () => {
+    const c = client(); const actions = [];
+    c.context.fetch = async (_url, options) => {
+        const { action } = JSON.parse(options.body);
+        actions.push(action);
+        if (action === 'getBootstrapData') {
+            return { ok: true, json: async () => ({ success: true, data: {
+                targets: [{ id: '1', age: '50', height: '160', village: 'หมู่ 2 บ้านตรัง', responsible_worker: 'อสม.เอ' }],
+                dashboardStats: { totalTargets: 1, riskCount: 1, patientCount: 0 },
+                quarterly: [],
+                workers: ['อสม.เอ']
+            }}) };
+        }
+        return { ok: true, json: async () => ({ success: true, data: {} }) };
+    };
+    assert.equal(await c.run('refreshData()'), true);
+    assert.deepEqual(actions, ['getBootstrapData']);
+    assert.equal(c.run('state.coreDataReady'), true);
+    assert.equal(c.run('state.secondaryReady'), true);
+    assert.equal(c.run('state.connectionReady'), true);
+    assert.equal(c.run('state.targets.length'), 1);
+    assert.equal(c.run('state.workerOptions[0]'), 'อสม.เอ');
+});
+
+test('malformed bootstrap quarterly data keeps secondary and writes locked', async () => {
+    const c = client();
+    c.context.fetch = async () => ({ ok: true, json: async () => ({ success: true, data: {
+        targets: [], dashboardStats: { totalTargets: 0 }, quarterly: {}, workers: []
+    } }) });
+
+    assert.equal(await c.run('refreshData()'), false);
+    assert.equal(c.run('state.secondaryReady'), false);
+    assert.equal(c.run('state.connectionReady'), false);
+    await assert.rejects(c.run("postToAPI('addQuarterly', {})"), /ยังไม่พร้อมบันทึก/);
+});
+
+test('malformed bootstrap workers data keeps writes locked', async () => {
+    const c = client();
+    c.context.fetch = async () => ({ ok: true, json: async () => ({ success: true, data: {
+        targets: [], dashboardStats: { totalTargets: 0 }, quarterly: [], workers: null
+    } }) });
+
+    assert.equal(await c.run('refreshData()'), false);
+    assert.equal(c.run('state.secondaryReady'), false);
+    assert.equal(c.run('state.connectionReady'), false);
+});
+
+test('legacy fallback works when bootstrap action is unavailable', async () => {
+    const c = client(); const actions = [];
+    c.context.fetch = async (_url, options) => {
+        const { action } = JSON.parse(options.body);
+        actions.push(action);
+        if (action === 'getBootstrapData') {
+            return { ok: true, json: async () => ({ success: false, error: 'ไม่พบ Action สำหรับการเขียนข้อมูล' }) };
+        }
+        const data = action === 'getOsmWorkers' || action === 'getTargets' ? [] : action === 'getAllQuarterly' ? { quarterly: [] } : {};
+        return { ok: true, json: async () => ({ success: true, data }) };
+    };
+    assert.equal(await c.run('refreshData()'), true);
+    assert.ok(actions.includes('getTargets'));
+    assert.ok(actions.includes('getDashboardStats'));
+    assert.ok(actions.includes('getAllQuarterly'));
+    assert.equal(c.run('state.coreDataReady'), true);
+    assert.equal(c.run('state.connectionReady'), true);
+});
+
+test('bootstrap network failure never silently downgrades to legacy', async () => {
+    const c = client(); const actions = [];
+    c.context.fetch = async (_url, options) => {
+        actions.push(JSON.parse(options.body).action);
+        throw new Error('network down');
+    };
+    assert.equal(await c.run('refreshData()'), false);
+    assert.deepEqual(actions, ['getBootstrapData']); // ไม่ fallback ไป legacy
+    assert.equal(c.run('state.connectionReady'), false);
+});
+
+test('stale generation does not overwrite a newer concurrent load', async () => {
+    const c = client();
+    let releaseFirst;
+    const firstGate = new Promise(resolve => { releaseFirst = resolve; });
+    let bootstrapCalls = 0;
+    c.context.fetch = async (_url, options) => {
+        const { action } = JSON.parse(options.body);
+        if (action !== 'getBootstrapData') {
+            return { ok: true, json: async () => ({ success: true, data: {} }) };
+        }
+        bootstrapCalls++;
+        if (bootstrapCalls === 1) {
+            await firstGate; // หน่วง request แรกไว้
+            return { ok: true, json: async () => ({ success: true, data: {
+                targets: [{ id: '1', age: '50', height: '160', village: 'v1', responsible_worker: 'w1' }],
+                dashboardStats: { totalTargets: 1 }, quarterly: [], workers: ['w1']
+            }}) };
+        }
+        return { ok: true, json: async () => ({ success: true, data: {
+            targets: [{ id: '2', age: '51', height: '161', village: 'v2', responsible_worker: 'w2' }],
+            dashboardStats: { totalTargets: 2 }, quarterly: [], workers: ['w2']
+        }}) };
+    };
+
+    const first = c.run('refreshData()');   // generation 1 (หน่วง)
+    const second = c.run('refreshData()');  // generation 2 (เสร็จทันที)
+    assert.equal(await second, true);
+    assert.equal(c.run('state.targets[0].id'), 2);
+
+    releaseFirst();
+    await first; // generation 1 ต้องถูกทิ้ง
+    assert.equal(c.run('state.targets[0].id'), 2); // ไม่ถูก overwrite โดยข้อมูลเก่า
+});
+
+test('stale legacy core response does not overwrite newer core state', async () => {
+    const c = client({ search: '?legacy=1' });
+    const releases = {};
+    const counts = {};
+    c.context.fetch = async (_url, options) => {
+        const { action } = JSON.parse(options.body);
+        counts[action] = (counts[action] || 0) + 1;
+        const call = counts[action];
+        if (call === 1 && ['getTargets', 'getDashboardStats'].includes(action)) {
+            await new Promise(resolve => { releases[action] = resolve; });
+        }
+        const old = call === 1;
+        const data = action === 'getTargets'
+            ? [{ id: old ? '1' : '2', age: '50', height: '160' }]
+            : action === 'getDashboardStats'
+                ? { totalTargets: old ? 1 : 2 }
+                : action === 'getAllQuarterly' ? { quarterly: [] } : [];
+        return { ok: true, json: async () => ({ success: true, data }) };
+    };
+
+    const stale = c.run('refreshData()');
+    await new Promise(resolve => setImmediate(resolve));
+    const current = c.run('refreshData()');
+    assert.equal(await current, true);
+    releases.getTargets(); releases.getDashboardStats();
+    await stale;
+    assert.equal(c.run('state.targets[0].id'), 2);
+    assert.equal(c.run('state.apiDashboardStats.totalTargets'), 2);
+});
+
+test('stale legacy secondary response does not overwrite newer secondary state', async () => {
+    const c = client({ search: '?legacy=1' });
+    const releases = {};
+    const counts = {};
+    c.context.fetch = async (_url, options) => {
+        const { action } = JSON.parse(options.body);
+        counts[action] = (counts[action] || 0) + 1;
+        const call = counts[action];
+        if (call === 1 && ['getOsmWorkers', 'getAllQuarterly'].includes(action)) {
+            await new Promise(resolve => { releases[action] = resolve; });
+        }
+        const old = call === 1;
+        const data = action === 'getTargets' ? []
+            : action === 'getDashboardStats' ? { totalTargets: 0 }
+                : action === 'getOsmWorkers' ? [old ? 'old-worker' : 'new-worker']
+                    : { quarterly: [{ id: old ? '1' : '2', target_id: '1' }] };
+        return { ok: true, json: async () => ({ success: true, data }) };
+    };
+
+    const stale = c.run('refreshData()');
+    await new Promise(resolve => setImmediate(resolve));
+    const current = c.run('refreshData()');
+    assert.equal(await current, true);
+    releases.getOsmWorkers(); releases.getAllQuarterly();
+    await stale;
+    assert.equal(c.run('state.quarterlyData[0].id'), 2);
+    assert.equal(c.run('state.workerOptions[0]'), 'new-worker');
+});
+
+test('stale failed refresh cannot lock or report over a newer successful generation', async () => {
+    const c = client();
+    let releaseFailure;
+    let calls = 0;
+    c.context.fetch = async () => {
+        calls++;
+        if (calls === 1) {
+            await new Promise(resolve => { releaseFailure = resolve; });
+            throw new Error('late stale failure');
+        }
+        return { ok: true, json: async () => ({ success: true, data: {
+            targets: [], dashboardStats: { totalTargets: 0 }, quarterly: [], workers: []
+        } }) };
+    };
+
+    const stale = c.run('refreshData()');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(await c.run('refreshData()'), true);
+    releaseFailure();
+    assert.equal(await stale, false);
+    assert.equal(c.run('state.connectionReady'), true);
+    assert.equal(c.elements.has('connection-error-message'), false);
+});
+
+test('legacy partial secondary failure emits no full hydration or login total marker', async () => {
+    const c = client({ search: '?legacy=1&perf=1', captureLogs: true });
+    c.run('setupEventListeners()');
+    c.run("document.getElementById('login-passcode').value = 'valid';");
+    c.context.fetch = async (_url, options) => {
+        const { action } = JSON.parse(options.body);
+        if (action === 'login') return { ok: true, json: async () => ({ success: true, data: { role: 'user' } }) };
+        if (action === 'getAllQuarterly') throw new Error('secondary down');
+        const data = action === 'getTargets' || action === 'getOsmWorkers' ? [] : {};
+        return { ok: true, json: async () => ({ success: true, data }) };
+    };
+
+    await c.elements.get('login-form').listeners.submit({ preventDefault() {} });
+    assert.equal(c.run('state.connectionReady'), false);
+    assert.ok(!c.logs.some(line => line.includes('full-hydration')));
+    assert.ok(!c.logs.some(line => line.includes('login-total (auth + full hydration)')));
+});
+
+test('session restore hydrates without re-login', async () => {
+    const c = client(); // storage เริ่มต้นมี ncd_authenticated = 'true'
+    const actions = [];
+    c.context.fetch = async (_url, options) => {
+        const { action } = JSON.parse(options.body);
+        actions.push(action);
+        if (action === 'getBootstrapData') {
+            return { ok: true, json: async () => ({ success: true, data: {
+                targets: [], dashboardStats: { totalTargets: 0 }, quarterly: [], workers: []
+            }}) };
+        }
+        return { ok: true, json: async () => ({ success: true, data: {} }) };
+    };
+    c.run('checkAuthentication()');
+    await new Promise(resolve => setTimeout(resolve, 50)); // รอ async refreshData ทำงาน
+    assert.ok(actions.includes('getBootstrapData'));
+    assert.ok(!actions.includes('login')); // ไม่มีการ re-login
+    assert.equal(c.run('state.coreDataReady'), true);
+    assert.equal(c.run('state.connectionReady'), true);
 });
 
 test('browser settings overrides are ignored and settings form is removed', () => {

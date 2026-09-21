@@ -64,7 +64,10 @@ const MOCK_WORKERS = [
 const state = {
     currentView: 'dashboard-view',
     connectionMode: 'online', // Production only: never fall back to simulated data.
-    connectionReady: false,
+    connectionReady: false,   // write-ready: เปิดเฉพาะ hydrate ครบแล้ว (targets+stats+quarterly+workers)
+    coreDataReady: false,     // targets + dashboardStats พร้อม (แสดง dashboard ได้ read-only)
+    secondaryReady: false,    // quarterly + workers พร้อม
+    loadGeneration: 0,        // token กัน stale response หลัง logout/refresh ซ้ำ
     gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
     apiPasscode: DEFAULT_API_PASSCODE,
     
@@ -259,66 +262,185 @@ function toggleTheme() {
     refreshCharts();
 }
 
+// --- Dev-only performance instrumentation ---
+// เปิดได้โดยเรียก URL ด้วย ?perf=1 หรือตั้ง localStorage ncd_perf_log=1 (production ปิดโดยปริยาย)
+const PERF_LOGGING = (typeof location !== 'undefined' && /[?&]perf=1/.test(location.search))
+    || (typeof localStorage !== 'undefined' && localStorage.getItem('ncd_perf_log') === '1');
+// ?legacy=1 → บังคับ path เดิม (parallel) เพื่อ A/B เทียบกับ bootstrap (dev-only benchmark)
+const FORCE_LEGACY_READS = (typeof location !== 'undefined' && /[?&]legacy=1/.test(location.search));
+function perfNow() {
+    return (typeof performance !== 'undefined') ? performance.now() : Date.now();
+}
+function perfLog(label, start) {
+    if (!PERF_LOGGING) return;
+    console.log(`[PERF] ${label}: ${Math.round(perfNow() - start)}ms`);
+}
+
 // --- Data Fetching and Parsing ---
+// Progressive hydration:
+//   1) CORE (critical): targets + dashboardStats → แสดง dashboard ที่ใช้ได้ (read-only)
+//   2) SECONDARY (non-critical): quarterly + workers → hydrate ส่วนที่เหลือ + เปิดให้บันทึกได้
 async function refreshData() {
-    showSpinner(true);
-    state.connectionReady = false;
+    const generation = ++state.loadGeneration;
+    const startedAt = perfNow();
+
+    state.connectionReady = false;   // write-ready: เข้มงวดเท่าเดิม เปิดเฉพาะ hydrate ครบแล้ว
+    state.coreDataReady = false;
+    state.secondaryReady = false;
     updateConnectionIndicator();
+
+    if (state.currentView === 'dashboard-view') renderDashboardLoading();
+
     try {
-        await fetchFromAPI();
-        
-        // Render initial view
-        switchView(state.currentView);
-        state.connectionReady = true;
-        document.getElementById('connection-error').classList.add('hidden');
+        const bootstrap = await fetchBootstrapOrNull();
+        perfLog('bootstrap-request', startedAt);
+        if (generation !== state.loadGeneration) return false;
+
+        if (bootstrap) {
+            // Bootstrap endpoint ให้ข้อมูลครบใน request เดียว (targets + stats + quarterly + workers)
+            applyCoreData(bootstrap.targets, bootstrap.dashboardStats);
+            state.coreDataReady = true;
+            finishCoreRender();
+            perfLog('coreDataReady + first-usable-dashboard (bootstrap)', startedAt);
+
+            if (generation !== state.loadGeneration) return false;
+            applySecondaryData(bootstrap.quarterly, bootstrap.workers);
+            state.secondaryReady = true;
+            finishSecondaryRender();
+            perfLog('secondaryReady + connectionReady (bootstrap)', startedAt);
+            perfLog('full-hydration', startedAt);
+            return true;
+        }
+
+        // Fallback: backend เดิมที่ยังไม่มี bootstrap action → อ่านแบบ parallel
+        const core = await loadCoreLegacy();
+        if (generation !== state.loadGeneration) return false;
+        applyCoreData(core.targets, core.dashboardStats);
+        state.coreDataReady = true;
+        finishCoreRender();
+        perfLog('coreDataReady + first-usable-dashboard (legacy)', startedAt);
+
+        try {
+            const secondary = await loadSecondaryLegacy();
+            if (generation !== state.loadGeneration) return false;
+            applySecondaryData(secondary.quarterly, secondary.workers);
+            state.secondaryReady = true;
+            finishSecondaryRender();
+            perfLog('secondaryReady + connectionReady (legacy)', startedAt);
+            perfLog('full-hydration', startedAt);
+        } catch (err) {
+            if (generation !== state.loadGeneration) return false;
+            console.warn('[NCDs] Secondary data load failed — read-only mode:', err);
+            showToast('โหลดข้อมูลเพิ่มเติมไม่สำเร็จ แสดงผลหลักได้แต่ยังบันทึกข้อมูลไม่ได้', 'warning');
+            reportConnectionError(err);
+            // connectionReady ยัง false → ห้ามบันทึก และแสดงแบนเนอร์ข้อผิดพลาดแล้ว
+        }
         return true;
     } catch (err) {
+        if (generation !== state.loadGeneration) return false;
         console.error("Error loading data:", err);
         showToast("ไม่สามารถโหลดข้อมูลได้: " + err.message, "danger");
         reportConnectionError(err);
         return false;
     } finally {
         updateConnectionIndicator();
-        showSpinner(false);
     }
 }
 
-// Fetch database from Google Apps Script Web App
-async function fetchFromAPI() {
-    await fetchWorkerOptions();
+// พยายามดึงข้อมูลทั้งหมดจาก bootstrap endpoint; คืน null เมื่อ backend ยังไม่รองรับ action นี้
+async function fetchBootstrapOrNull() {
+    if (FORCE_LEGACY_READS) return null; // A/B benchmark: บังคับ path เดิม (parallel)
+    let raw;
+    try {
+        raw = await postToAPI('getBootstrapData', {}, state.apiPasscode, { reportError: false });
+    } catch (err) {
+        if (isActionUnavailableError(err)) return null; // backend เก่า → fallback legacy
+        throw err; // network/server error → ให้เป็น core failure จริง
+    }
+    const d = raw && raw.data;
+    if (!d || !Array.isArray(d.targets) || !d.dashboardStats || typeof d.dashboardStats !== 'object'
+        || Array.isArray(d.dashboardStats)
+        || !Array.isArray(d.quarterly) || !Array.isArray(d.workers)) {
+        throw new Error('ข้อมูล bootstrap จากฐานข้อมูลไม่ครบถ้วนหรือไม่ถูกต้อง');
+    }
+    return d;
+}
 
-    // 1. Get Targets
-    const targetsJSON = await postToAPI('getTargets', {});
+function isActionUnavailableError(err) {
+    return /ไม่พบ Action/i.test((err && err.message) || '');
+}
+
+async function loadCoreLegacy() {
+    const t = perfNow();
+    const [targetsJSON, statsJSON] = await Promise.all([
+        postToAPI('getTargets', {}, state.apiPasscode, { reportError: false }),
+        postToAPI('getDashboardStats', {}, state.apiPasscode, { reportError: false })
+    ]);
+    perfLog('core-legacy (getTargets + getDashboardStats)', t);
+
     if (!targetsJSON.success) throw new Error(targetsJSON.error);
     if (!Array.isArray(targetsJSON.data)) throw new Error('ข้อมูลรายชื่อจากฐานข้อมูลไม่ถูกต้อง');
-    state.targets = targetsJSON.data;
-    state.targets.forEach(t => {
+    if (!statsJSON.data || typeof statsJSON.data !== 'object') throw new Error('ข้อมูลสรุปจากฐานข้อมูลไม่ถูกต้อง');
+
+    return {
+        targets: targetsJSON.data,
+        dashboardStats: statsJSON.success ? statsJSON.data : state.apiDashboardStats
+    };
+}
+
+async function loadSecondaryLegacy() {
+    const t = perfNow();
+    const [workerJSON, quarterlyJSON] = await Promise.all([
+        postToAPI('getOsmWorkers', {}, state.apiPasscode, { reportError: false }),
+        postToAPI('getAllQuarterly', {}, state.apiPasscode, { reportError: false })
+    ]);
+    perfLog('secondary-legacy (getOsmWorkers + getAllQuarterly)', t);
+
+    if (!Array.isArray(workerJSON.data)) throw new Error('ข้อมูลคณะทำงานจากฐานข้อมูลไม่ถูกต้อง');
+    if (!quarterlyJSON.data || !Array.isArray(quarterlyJSON.data.quarterly)) throw new Error('ข้อมูลผลติดตามจากฐานข้อมูลไม่ถูกต้อง');
+
+    return {
+        quarterly: quarterlyJSON.success ? quarterlyJSON.data.quarterly : [],
+        workers: workerJSON.success && Array.isArray(workerJSON.data) && workerJSON.data.length > 0 ? workerJSON.data : null
+    };
+}
+
+function normalizeTargets(targets) {
+    (targets || []).forEach(t => {
         t.id = parseInt(t.id);
         t.age = parseInt(t.age);
         t.height = parseFloat(t.height);
         t.village = t.village || '';
         t.responsible_worker = t.responsible_worker || '';
     });
-    
-    // 2. Fetch stats and other tables by fetching details when needed,
-    // but to get dashboard Stats, we query getDashboardStats API
-    const statsJSON = await postToAPI('getDashboardStats', {});
-    if (!statsJSON.data || typeof statsJSON.data !== 'object') throw new Error('ข้อมูลสรุปจากฐานข้อมูลไม่ถูกต้อง');
-    if (statsJSON.success) {
-        state.apiDashboardStats = statsJSON.data;
-    }
+    return targets || [];
+}
 
-    // 3. Load all quarterly rows (incl. stored pingpong) for registry / distribution
-    {
-        const quarterlyJSON = await postToAPI('getAllQuarterly', {});
-        if (!Array.isArray(quarterlyJSON.data?.quarterly)) throw new Error('ข้อมูลผลติดตามจากฐานข้อมูลไม่ถูกต้อง');
-        if (quarterlyJSON.success && quarterlyJSON.data && Array.isArray(quarterlyJSON.data.quarterly)) {
-            state.quarterlyData = quarterlyJSON.data.quarterly;
-            state.quarterlyData.forEach(normalizeTrackingRecord);
-        }
-    }
+function applyCoreData(targets, stats) {
+    state.targets = normalizeTargets(targets);
+    state.apiDashboardStats = stats;
+}
 
+function applySecondaryData(quarterly, workers) {
+    state.workerOptions = [...MOCK_WORKERS];
+    state.quarterlyData = Array.isArray(quarterly) ? quarterly : [];
+    state.quarterlyData.forEach(normalizeTrackingRecord);
+    if (Array.isArray(workers) && workers.length > 0) {
+        state.workerOptions = getUniqueWorkers(workers);
+    }
+}
+
+function finishCoreRender() {
+    const errEl = document.getElementById('connection-error');
+    if (errEl) errEl.classList.add('hidden');
+    switchView(state.currentView);
+}
+
+function finishSecondaryRender() {
     populateWorkerControls();
+    if (state.currentView === 'dashboard-view') renderDashboardSecondary();
+    state.connectionReady = true;
+    updateConnectionIndicator();
 }
 
 function normalizeTrackingRecord(record) {
@@ -334,19 +456,6 @@ function normalizeTrackingRecord(record) {
         });
     });
     return record;
-}
-
-
-async function fetchWorkerOptions() {
-    state.workerOptions = [...MOCK_WORKERS];
-
-    if (state.connectionMode !== 'online') return;
-
-    const workerJSON = await postToAPI('getOsmWorkers', {});
-    if (!Array.isArray(workerJSON.data)) throw new Error('ข้อมูลคณะทำงานจากฐานข้อมูลไม่ถูกต้อง');
-    if (workerJSON.success && Array.isArray(workerJSON.data) && workerJSON.data.length > 0) {
-        state.workerOptions = getUniqueWorkers(workerJSON.data);
-    }
 }
 
 // Custom CSV Parser (Robust Client-Side parsing)
@@ -581,72 +690,80 @@ function updateHeaderTitles(viewId) {
 }
 
 // --- View 1: Dashboard Rendering ---
-function renderDashboard() {
-    let stats = {};
-    
+function getDashboardStats() {
     if (state.connectionMode === 'online' && state.apiDashboardStats) {
-        stats = state.apiDashboardStats;
-    } else {
-        // Calculate locally (Demo Mode)
-        const total = state.targets.length;
-        const risk = state.targets.filter(t => t.type === 'กลุ่มเสี่ยง').length;
-        const patient = state.targets.filter(t => t.type === 'กลุ่มป่วย').length;
-        
-        // Calculate improvements (Latest vs M0)
-        let improvedBmi = 0;
-        let improvedBp = 0;
-        let improvedDtx = 0;
-        let followUpCount = 0;
-        
-        // Group quarterly logs by target
-        const grouped = {};
-        state.quarterlyData.forEach(row => {
-            if (!grouped[row.target_id]) grouped[row.target_id] = [];
-            grouped[row.target_id].push(row);
-        });
-        
-        Object.keys(grouped).forEach(tid => {
-            const logs = grouped[tid];
-            if (logs.length > 1) { // has M0 and follow-ups
-                followUpCount++;
-                // Sort by quarter
-                logs.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
-                
-                const m0 = logs[0];
-                const latest = logs[logs.length - 1];
-                
-                if (latest.bmi < m0.bmi) improvedBmi++;
-                
-                if (latest.bp && m0.bp) {
-                    const m0Sys = parseInt(m0.bp.toString().split('/')[0]);
-                    const latSys = parseInt(latest.bp.toString().split('/')[0]);
-                    if (latSys < m0Sys) improvedBp++;
-                }
-                
-                if (latest.dtx < m0.dtx) improvedDtx++;
-            }
-        });
-        
-        const improvedBmiRate = followUpCount > 0 ? ((improvedBmi / followUpCount) * 100).toFixed(1) : 0;
-        const improvedBpRate = followUpCount > 0 ? ((improvedBp / followUpCount) * 100).toFixed(1) : 0;
-        const improvedDtxRate = followUpCount > 0 ? ((improvedDtx / followUpCount) * 100).toFixed(1) : 0;
-        const overallRate = followUpCount > 0 ? (((improvedBmi + improvedBp + improvedDtx) / (followUpCount * 3)) * 100).toFixed(1) : 0;
-        
-        stats = {
-            totalTargets: total,
-            riskCount: risk,
-            patientCount: patient,
-            totalWithFollowUp: followUpCount,
-            improvedBmiCount: improvedBmi,
-            improvedBmiRate: improvedBmiRate,
-            improvedBpCount: improvedBp,
-            improvedBpRate: improvedBpRate,
-            improvedDtxCount: improvedDtx,
-            improvedDtxRate: improvedDtxRate,
-            overallImprovedRate: overallRate
-        };
+        return state.apiDashboardStats;
     }
-    
+
+    // Calculate locally (Demo Mode)
+    const total = state.targets.length;
+    const risk = state.targets.filter(t => t.type === 'กลุ่มเสี่ยง').length;
+    const patient = state.targets.filter(t => t.type === 'กลุ่มป่วย').length;
+
+    // Calculate improvements (Latest vs M0)
+    let improvedBmi = 0;
+    let improvedBp = 0;
+    let improvedDtx = 0;
+    let followUpCount = 0;
+
+    // Group quarterly logs by target
+    const grouped = {};
+    state.quarterlyData.forEach(row => {
+        if (!grouped[row.target_id]) grouped[row.target_id] = [];
+        grouped[row.target_id].push(row);
+    });
+
+    Object.keys(grouped).forEach(tid => {
+        const logs = grouped[tid];
+        if (logs.length > 1) { // has M0 and follow-ups
+            followUpCount++;
+            // Sort by quarter
+            logs.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
+
+            const m0 = logs[0];
+            const latest = logs[logs.length - 1];
+
+            if (latest.bmi < m0.bmi) improvedBmi++;
+
+            if (latest.bp && m0.bp) {
+                const m0Sys = parseInt(m0.bp.toString().split('/')[0]);
+                const latSys = parseInt(latest.bp.toString().split('/')[0]);
+                if (latSys < m0Sys) improvedBp++;
+            }
+
+            if (latest.dtx < m0.dtx) improvedDtx++;
+        }
+    });
+
+    const improvedBmiRate = followUpCount > 0 ? ((improvedBmi / followUpCount) * 100).toFixed(1) : 0;
+    const improvedBpRate = followUpCount > 0 ? ((improvedBp / followUpCount) * 100).toFixed(1) : 0;
+    const improvedDtxRate = followUpCount > 0 ? ((improvedDtx / followUpCount) * 100).toFixed(1) : 0;
+    const overallRate = followUpCount > 0 ? (((improvedBmi + improvedBp + improvedDtx) / (followUpCount * 3)) * 100).toFixed(1) : 0;
+
+    return {
+        totalTargets: total,
+        riskCount: risk,
+        patientCount: patient,
+        totalWithFollowUp: followUpCount,
+        improvedBmiCount: improvedBmi,
+        improvedBmiRate: improvedBmiRate,
+        improvedBpCount: improvedBp,
+        improvedBpRate: improvedBpRate,
+        improvedDtxCount: improvedDtx,
+        improvedDtxRate: improvedDtxRate,
+        overallImprovedRate: overallRate
+    };
+}
+
+function renderDashboard() {
+    renderDashboardCore();
+    renderDashboardSecondary();
+}
+
+// ส่วนหลักของ dashboard ที่พร้อมแสดงทันทีเมื่อ core data (stats) มา
+function renderDashboardCore() {
+    const stats = getDashboardStats();
+
     // Update stats cards UI
     document.getElementById('stat-total').textContent = stats.totalTargets;
     document.getElementById('stat-risk').textContent = stats.riskCount;
@@ -657,22 +774,50 @@ function renderDashboard() {
 
     // Draw Pie Chart: Ratio
     drawRatioChart(stats.riskCount, stats.patientCount);
-    
+
     // Draw Bar Chart: Improvement Indicators
     drawImprovementChart(stats.improvedBmiRate, stats.improvedBpRate, stats.improvedDtxRate);
-
-    // Render ping-pong 7-color distribution
-    renderPingpongDistribution();
 
     // Render village-level progress cards
     renderVillageProgress(stats);
     renderWorkerProgress(stats);
-    
-    // Render Urgent targets table
+}
+
+// ส่วนที่ต้องใช้ข้อมูล quarterly (pingpong / urgent / behavior) — hydrate ทีหลัง
+function renderDashboardSecondary() {
+    if (!state.secondaryReady) {
+        renderSecondaryLoading();
+        return;
+    }
+    renderPingpongDistribution();
     renderUrgentTargetsTable();
-    
-    // Render overall behavior metrics
     renderOverallBehavior();
+}
+
+// สถานะ "กำลังโหลด" แบบ component-level สำหรับ section ที่รอข้อมูล secondary
+function renderSecondaryLoading() {
+    const note = document.getElementById('pingpong-dist-note');
+    if (note) note.textContent = 'กำลังโหลดผลติดตามล่าสุด...';
+    const bar = document.getElementById('pingpong-dist-bar');
+    if (bar) bar.innerHTML = '<div class="w-full h-full bg-slate-200/70 rounded-full"></div>';
+    const legend = document.getElementById('pingpong-dist-legend');
+    if (legend) legend.innerHTML = '<p class="col-span-full text-sm text-on-surface-variant text-center py-2">กำลังโหลดข้อมูลเพิ่มเติม...</p>';
+
+    const countLabel = document.getElementById('urgent-count-label');
+    if (countLabel) countLabel.textContent = 'กำลังโหลด...';
+    const tbody = document.getElementById('dashboard-urgent-list');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-sm text-on-surface-variant">กำลังโหลดรายการที่ควรติดตาม...</td></tr>';
+    const cards = document.getElementById('dashboard-urgent-cards');
+    if (cards) cards.innerHTML = '<div class="rounded-xl bg-white/60 border border-slate-100 p-4 text-sm text-on-surface-variant text-center">กำลังโหลดรายการที่ควรติดตาม...</div>';
+}
+
+// สถานะโหลดเริ่มต้น (ก่อน core data พร้อม) สำหรับ login / session-restore
+function renderDashboardLoading() {
+    const v = document.getElementById('village-progress-container');
+    if (v) v.innerHTML = '<div class="col-span-full rounded-xl bg-white/50 border border-white/60 p-6 text-center text-sm text-on-surface-variant">กำลังโหลดข้อมูล...</div>';
+    const w = document.getElementById('worker-progress-container');
+    if (w) w.innerHTML = '<div class="col-span-full rounded-xl bg-white/50 border border-white/60 p-6 text-center text-sm text-on-surface-variant">กำลังโหลดข้อมูล...</div>';
+    renderSecondaryLoading();
 }
 
 function renderPingpongDistribution() {
@@ -2316,16 +2461,26 @@ function setupEventListeners() {
             const errorDiv = document.getElementById('login-error');
             
             const submit = loginForm.querySelector('[type="submit"]');
+            const submitLabel = submit ? submit.querySelector('span') : null;
             submit.disabled = true;
+            if (submitLabel) submitLabel.textContent = 'กำลังตรวจสอบ...';
+            const loginStart = perfNow();
             try {
                 const login = await postToAPI('login', {}, inputPasscode);
+                perfLog('login-auth', loginStart);
                 if (login.data?.role !== 'user') throw new Error('กรุณาอัปเดต Apps Script เป็นเวอร์ชันล่าสุด');
                 sessionStorage.setItem('ncd_authenticated', 'true');
                 const loginScreen = document.getElementById('login-screen');
                 if (loginScreen) loginScreen.classList.add('hidden');
                 errorDiv.classList.add('hidden');
                 document.getElementById('login-passcode').value = '';
-                if (await refreshData()) showToast('เข้าสู่ระบบและโหลดข้อมูลจริงสำเร็จ');
+                // ซ่อนหน้า login แล้วแสดง app shell + โหลดข้อมูลแบบ progressive ทันที
+                showToast('เข้าสู่ระบบแล้ว กำลังโหลดข้อมูลล่าสุด...', 'success');
+                const ok = await refreshData();
+                if (ok && state.connectionReady) {
+                    showToast('เข้าสู่ระบบและโหลดข้อมูลจริงเรียบร้อยแล้ว');
+                    perfLog('login-total (auth + full hydration)', loginStart);
+                }
             } catch (error) {
                 sessionStorage.removeItem('ncd_authenticated');
                 errorDiv.textContent = error.message;
@@ -2335,7 +2490,10 @@ function setupEventListeners() {
                     passcodeField.value = '';
                     passcodeField.focus();
                 }
-            } finally { submit.disabled = false; }
+            } finally {
+                if (submitLabel) submitLabel.textContent = 'เข้าสู่ระบบ';
+                submit.disabled = false;
+            }
         });
     }
 
@@ -2825,7 +2983,7 @@ function setupEventListeners() {
 }
 
 // Post request handler using POST redirect trick for GAS (Text payload with text/plain to bypass Preflight)
-async function postToAPI(action, data, passcode = state.apiPasscode) {
+async function postToAPI(action, data, passcode = state.apiPasscode, opts = {}) {
     const isWrite = ['addTarget', 'updateTarget', 'addQuarterly', 'addDailyLog'].includes(action);
     if (isWrite && (state.connectionMode !== 'online' || !state.connectionReady || sessionStorage.getItem('ncd_authenticated') !== 'true')) {
         throw new Error('ยังไม่พร้อมบันทึก กรุณาเชื่อมต่อใหม่ให้สำเร็จก่อน ข้อมูลในฟอร์มยังอยู่');
@@ -2856,7 +3014,7 @@ async function postToAPI(action, data, passcode = state.apiPasscode) {
             ? 'ยังยืนยันผลการบันทึกไม่ได้ กรุณาเชื่อมต่อใหม่และตรวจรายการก่อนบันทึกซ้ำ: '
             : 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ: ';
         const failure = new Error(message + (error.name === 'AbortError' ? 'หมดเวลารอเซิร์ฟเวอร์' : error.message));
-        reportConnectionError(failure);
+        if (opts.reportError !== false) reportConnectionError(failure);
         throw failure;
     } finally {
         clearTimeout(timer);
