@@ -115,6 +115,8 @@ function doPost(e) {
       return getDashboardStats(ss);
     } else if (action === "getAllQuarterly") {
       return getAllQuarterly(ss);
+    } else if (action === "getBootstrapData") {
+      return getBootstrapData(ss);
     } else if (action === "setupSheets") {
       setupSheetsForSpreadsheet(ss);
       return successResponse({ message: "ตรวจสอบและเติมหัวตารางชีตเรียบร้อยแล้ว" });
@@ -227,11 +229,17 @@ function getTargetDetail(ss, targetId) {
 // 3. คำนวณค่าสถิติแดชบอร์ด
 function getDashboardStats(ss) {
   var targetsSheet = ss.getSheetByName("Targets");
-  var quarterlySheet = ss.getSheetByName("QuarterlyData");
-  
   if (!targetsSheet) return errorResponse("ไม่พบแผ่นงาน 'Targets'");
-  
+  var quarterlySheet = ss.getSheetByName("QuarterlyData");
+
   var targets = getSheetData(targetsSheet);
+  var quarterlyData = quarterlySheet ? getSheetData(quarterlySheet) : [];
+  var osmWorkers = readOsmWorkers(ss);
+  return successResponse(computeDashboardStats_(targets, quarterlyData, osmWorkers));
+}
+
+// คำนวณสถิติแดชบอร์ดจากข้อมูลที่อ่านมาแล้ว (ใช้ร่วมกันระหว่าง getDashboardStats และ getBootstrapData)
+function computeDashboardStats_(targets, quarterlyData, osmWorkers) {
   var total = targets.length;
   
   var riskCount = targets.filter(function(t) { return t.type === "กลุ่มเสี่ยง"; }).length;
@@ -244,47 +252,41 @@ function getDashboardStats(ss) {
   var totalWithFollowUp = 0;
   var targetGroups = {};
   
-  if (quarterlySheet) {
-    var qData = getSheetData(quarterlySheet);
-    
-    // จัดกลุ่มตาม target_id
-    qData.forEach(function(row) {
-      var tid = row.target_id;
-      if (!targetGroups[tid]) targetGroups[tid] = [];
-      targetGroups[tid].push(row);
-    });
-    
-    Object.keys(targetGroups).forEach(function(tid) {
-      var logs = targetGroups[tid];
-      if (logs.length > 1) { // มีการติดตามผลมากกว่า 1 ครั้ง (มี M0 และไตรมาสอื่น)
-        totalWithFollowUp++;
-        
-        logs.sort(function(a, b) { return trackingRoundOrder_(a.quarter) - trackingRoundOrder_(b.quarter); });
-        
-        var m0 = logs[0];
-        var latest = logs[logs.length - 1];
-        
-        // 1. BMI ลดลง (ดีขึ้น)
-        if (latest.bmi && m0.bmi && parseFloat(latest.bmi) < parseFloat(m0.bmi)) {
-          improvedBmiCount++;
-        }
-        
-        // 2. ความดันโลหิตดีขึ้น (Systolic ล่าสุด น้อยกว่า M0)
-        if (latest.bp && m0.bp) {
-          var m0Sys = parseInt(m0.bp.toString().split("/")[0]);
-          var latSys = parseInt(latest.bp.toString().split("/")[0]);
-          if (latSys < m0Sys) improvedBpCount++;
-        }
-        
-        // 3. ค่าน้ำตาล DTX ลดลง
-        if (latest.dtx && m0.dtx && parseInt(latest.dtx) < parseInt(m0.dtx)) {
-          improvedDtxCount++;
-        }
-      }
-    });
-  }
+  // จัดกลุ่มตาม target_id
+  quarterlyData.forEach(function(row) {
+    var tid = row.target_id;
+    if (!targetGroups[tid]) targetGroups[tid] = [];
+    targetGroups[tid].push(row);
+  });
 
-  var osmWorkers = readOsmWorkers(ss);
+  Object.keys(targetGroups).forEach(function(tid) {
+    var logs = targetGroups[tid];
+    if (logs.length > 1) { // มีการติดตามผลมากกว่า 1 ครั้ง (มี M0 และไตรมาสอื่น)
+      totalWithFollowUp++;
+
+      logs.sort(function(a, b) { return trackingRoundOrder_(a.quarter) - trackingRoundOrder_(b.quarter); });
+
+      var m0 = logs[0];
+      var latest = logs[logs.length - 1];
+
+      // 1. BMI ลดลง (ดีขึ้น)
+      if (latest.bmi && m0.bmi && parseFloat(latest.bmi) < parseFloat(m0.bmi)) {
+        improvedBmiCount++;
+      }
+
+      // 2. ความดันโลหิตดีขึ้น (Systolic ล่าสุด น้อยกว่า M0)
+      if (latest.bp && m0.bp) {
+        var m0Sys = parseInt(m0.bp.toString().split("/")[0]);
+        var latSys = parseInt(latest.bp.toString().split("/")[0]);
+        if (latSys < m0Sys) improvedBpCount++;
+      }
+
+      // 3. ค่าน้ำตาล DTX ลดลง
+      if (latest.dtx && m0.dtx && parseInt(latest.dtx) < parseInt(m0.dtx)) {
+        improvedDtxCount++;
+      }
+    }
+  });
   var mockWorkers = [
     "อสม.นูรอัยนี มะ", "อสม.ฟาตีเมาะ สาและ", "อสม.ไซนับ ดอเลาะ", "อสม.อามีนะห์ มะลี",
     "อสม.รอกีเยาะ เจ๊ะมะ", "อสม.ซูไรดา ดือราแม", "อสม.ปาตีเมาะ มามะ", "อสม.มารียัม สะแลแม",
@@ -355,7 +357,7 @@ function getDashboardStats(ss) {
     return item.total > 0 || item.worker !== "ยังไม่ระบุคณะทำงาน";
   });
   
-  return successResponse({
+  return {
     totalTargets: total,
     riskCount: riskCount,
     patientCount: patientCount,
@@ -368,7 +370,40 @@ function getDashboardStats(ss) {
     improvedDtxRate: totalWithFollowUp > 0 ? ((improvedDtxCount / totalWithFollowUp) * 100).toFixed(1) : "0",
     villageSummary: villageSummary,
     workerSummary: workerSummary
+  };
+}
+
+// ดึงข้อมูลทั้งหมดที่จำเป็นต่อการเปิดหน้าจอในคำขอเดียว (bootstrap) — backward compatible
+function getBootstrapData(ss) {
+  // ตั้งเป็น true เพื่อวัดส่วนที่ช้าที่สุด (Logger.log) แล้วปิดกลับก่อน deploy จริง
+  var PROFILE_BOOTSTRAP = false;
+  var t0 = PROFILE_BOOTSTRAP ? new Date().getTime() : 0;
+  function tMark(label) {
+    if (!PROFILE_BOOTSTRAP) return;
+    Logger.log("[BOOTSTRAP] " + label + ": " + (new Date().getTime() - t0) + "ms");
+  }
+
+  var targetsSheet = ss.getSheetByName("Targets");
+  if (!targetsSheet) return errorResponse("ไม่พบแผ่นงาน 'Targets'");
+  var quarterlySheet = ss.getSheetByName("QuarterlyData");
+
+  var targets = getSheetData(targetsSheet);
+  tMark("targets-read");
+  var quarterlyData = quarterlySheet ? getSheetData(quarterlySheet) : [];
+  tMark("quarterly-read");
+  var osmWorkers = readOsmWorkers(ss);
+  tMark("osm-read");
+  var dashboardStats = computeDashboardStats_(targets, quarterlyData, osmWorkers);
+  tMark("stats-compute");
+
+  var result = successResponse({
+    targets: targets,
+    dashboardStats: dashboardStats,
+    quarterly: quarterlyData,
+    workers: osmWorkers
   });
+  tMark("total (incl. serialize)");
+  return result;
 }
 
 // 4. บันทึกเป้าหมายใหม่
