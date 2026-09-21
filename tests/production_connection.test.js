@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const { test } = require('node:test');
 
-function client({ search = '', captureLogs = false } = {}) {
+function client({ search = '', captureLogs = false, stubSpinner = true } = {}) {
     const elements = new Map();
     const storage = new Map([['ncd_authenticated', 'true']]);
     const logs = [];
@@ -31,9 +31,27 @@ function client({ search = '', captureLogs = false } = {}) {
         fetch: async () => { throw new Error('network down'); }
     });
     vm.runInContext(fs.readFileSync(require.resolve('../app.js'), 'utf8'), context);
-    vm.runInContext('showToast = () => {}; showSpinner = () => {}; switchView = () => {}; populateWorkerControls = () => {}; renderDashboardSecondary = () => {}; renderDashboardLoading = () => {};', context);
+    vm.runInContext(`showToast = () => {}; ${stubSpinner ? 'showSpinner = () => {};' : ''} switchView = () => {}; populateWorkerControls = () => {}; renderDashboardSecondary = () => {}; renderDashboardLoading = () => {};`, context);
     return { context, storage, elements, logs, run: code => vm.runInContext(code, context) };
 }
+
+test('login and blocking operations expose contextual progress messages', () => {
+    const html = fs.readFileSync(require.resolve('../index.html'), 'utf8');
+    assert.match(html, /id="loading-spinner-message"[^>]*aria-live="polite"/);
+
+    const c = client({ stubSpinner: false });
+    c.run("showSpinner(true, 'กำลังโหลดข้อมูลรายบุคคล...')");
+    assert.equal(c.elements.get('loading-spinner-message').textContent, 'กำลังโหลดข้อมูลรายบุคคล...');
+    assert.equal(c.elements.get('loading-spinner').classList.contains('hidden'), false);
+    c.run('showSpinner(false)');
+    assert.equal(c.elements.get('loading-spinner').classList.contains('hidden'), true);
+
+    const source = fs.readFileSync(require.resolve('../app.js'), 'utf8');
+    assert.match(source, /submitLabel\.textContent = 'กำลังตรวจสอบรหัสผ่าน\.\.\.'/);
+    assert.match(source, /showSpinner\(true, 'กำลังบันทึกข้อมูลบุคคล\.\.\.'\)/);
+    assert.match(source, /showSpinner\(true, 'กำลังบันทึกผลติดตามสุขภาพ\.\.\.'\)/);
+    assert.match(source, /showSpinner\(true, 'กำลังบันทึกพฤติกรรมรายวัน\.\.\.'\)/);
+});
 
 test('old demo preference cannot enable demo and settings fields are blank for users', () => {
     const c = client(); c.storage.set('ncd_connection_mode', 'demo');

@@ -1785,7 +1785,7 @@ function buildTargetCard({ t, log, pp, village }) {
 async function viewTargetProfile(targetId) {
     state.selectedTargetId = targetId;
     
-    showSpinner(true);
+    showSpinner(true, 'กำลังโหลดข้อมูลรายบุคคล...');
     try {
         if (state.connectionMode === 'online') {
             // Fetch target details from API
@@ -2463,7 +2463,7 @@ function setupEventListeners() {
             const submit = loginForm.querySelector('[type="submit"]');
             const submitLabel = submit ? submit.querySelector('span') : null;
             submit.disabled = true;
-            if (submitLabel) submitLabel.textContent = 'กำลังตรวจสอบ...';
+            if (submitLabel) submitLabel.textContent = 'กำลังตรวจสอบรหัสผ่าน...';
             const loginStart = perfNow();
             try {
                 const login = await postToAPI('login', {}, inputPasscode);
@@ -2808,7 +2808,7 @@ function setupEventListeners() {
         
         const submitBtn = (e.target && e.target.querySelector) ? e.target.querySelector('[type="submit"]') : null;
         if (submitBtn) submitBtn.disabled = true;
-        showSpinner(true);
+        showSpinner(true, 'กำลังบันทึกข้อมูลบุคคล...');
         try {
             {
                 const res = await postToAPI(action, formData);
@@ -2899,7 +2899,7 @@ function setupEventListeners() {
         
         const submitBtn = (e.target && e.target.querySelector) ? e.target.querySelector('[type="submit"]') : null;
         if (submitBtn) submitBtn.disabled = true;
-        showSpinner(true);
+        showSpinner(true, 'กำลังบันทึกผลติดตามสุขภาพ...');
         try {
             {
                 const res = await postToAPI('addQuarterly', formData);
@@ -2962,7 +2962,7 @@ function setupEventListeners() {
         
         const submitBtn = (e.target && e.target.querySelector) ? e.target.querySelector('[type="submit"]') : null;
         if (submitBtn) submitBtn.disabled = true;
-        showSpinner(true);
+        showSpinner(true, 'กำลังบันทึกพฤติกรรมรายวัน...');
         try {
             {
                 const res = await postToAPI('addDailyLog', formData);
@@ -3029,9 +3029,11 @@ function reportConnectionError(error) {
 }
 
 // --- UI Feedback Elements ---
-function showSpinner(show) {
+function showSpinner(show, message = 'กำลังดำเนินการ...') {
     const spinner = document.getElementById('loading-spinner');
+    const spinnerMessage = document.getElementById('loading-spinner-message');
     if (show) {
+        if (spinnerMessage) spinnerMessage.textContent = message;
         spinner.classList.remove('hidden');
     } else {
         spinner.classList.add('hidden');
