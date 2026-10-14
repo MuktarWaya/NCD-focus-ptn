@@ -110,7 +110,7 @@
         };
     </script>
     <!-- Local CSS stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261014-w0">
+    <link rel="stylesheet" href="style.css?v=20261014-w0-table">
 </head>
 <body class="bg-background-base text-on-surface antialiased font-body-md h-full flex flex-col overflow-hidden">
 
@@ -587,13 +587,15 @@
                         <label>ชุมชน<select id="w0-village" class="report-input"><option value="">ทุกชุมชน</option></select></label>
                         <label>คณะทำงาน<select id="w0-worker" class="report-input"><option value="">ทุกคณะทำงาน</option></select></label>
                         <label>สถานะภาพรวมคณะทำงาน<select id="w0-status" class="report-input"><option value="">ทุกสถานะ</option><option value="green">ครบทุกคน</option><option value="yellow">มีบางส่วน / คละสถานะ</option><option value="red">ยังไม่มีผลทุกคน</option></select></label>
-                    </div><div class="w0-tools"><button id="w0-refresh" type="button" class="report-secondary-btn">อ่านข้อมูลล่าสุด</button><button id="w0-capture" type="button" class="report-secondary-btn" aria-pressed="false">โหมดแคปหน้าจอ</button></div></div>
+                    </div><div class="w0-tools"><button id="w0-refresh" type="button" class="report-secondary-btn">อ่านข้อมูลล่าสุด</button><button id="w0-capture" type="button" class="report-secondary-btn" aria-pressed="false">แคปตารางสรุป</button></div></div>
                     <p id="w0-message" role="status"></p>
                     <div id="w0-report" hidden>
                         <header class="w0-report-heading"><h2>ติดตามความครบ W0 · <span id="w0-community"></span></h2><p id="w0-scope"></p><p>อ่านข้อมูลล่าสุด: <time id="w0-time"></time></p></header>
                         <div id="w0-summary" class="w0-summary" aria-live="polite"></div>
                         <p class="w0-explanation">สีแสดงความครบของข้อมูล ไม่ใช่ระดับความเสี่ยงสุขภาพ เขียว = ครบตามแบบ W0 · เหลือง = มีบางส่วนหรือมีผลรอบอื่น · แดง = ยังไม่มีผลติดตามเลย</p>
                         <p class="w0-explanation">พฤติกรรมบางช่องเพิ่งเพิ่ม จำนวนแต่ละหัวข้ออาจซ้ำคนกัน หัวข้อผลประเมินนับเฉพาะผู้มี W0 ส่วนข้อมูลทะเบียนตรวจทุกคน ผลแล็บที่ยังไม่มีให้ประสานผลเดิมหรือแจ้งสถานะ</p>
+                        <p class="w0-table-note">สีแสดงความครบของข้อมูล W0 · บางส่วนรวมผู้มี M0 / รอบอื่น · ต้องดู = บางส่วน + ยังไม่มีผลติดตาม · เครื่องหมาย * ให้ผู้ประสานงานตรวจชื่อผู้รับผิดชอบ</p>
+                        <div id="w0-comparison"></div>
                         <div id="w0-workers"></div>
                     </div>
                     <dialog id="w0-copy-dialog"><h3>ข้อความเตือนสำหรับคัดลอก</h3><textarea id="w0-copy-text" aria-label="ข้อความเตือน" readonly></textarea><button id="w0-copy-close" type="button" class="report-secondary-btn">ปิดข้อความ</button></dialog>
@@ -1530,9 +1532,9 @@
     <!-- Script Application Logic -->
     <script src="tracking-utils.js?v=20260719-biweekly"></script>
     <script src="ncd-export.js?v=20261014-community"></script>
-    <script src="w0-completeness.js?v=20261014-w0"></script>
-    <script src="app.js?v=20261014-w0"></script>
+    <script src="w0-completeness.js?v=20261014-w0-table"></script>
+    <script src="app.js?v=20261014-w0-table"></script>
     <script src="ncd-report-ui.js?v=20261014-community"></script>
-    <script src="w0-tracking-ui.js?v=20261014-w0"></script>
+    <script src="w0-tracking-ui.js?v=20261014-w0-table"></script>
 </body>
 </html>

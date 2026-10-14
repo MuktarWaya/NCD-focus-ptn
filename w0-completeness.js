@@ -25,10 +25,19 @@ function validDate(v){const s=clean(v);const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(
 function build(targets,records,workers,filters={}){
  const ids=new Set();targets.forEach(t=>{if(!clean(t.id)||ids.has(String(t.id)))throw Error('รหัสรายบุคคลขาดหรือซ้ำ กรุณาตรวจทะเบียนก่อนสรุป');ids.add(String(t.id));});
  const directory=new Set(workers.map(clean));const groups=new Map();
- targets.filter(t=>!filters.village||clean(t.village)===filters.village).forEach(t=>{const name=clean(t.responsible_worker)||'ยังไม่ระบุคณะทำงาน';if(filters.worker&&name!==filters.worker)return;let g=groups.get(name);if(!g){g={name,total:0,green:0,yellow:0,red:0,noW0:0,legacy:0,other:0,missing:{},review:{},needsCoordinator:!directory.has(name)||name==='ทดสอบ'};groups.set(name,g);}const p=inspect(t,records);g.total++;g[p.status]++;if(!p.hasW0)g.noW0++;if(p.legacy)g.legacy++;else if(p.other)g.other++;p.missing.forEach(k=>{g.missing[k]=(g.missing[k]||0)+1;});p.review.forEach(k=>{g.review[k]=(g.review[k]||0)+1;});});
+ targets.filter(t=>!filters.village||clean(t.village)===filters.village).forEach(t=>{const name=clean(t.responsible_worker)||'ยังไม่ระบุคณะทำงาน';if(filters.worker&&name!==filters.worker)return;let g=groups.get(name);if(!g){g={name,total:0,green:0,yellow:0,red:0,noW0:0,legacy:0,other:0,missing:{},review:{},members:[],needsCoordinator:!directory.has(name)||name==='ทดสอบ'};groups.set(name,g);}const p=inspect(t,records);g.members.push({id:t.id,name:clean(t.name)||'ยังไม่ระบุชื่อ',village:clean(t.village)||'ยังไม่ระบุหมู่บ้าน',...p});g.total++;g[p.status]++;if(!p.hasW0)g.noW0++;if(p.legacy)g.legacy++;else if(p.other)g.other++;p.missing.forEach(k=>{g.missing[k]=(g.missing[k]||0)+1;});p.review.forEach(k=>{g.review[k]=(g.review[k]||0)+1;});});
  const rows=[...groups.values()].map(g=>({...g,status:g.green===g.total?'green':g.red===g.total?'red':'yellow'})).filter(g=>!filters.status||g.status===filters.status).sort((a,b)=>a.name.localeCompare(b.name,'th'));
  return {rows,totals:rows.reduce((a,g)=>{['total','green','yellow','red'].forEach(k=>a[k]+=g[k]);return a;},{total:0,green:0,yellow:0,red:0})};
 }
+function comparison(targets,records,workers,filters={}) {
+ const overall=build(targets,records,workers,filters);
+ const allowed=new Set(overall.rows.map(g=>g.name));
+ const villages=[...new Set(targets.filter(t=>!filters.village||clean(t.village)===filters.village).map(t=>clean(t.village)))].sort((a,b)=>a.localeCompare(b,'th'));
+ return villages.map(village=>{
+  const scoped=targets.filter(t=>clean(t.village)===village && allowed.has(clean(t.responsible_worker)||'ยังไม่ระบุคณะทำงาน'));
+  return {village:village||'ยังไม่ระบุหมู่บ้าน',...build(scoped,records,workers)};
+ }).filter(section=>section.totals.total>0);
+}
 function reminder(g,community,time){const list=obj=>Object.entries(obj).map(([k,n])=>`• ${k}: ${n} คน`).join('\n');return `เรียน ${g.name}\nติดตามข้อมูลรอบเริ่มต้น W0: ${community}\nข้อมูลอ่านล่าสุด ${time}\nรับผิดชอบ ${g.total} คน\n🟢 ครบ ${g.green} คน 🟡 บางส่วน ${g.yellow} คน 🔴 ยังไม่มีผลติดตาม ${g.red} คน\nยังไม่มี W0 ${g.noW0} คน${g.legacy?` (มี M0 เดิม ${g.legacy} คน กรุณาตรวจรอบก่อนกรอกซ้ำ)`:''}${g.other?` / มีรอบอื่น ${g.other} คน`:''}\n${Object.keys(g.missing).length?`ข้อมูลที่ขาด:\n${list(g.missing)}\n`:''}${Object.keys(g.review).length?`ค่าที่ต้องตรวจต้นทาง:\n${list(g.review)}\n`:''}${g.needsCoordinator?'กรุณาให้ผู้ประสานงานตรวจชื่อผู้รับผิดชอบกับทะเบียนคณะทำงาน\n':''}ขอความร่วมมือเติมข้อมูลตามผลประเมินจริง ช่องพฤติกรรมบางรายการเพิ่งเพิ่ม หากผลแล็บยังไม่มี ขอให้ประสานผลเดิมหรือแจ้งสถานะ\nจำนวนแต่ละหัวข้ออาจซ้ำคนกัน ไม่ควรนำมาบวกเป็นจำนวนคนทั้งหมด ขอบคุณค่ะ`;} 
-return {inspect,build,reminder,validDate};
+return {inspect,build,comparison,reminder,validDate};
 });

@@ -9,3 +9,12 @@ test('duplicate data is blocked or flagged for review',()=>{assert.throws(()=>ap
 test('group filter preserves full denominator; village scopes responsibility; no empty green workers',()=>{const ts=[target,{...target,id:2},{...target,id:3,village:'หมู่ ข'}];const r=api.build(ts,[record],['ทีม ก'],{village:'หมู่ ก',status:'yellow'});assert.deepEqual(r.totals,{total:2,green:1,yellow:0,red:1});assert.equal(r.rows[0].status,'yellow');assert.equal(api.build(ts,[record],['ทีม ก'],{status:'green'}).totals.total,0);assert.deepEqual(api.build([],[],['ทีม ว่าง']).rows,[]);});
 test('unknown directory and reminders expose counts without patient identity',()=>{const g=api.build([target],[{...record,food_habit:''}],[]).rows[0];assert.equal(g.needsCoordinator,true);const text=api.reminder(g,'หมู่ ก','วันนี้');assert.match(text,/พฤติกรรมการกิน: 1 คน/);assert.ok(!text.includes(target.name));});
 test('date validity and unsupported behavior values require review',()=>{assert.equal(api.validDate('31/02/2569'),false);assert.equal(api.validDate('14/10/2569'),true);assert.equal(api.validDate('2026-10-14T00:00:00.000Z'),true);const p=api.inspect(target,[{...record,smoking:'unknown',report_exercise_minutes:-1,date:'31/02/2026'}]);assert.ok(p.review.includes('บุหรี่'));assert.ok(p.review.includes('นาทีออกกำลังกาย'));assert.ok(p.review.includes('วันที่ประเมิน'));});
+const comparison = require('../w0-completeness');
+test('comparison separates each village and preserves member identity and deficits',()=>{
+ const ts=[target,{...target,id:2,name:'คนที่สอง',village:'หมู่ ข'},{...target,id:3,name:'คนที่สาม'}];
+ const sections=comparison.comparison(ts,[record,{...record,target_id:2,food_habit:''}],['ทีม ก']);
+ assert.equal(sections.length,2);assert.deepEqual(sections[0].totals,{total:2,green:1,yellow:0,red:1});
+ assert.equal(sections[1].rows[0].members[0].name,'คนที่สอง');assert.ok(sections[1].rows[0].members[0].missing.includes('พฤติกรรมการกิน'));
+ assert.equal(sections.flatMap(s=>s.rows.flatMap(g=>g.members)).length,3);
+ const filtered=comparison.comparison(ts,[record],['ทีม ก'],{village:'หมู่ ก',worker:'ทีม ก',status:'yellow'});assert.equal(filtered.length,1);assert.equal(filtered[0].totals.total,2);
+});

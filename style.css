@@ -879,3 +879,20 @@ body.w0-capture #w0-tracking-view .w0-report-heading { background:transparent!im
 .w0-details summary:focus-visible { outline:3px solid var(--brand,#0f766e); outline-offset:3px; }
 body.w0-capture .w0-details summary { display:none; }
 #w0-tracking-view button:disabled { opacity:.6; cursor:wait; }
+.w0-comparison-section { margin:24px 0; }
+.w0-comparison-section h3 { font-size:18px; font-weight:700; margin-bottom:10px; }
+.w0-comparison-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:14px; }
+.w0-comparison-table caption { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+#w0-tracking-view .w0-comparison-table th,#w0-tracking-view .w0-comparison-table td { padding:10px 8px; border:1px solid #cbd5e1; text-align:center; overflow-wrap:anywhere; }
+#w0-tracking-view .w0-comparison-table th:first-child { width:36%; text-align:left; }
+.w0-comparison-table thead,.w0-comparison-table tfoot { background:#e2e8f0; color:#0f172a; font-weight:700; }
+.w0-table-note { font-size:13px; line-height:1.6; margin-top:12px; }
+.w0-members summary { cursor:pointer; font-weight:600; padding:12px 0; }
+.w0-members li { display:grid; grid-template-columns:1fr 1.4fr; gap:16px; padding:12px 0; border-top:1px solid var(--line,#dbe5ea); }
+.w0-members small { display:block; font-size:12px; margin-top:4px; }
+.w0-profile-link { text-decoration:underline; text-underline-offset:3px; font-weight:600; text-align:left; }
+.w0-profile-link:focus-visible,.w0-members summary:focus-visible { outline:3px solid var(--brand,#0f766e); outline-offset:3px; }
+.w0-member-note { margin-bottom:10px; }
+body.w0-capture #w0-workers,body.w0-capture .w0-explanation { display:none!important; }
+body.w0-capture .w0-comparison-table { color:#0f172a!important; }
+@media(max-width:600px) { #w0-tracking-view .w0-comparison-table th,#w0-tracking-view .w0-comparison-table td { padding:8px 3px; font-size:12px; } #w0-tracking-view .w0-comparison-table th:first-child { width:34%; } .w0-members li { grid-template-columns:1fr; gap:8px; } }
