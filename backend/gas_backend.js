@@ -19,6 +19,36 @@ var WEEKLY_SUMMARY_HEADERS = [
 
 // รหัสสีปิงปองจราจร 7 สี ที่คำนวณและเก็บติดกับผลติดตามแต่ละรอบ (ทะเบียนจำแนกรหัสสี)
 var PINGPONG_HEADERS = ["pingpong", "pingpong_rank"];
+var NCD_REPORT_HEADERS = ["report_exercise_minutes", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "veggie_fruit", "depression_2q", "report_sleep_hours", "sleep", "smoking", "alcohol", "risk_category"];
+
+function validateNcdReportData_(data) {
+  var numeric = { report_exercise_minutes: 10080, veggie_fruit: 100, report_sleep_hours: 24 };
+  var keys = Object.keys(numeric);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i], value = data[key];
+    if (value === undefined || value === null || String(value).trim() === "") continue;
+    var n = Number(value);
+    if (!isFinite(n) || n < 0 || n > numeric[key]) return "ข้อมูล " + key + " ต้องเป็นตัวเลข 0 ถึง " + numeric[key];
+  }
+  var options = {
+    physical_activity: ["high", "low", "none", ">= 150 นาที", "≥ 150 นาที", "< 150 นาที", "ไม่ออกเลย"],
+    food_overeat: ["yes", "no", "Y", "N", "มี", "ไม่มี"],
+    food_unhealthy: ["yes", "no", "Y", "N", "มี", "ไม่มี"],
+    depression_2q: ["yes", "no", "มี", "ไม่มี"],
+    sleep: ["low", "high", "≤ 7-8 ชม.", "≥ 7-8 ชม.", "≤ 7–8 ชม.", "≥ 7–8 ชม."],
+    smoking: ["yes", "no", "สูบ", "ไม่สูบ"],
+    alcohol: ["yes", "no", "ดื่ม", "ไม่ดื่ม"],
+    risk_category: ["DM", "DM + BMI เกิน", "HT", "HT + BMI เกิน", "DM + HT", "DM + HT + BMI เกิน", "BMI เกิน"]
+  };
+  keys = Object.keys(options);
+  for (var j = 0; j < keys.length; j++) {
+    var field = keys[j], selected = data[field];
+    if (selected === undefined || selected === null || selected === "") continue;
+    if (options[field].indexOf(String(selected)) === -1) return "ตัวเลือก " + field + " ไม่ถูกต้อง";
+  }
+  if (data.food_habit !== undefined && String(data.food_habit).length > 2000) return "พฤติกรรมการกินต้องไม่เกิน 2000 ตัวอักษร";
+  return "";
+}
 
 function trackingRoundOrder_(round) {
   var match = /^W(\d+)$/.exec(String(round || ""));
@@ -28,6 +58,8 @@ function trackingRoundOrder_(round) {
 }
 
 function validateTrackingData_(data) {
+  var reportError = validateNcdReportData_(data);
+  if (reportError) return reportError;
   var round = String(data.quarter || "");
   if (["M0", "M3", "M6", "M9"].indexOf(round) !== -1) return "";
   if (TRACKING_ROUNDS.indexOf(round) === -1) return "รอบติดตามไม่ถูกต้อง";
@@ -400,7 +432,8 @@ function getBootstrapData(ss) {
     targets: targets,
     dashboardStats: dashboardStats,
     quarterly: quarterlyData,
-    workers: osmWorkers
+    workers: osmWorkers,
+    ncdReportVersion: 1
   });
   tMark("total (incl. serialize)");
   return result;
@@ -632,7 +665,7 @@ function addQuarterly(ss, data) {
   var sheet = ss.getSheetByName("QuarterlyData");
   if (!sheet) return errorResponse("ไม่พบแผ่นงาน 'QuarterlyData'");
 
-  var headers = ensureSheetHeaders_(sheet, WEEKLY_SUMMARY_HEADERS.concat(PINGPONG_HEADERS));
+  var headers = ensureSheetHeaders_(sheet, WEEKLY_SUMMARY_HEADERS.concat(PINGPONG_HEADERS).concat(NCD_REPORT_HEADERS));
   var nextId = getNextId(sheet);
   data.id = nextId;
   data.date = data.date || getTodayThaiDate();
@@ -645,6 +678,9 @@ function addQuarterly(ss, data) {
 
   var validationError = validateTrackingData_(data);
   if (validationError) return errorResponse(validationError);
+
+  // New free-text assessment must be stored as literal text in Google Sheets.
+  if (typeof data.food_habit === "string" && data.food_habit.charAt(0) === "=") data.food_habit = "'" + data.food_habit;
 
   if (["W0", "W12", "W24"].indexOf(String(data.quarter)) === -1) {
     ["hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"].forEach(function(field) {
@@ -692,8 +728,8 @@ function addQuarterly(ss, data) {
 // 5.1 ดึงผลติดตามทั้งหมด (รวมคอลัมน์ pingpong) — ใช้ทำทะเบียนรหัสสี/การกระจายสีฝั่งเว็บ
 function getAllQuarterly(ss) {
   var sheet = ss.getSheetByName("QuarterlyData");
-  if (!sheet) return successResponse({ quarterly: [] });
-  return successResponse({ quarterly: getSheetData(sheet) });
+  if (!sheet) return successResponse({ quarterly: [], ncdReportVersion: 1 });
+  return successResponse({ quarterly: getSheetData(sheet), ncdReportVersion: 1 });
 }
 
 // 6.1 คำนวณรหัสสีปิงปองย้อนหลังให้ทุกแถวใน QuarterlyData (รันครั้งเดียวหลังเพิ่มคอลัมน์)
@@ -1248,7 +1284,7 @@ function setupSheets() {
 function setupSheetsForSpreadsheet(ss) {
   var sheetsConfig = {
     "Targets": ["id", "name", "address", "village", "responsible_worker", "age", "height", "type", "chronic_disease", "co_morbidity", "onset_year", "medicines"],
-    "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"].concat(WEEKLY_SUMMARY_HEADERS).concat(PINGPONG_HEADERS),
+    "QuarterlyData": ["id", "target_id", "quarter", "date", "weight", "bmi", "waist", "dtx", "bp", "body_fat", "muscle_mass", "visceral_fat", "body_age", "physical_activity", "food_overeat", "food_unhealthy", "food_habit", "remark", "veggie_fruit", "depression_2q", "sleep", "smoking", "alcohol", "hba1c", "egfr", "creatinine", "triglyceride", "ldl", "cholesterol"].concat(WEEKLY_SUMMARY_HEADERS).concat(PINGPONG_HEADERS).concat(["report_exercise_minutes", "report_sleep_hours", "risk_category"]),
     "DailyLogs": ["id", "target_id", "week", "day", "date", "avoid_sweet", "avoid_oil", "avoid_salt", "menu", "exercise_type", "exercise_duration", "water", "sleep_hours"],
     "NotificationLog": ["timestamp", "type", "severity", "target_id", "target_name", "village", "responsible_worker", "message", "channel", "status", "sent_at", "dedupe_key", "error"]
   };

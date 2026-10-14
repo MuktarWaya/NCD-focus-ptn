@@ -625,6 +625,22 @@
                         </div>
                     </div>
 
+                    <section class="ncd-export-section" aria-labelledby="ncd-export-title">
+                        <h3 id="ncd-export-title">รายงาน Excel สำหรับหน่วยจัดการ</h3>
+                        <p>เลือกหนึ่งชุมชนและรอบติดตาม ไฟล์มีแผ่นกลุ่มเสี่ยงและกลุ่มป่วย ข้อมูลที่ยังไม่ประเมินจะเว้นว่าง</p>
+                        <form id="ncd-export-form">
+                            <div class="report-grid">
+                                <div class="report-field"><label for="ncd-export-village">ชุมชน *</label><select id="ncd-export-village" class="report-input" required><option value="">เลือกชุมชน</option></select></div>
+                                <div class="report-field"><label for="ncd-export-round">รอบติดตาม *</label><select id="ncd-export-round" class="report-input" required></select></div>
+                                <div class="report-field"><label for="ncd-export-tambon">ตำบล *</label><input id="ncd-export-tambon" class="report-input" maxlength="100" required></div>
+                                <div class="report-field"><label for="ncd-export-district">อำเภอ *</label><input id="ncd-export-district" class="report-input" maxlength="100" required></div>
+                                <div class="report-field"><label for="ncd-export-province">จังหวัด *</label><input id="ncd-export-province" class="report-input" value="ปัตตานี" maxlength="100" required></div>
+                            </div>
+                            <p id="ncd-export-status" role="status" aria-live="polite">เลือกชุมชนและกดตรวจจำนวนก่อนส่งออก</p>
+                            <div class="report-actions"><button id="ncd-export-preview" type="button" class="report-secondary-btn">ตรวจจำนวนข้อมูล</button><button id="ncd-export-btn" type="submit" class="report-primary-btn">ส่งออก Excel ตามแบบ</button></div>
+                        </form>
+                    </section>
+
                     <!-- Registry table -->
                     <div class="glass-card rounded-2xl p-0 overflow-hidden">
                         <div class="overflow-x-auto">
@@ -1371,6 +1387,14 @@
                         </div>
                     </div>
 
+                    <fieldset class="report-assessment-section">
+                        <legend>ประเมินตามแบบหน่วยจัดการ</legend>
+                        <p id="ncd-report-support" role="status" hidden></p>
+                        <p>บันทึกผลประเมินของรอบนี้ เว้นว่างหรือเลือก “ยังไม่ประเมิน” เมื่อไม่มีข้อมูล การออกกำลังกายส่วนนี้อ้างถึง 1 สัปดาห์ที่ประเมิน</p>
+                        <p>ช่องการนอนในแบบมีช่วงเกณฑ์ซ้อนกัน ให้เลือกช่องตามผลประเมินที่หน่วยจัดการกำหนด ระบบจะไม่จัดกลุ่มจากชั่วโมงนอนอัตโนมัติ</p>
+                        <div id="ncd-report-fields" class="report-grid"></div>
+                    </fieldset>
+
                     <div class="space-y-1">
                         <label for="form-q-remark" class="block text-xs font-semibold text-slate-700">หมายเหตุ / ความคิดเห็นเพิ่มเติม</label>
                         <input type="text" id="form-q-remark" class="w-full bg-white/60 border border-outline-variant/60 rounded-xl px-4 py-2.5 text-on-surface focus:ring-2 focus:ring-primary/50 focus:border-primary/50 outline-none transition-all" placeholder="หมายเหตุทั่วไปสำหรับการประเมินรอบนี้">
@@ -1488,6 +1512,8 @@
 
     <!-- Script Application Logic -->
     <script src="tracking-utils.js?v=20260719-biweekly"></script>
-    <script src="app.js?v=20260719-biweekly"></script>
+    <script src="ncd-export.js?v=20261014-community"></script>
+    <script src="app.js?v=20261014-community"></script>
+    <script src="ncd-report-ui.js?v=20261014-community"></script>
 </body>
 </html>

@@ -25,6 +25,8 @@ function client({ search = '', captureLogs = false, stubSpinner = true } = {}) {
         console: { error() {}, warn() {}, log(...args) { if (captureLogs) logs.push(args.join(' ')); } },
         location: { search }, AbortController, setTimeout, clearTimeout,
         trackingUtils: require('../tracking-utils'),
+        ncdReportUI: { collect: () => ({}) },
+        ncdExport: require('../ncd-export'),
         document: { addEventListener() {}, getElementById: element, querySelectorAll: () => [], createElement: () => ({}), head: { appendChild() {} } },
         localStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
         sessionStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
@@ -51,6 +53,15 @@ test('login and blocking operations expose contextual progress messages', () => 
     assert.match(source, /showSpinner\(true, 'กำลังบันทึกข้อมูลบุคคล\.\.\.'\)/);
     assert.match(source, /showSpinner\(true, 'กำลังบันทึกผลติดตามสุขภาพ\.\.\.'\)/);
     assert.match(source, /showSpinner\(true, 'กำลังบันทึกพฤติกรรมรายวัน\.\.\.'\)/);
+});
+
+test('community export retains raw missing measurements while chart normalization stays compatible', () => {
+    const c = client();
+    c.run("applySecondaryData([{id: 1, target_id: 1, quarter: 'W0', body_fat: '', muscle_mass: 0, weight: 60}], [])");
+    assert.equal(c.run('state.quarterlyData[0].body_fat'), 0);
+    assert.equal(c.run('state.quarterlyExportData[0].body_fat'), '');
+    assert.equal(c.run('state.quarterlyExportData[0].muscle_mass'), 0);
+    assert.equal(c.run('state.quarterlyData[0]._ncdRawPhysical.body_fat'), '');
 });
 
 test('old demo preference cannot enable demo and settings fields are blank for users', () => {

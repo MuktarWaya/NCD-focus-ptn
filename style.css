@@ -54,6 +54,44 @@
     --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Community reporting follows the existing teal form vocabulary. */
+.ncd-export-section, .report-assessment-section {
+    padding: 20px;
+    margin: 16px 0;
+    border: 1px solid var(--brand-line);
+    border-radius: 12px;
+    background: var(--brand-tint);
+    color: var(--ink, #0f172a);
+}
+.ncd-export-section h3, .report-assessment-section legend { font-size: 1rem; font-weight: 700; }
+.report-assessment-section legend { padding: 0 6px; }
+.report-assessment-section:disabled .report-grid { opacity: .65; }
+.ncd-export-section p, .report-assessment-section p { font-size: .875rem; line-height: 1.6; margin: 8px 0 16px; color: #334155; }
+.report-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.report-field { min-width: 0; }
+.report-field[hidden] { display: none; }
+.report-field-wide { grid-column: 1 / -1; }
+.report-field label { display: block; font-size: .875rem; font-weight: 600; margin-bottom: 6px; }
+.report-input { width: 100%; min-height: 44px; border: 1px solid #94a3b8; border-radius: 8px; padding: 10px 12px; background: #fff; color: #0f172a; font: inherit; }
+.report-input::placeholder { color: #475569; }
+.report-input:focus-visible, .report-primary-btn:focus-visible, .report-secondary-btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.report-input:disabled { background: #e2e8f0; color: #475569; }
+.report-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+.report-primary-btn, .report-secondary-btn { border-radius: 8px; min-height: 44px; padding: 10px 16px; font-weight: 600; transition: background-color .15s; }
+.report-primary-btn { background: var(--brand); color: #fff; }
+.report-primary-btn:hover { background: var(--brand-hover); }
+.report-primary-btn:disabled { opacity: .65; cursor: wait; }
+.report-secondary-btn { border: 1px solid var(--brand); color: var(--brand-deep); background: #fff; }
+.report-secondary-btn:hover { background: var(--brand-soft); }
+.report-profile-summary { margin-top: 12px; padding: 12px; border: 1px solid var(--brand-line); border-radius: 8px; font-size: .75rem; }
+.report-profile-summary > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 8px; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+    .report-grid, .report-profile-summary > div { grid-template-columns: minmax(0, 1fr); }
+    .ncd-export-section, .report-assessment-section { padding: 16px; }
+    .report-actions > button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .report-primary-btn, .report-secondary-btn { transition: none; } }
+
 /* ---------------------------------------------------------------------------
    1b. Standardized design tokens (Phase 1) — reusable aliases
    --------------------------------------------------------------------------- */
@@ -555,6 +593,10 @@ table tbody tr:hover { background: var(--brand-tint); }
 .dark .glass-card h4,
 .dark label { color: #f1f5f9 !important; }
 .dark #view-title { color: #5eead4 !important; }
+.dark .ncd-export-section, .dark .report-assessment-section { background: #102b2d; border-color: #2f7770; color: #f1f5f9; }
+.dark .ncd-export-section p, .dark .report-assessment-section p { color: #cbd5e1; }
+.dark .report-input::placeholder { color: #cbd5e1; }
+.dark .report-secondary-btn { background: #102b2d; color: #ccfbf1; border-color: #5eead4; }
 .dark input, .dark select, .dark textarea {
     background: rgba(15, 23, 42, 0.82) !important;
     color: #f1f5f9 !important;

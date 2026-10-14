@@ -67,6 +67,7 @@ const state = {
     connectionReady: false,   // write-ready: เปิดเฉพาะ hydrate ครบแล้ว (targets+stats+quarterly+workers)
     coreDataReady: false,     // targets + dashboardStats พร้อม (แสดง dashboard ได้ read-only)
     secondaryReady: false,    // quarterly + workers พร้อม
+    ncdReportVersion: 0,
     loadGeneration: 0,        // token กัน stale response หลัง logout/refresh ซ้ำ
     gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
     apiPasscode: DEFAULT_API_PASSCODE,
@@ -74,6 +75,7 @@ const state = {
     // In-memory data (loaded from CSV or API)
     targets: [],
     quarterlyData: [],
+    quarterlyExportData: [], // Preserve raw blanks for the community report.
     dailyLogs: [],
     workerOptions: [...MOCK_WORKERS],
     
@@ -128,6 +130,7 @@ function updateConnectionIndicator() {
     document.querySelectorAll('#target-form [type="submit"], #quarterly-form [type="submit"], #daily-form [type="submit"]').forEach(button => {
         button.disabled = !state.connectionReady;
     });
+    if (typeof ncdReportUI !== 'undefined') ncdReportUI.updateBackendSupport?.();
 }
 
 function getTargetVillage(target) {
@@ -287,6 +290,7 @@ async function refreshData() {
     state.connectionReady = false;   // write-ready: เข้มงวดเท่าเดิม เปิดเฉพาะ hydrate ครบแล้ว
     state.coreDataReady = false;
     state.secondaryReady = false;
+    state.ncdReportVersion = 0;
     updateConnectionIndicator();
 
     if (state.currentView === 'dashboard-view') renderDashboardLoading();
@@ -305,6 +309,7 @@ async function refreshData() {
 
             if (generation !== state.loadGeneration) return false;
             applySecondaryData(bootstrap.quarterly, bootstrap.workers);
+            state.ncdReportVersion = Number(bootstrap.ncdReportVersion) || 0;
             state.secondaryReady = true;
             finishSecondaryRender();
             perfLog('secondaryReady + connectionReady (bootstrap)', startedAt);
@@ -324,6 +329,7 @@ async function refreshData() {
             const secondary = await loadSecondaryLegacy();
             if (generation !== state.loadGeneration) return false;
             applySecondaryData(secondary.quarterly, secondary.workers);
+            state.ncdReportVersion = Number(secondary.ncdReportVersion) || 0;
             state.secondaryReady = true;
             finishSecondaryRender();
             perfLog('secondaryReady + connectionReady (legacy)', startedAt);
@@ -401,7 +407,8 @@ async function loadSecondaryLegacy() {
 
     return {
         quarterly: quarterlyJSON.success ? quarterlyJSON.data.quarterly : [],
-        workers: workerJSON.success && Array.isArray(workerJSON.data) && workerJSON.data.length > 0 ? workerJSON.data : null
+        workers: workerJSON.success && Array.isArray(workerJSON.data) && workerJSON.data.length > 0 ? workerJSON.data : null,
+        ncdReportVersion: quarterlyJSON.data.ncdReportVersion || 0
     };
 }
 
@@ -423,6 +430,7 @@ function applyCoreData(targets, stats) {
 
 function applySecondaryData(quarterly, workers) {
     state.workerOptions = [...MOCK_WORKERS];
+    state.quarterlyExportData = Array.isArray(quarterly) ? quarterly.map(record => ({ ...record })) : [];
     state.quarterlyData = Array.isArray(quarterly) ? quarterly : [];
     state.quarterlyData.forEach(normalizeTrackingRecord);
     if (Array.isArray(workers) && workers.length > 0) {
@@ -444,6 +452,12 @@ function finishSecondaryRender() {
 }
 
 function normalizeTrackingRecord(record) {
+    if (!record._ncdRawPhysical) {
+        record._ncdRawPhysical = {};
+        ['weight', 'bmi', 'waist', 'dtx', 'body_fat', 'muscle_mass', 'visceral_fat', 'body_age'].forEach(field => {
+            record._ncdRawPhysical[field] = record[field] ?? '';
+        });
+    }
     record.id = parseInt(record.id);
     record.target_id = parseInt(record.target_id);
     ['weight', 'bmi', 'waist', 'dtx', 'body_fat', 'muscle_mass', 'visceral_fat', 'body_age'].forEach(field => {
@@ -1795,12 +1809,18 @@ async function viewTargetProfile(targetId) {
             state.selectedTargetProfile = json.data.profile;
             state.selectedTargetQuarterly = json.data.quarterly;
             state.selectedTargetDailyLogs = json.data.dailyLogs;
+
+            // Update report preview from the just-read profile without losing raw blanks.
+            state.quarterlyExportData = state.quarterlyExportData
+                .filter(row => String(row.target_id) !== String(targetId))
+                .concat(json.data.quarterly.map(row => ({ ...row })));
             
             // Format numeric values
             state.selectedTargetProfile.id = parseInt(state.selectedTargetProfile.id);
             state.selectedTargetProfile.age = parseInt(state.selectedTargetProfile.age);
             state.selectedTargetProfile.height = parseFloat(state.selectedTargetProfile.height);
             state.selectedTargetProfile.responsible_worker = state.selectedTargetProfile.responsible_worker || '';
+            state.targets = state.targets.map(target => String(target.id) === String(targetId) ? { ...state.selectedTargetProfile } : target);
             
             state.selectedTargetQuarterly.forEach(normalizeTrackingRecord);
             
@@ -2111,6 +2131,7 @@ function renderTimelineCards() {
                 </div>
             </div>
             ${labSummary}
+            ${ncdReportUI.summary(log)}
             ${weekSummaries ? `<div class="mt-4 pt-3 border-t border-slate-100 space-y-2">${weekSummaries}</div>` : ''}
         `;
         
@@ -2866,10 +2887,10 @@ function setupEventListeners() {
             waist: parseFloat(document.getElementById('form-q-waist').value),
             bp: document.getElementById('form-q-bp').value.trim(),
             dtx: parseInt(document.getElementById('form-q-dtx').value),
-            body_fat: parseFloat(document.getElementById('form-q-fat').value) || 0,
-            muscle_mass: parseFloat(document.getElementById('form-q-muscle').value) || 0,
-            visceral_fat: parseInt(document.getElementById('form-q-visceral').value) || 0,
-            body_age: parseInt(document.getElementById('form-q-bodyage').value) || 0,
+            body_fat: ncdExport.number(document.getElementById('form-q-fat').value) ?? '',
+            muscle_mass: ncdExport.number(document.getElementById('form-q-muscle').value) ?? '',
+            visceral_fat: ncdExport.number(document.getElementById('form-q-visceral').value) ?? '',
+            body_age: ncdExport.number(document.getElementById('form-q-bodyage').value) ?? '',
             remark: document.getElementById('form-q-remark').value.trim(),
             // Lab results
             hba1c: parseFloat(document.getElementById('form-q-hba1c').value) || '',
@@ -2879,6 +2900,8 @@ function setupEventListeners() {
             ldl: parseInt(document.getElementById('form-q-ldl').value) || '',
             cholesterol: parseInt(document.getElementById('form-q-chol').value) || ''
         };
+
+        Object.assign(formData, ncdReportUI.collect());
 
         if (formData.quarter !== 'W0') {
             [1, 2].forEach(weekIndex => {
@@ -3609,7 +3632,8 @@ function loadTrackingRoundRecord(round) {
         'form-q-egfr': 'egfr', 'form-q-creatinine': 'creatinine', 'form-q-trigly': 'triglyceride',
         'form-q-ldl': 'ldl', 'form-q-chol': 'cholesterol'
     };
-    Object.entries(physicalFields).forEach(([id, key]) => setTrackingField(id, record ? record[key] : ''));
+    Object.entries(physicalFields).forEach(([id, key]) => setTrackingField(id, record ? (record._ncdRawPhysical?.[key] ?? record[key]) : ''));
+    ncdReportUI.load(record, state.selectedTargetProfile);
     if (record) {
         setTrackingField('form-q-date', record.date);
     } else {
