@@ -68,6 +68,8 @@ const state = {
     coreDataReady: false,     // targets + dashboardStats พร้อม (แสดง dashboard ได้ read-only)
     secondaryReady: false,    // quarterly + workers พร้อม
     ncdReportVersion: 0,
+    w0WorkerDirectory: [], // Actual API directory, without fallback names.
+    w0DataReadAt: null,
     loadGeneration: 0,        // token กัน stale response หลัง logout/refresh ซ้ำ
     gasUrl: 'https://script.google.com/macros/s/AKfycbyWSrEKMUTazju1NHOk4h_XpJlpKTColEyyzdUexl7LXiphImm7wZL7cBINCxpCdeVjDA/exec',
     apiPasscode: DEFAULT_API_PASSCODE,
@@ -131,6 +133,7 @@ function updateConnectionIndicator() {
         button.disabled = !state.connectionReady;
     });
     if (typeof ncdReportUI !== 'undefined') ncdReportUI.updateBackendSupport?.();
+    if (typeof w0TrackingUI !== 'undefined' && state.currentView === 'w0-tracking-view') w0TrackingUI.render();
 }
 
 function getTargetVillage(target) {
@@ -429,6 +432,7 @@ function applyCoreData(targets, stats) {
 }
 
 function applySecondaryData(quarterly, workers) {
+    state.w0WorkerDirectory = Array.isArray(workers) ? getUniqueWorkers(workers) : [];
     state.workerOptions = [...MOCK_WORKERS];
     state.quarterlyExportData = Array.isArray(quarterly) ? quarterly.map(record => ({ ...record })) : [];
     state.quarterlyData = Array.isArray(quarterly) ? quarterly : [];
@@ -448,6 +452,7 @@ function finishSecondaryRender() {
     populateWorkerControls();
     if (state.currentView === 'dashboard-view') renderDashboardSecondary();
     state.connectionReady = true;
+    state.w0DataReadAt = new Date().toISOString();
     updateConnectionIndicator();
 }
 
@@ -610,6 +615,7 @@ function populateWorkerControls() {
 
 // --- Navigation / Routing ---
 function switchView(viewId) {
+    if (typeof w0TrackingUI !== 'undefined' && viewId !== 'w0-tracking-view') w0TrackingUI.capture(false);
     if (viewId === 'settings-view') return;
     // Hide all views
     document.querySelectorAll('.view-section').forEach(view => {
@@ -644,6 +650,8 @@ function switchView(viewId) {
         renderDashboard();
     } else if (viewId === 'targets-view') {
         renderTargetsList();
+    } else if (viewId === 'w0-tracking-view') {
+        if (typeof w0TrackingUI !== 'undefined') w0TrackingUI.render();
     } else if (viewId === 'registry-view') {
         renderRegistry();
     } else if (viewId === 'focusgroup-view') {
@@ -685,6 +693,9 @@ function updateHeaderTitles(viewId) {
     } else if (viewId === 'targets-view') {
         title.textContent = 'รายชื่อกลุ่มเป้าหมาย';
         subtitle.textContent = 'แสดงข้อมูลประชากรเป้าหมาย นำเข้า ติดตามผล และกรองกลุ่มเสี่ยง/กลุ่มป่วย';
+    } else if (viewId === 'w0-tracking-view') {
+        title.textContent = 'ติดตามข้อมูล W0';
+        subtitle.textContent = 'ความครบของข้อมูลรอบเริ่มต้น แยกตามชุมชนและคณะทำงาน';
     } else if (viewId === 'registry-view') {
         title.textContent = 'ทะเบียนจำแนกรหัสสี ปิงปองจราจร 7 สี';
         subtitle.textContent = 'ทะเบียนกลุ่มเป้าหมายจำแนกตามรหัสสีจากผลติดตามล่าสุด เรียงตามความรุนแรง พร้อมส่งออกรายงาน';
