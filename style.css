@@ -896,3 +896,15 @@ body.w0-capture .w0-details summary { display:none; }
 body.w0-capture #w0-workers,body.w0-capture .w0-explanation { display:none!important; }
 body.w0-capture .w0-comparison-table { color:#0f172a!important; }
 @media(max-width:600px) { #w0-tracking-view .w0-comparison-table th,#w0-tracking-view .w0-comparison-table td { padding:8px 3px; font-size:12px; } #w0-tracking-view .w0-comparison-table th:first-child { width:34%; } .w0-members li { grid-template-columns:1fr; gap:8px; } }
+/* Compact capture keeps a village comparison in a single desktop screenshot. */
+body.w0-capture main { padding:12px!important; }
+body.w0-capture #w0-tracking-view { padding:12px; }
+body.w0-capture .w0-toolbar { margin-bottom:8px; }
+body.w0-capture #w0-capture { min-height:32px; padding:4px 12px; }
+body.w0-capture .w0-report-heading { padding:0!important; }
+body.w0-capture .w0-report-heading h2 { font-size:20px; }
+body.w0-capture .w0-report-heading p { margin:2px 0; font-size:12px; }
+body.w0-capture .w0-summary { padding:8px 0; margin-bottom:8px; }
+body.w0-capture .w0-comparison-section { margin:12px 0; }
+body.w0-capture .w0-comparison-section h3 { margin-bottom:6px; }
+body.w0-capture #w0-tracking-view .w0-comparison-table th,body.w0-capture #w0-tracking-view .w0-comparison-table td { padding:6px 4px; }
