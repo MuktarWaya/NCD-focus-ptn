@@ -27,8 +27,8 @@ const w0TrackingUI = (() => {
         const village = el('w0-village').value;
         const workers = [...new Set(getScopedTargets().filter(t=>!village||String(t.village||'').trim()===village).map(t=>String(t.responsible_worker||'ยังไม่ระบุคณะทำงาน').trim().replace(/\s+/g,' ')))].sort((a,b)=>a.localeCompare(b,'th'));
         options('w0-worker',workers,'ทุกคณะทำงาน');
-        el('w0-worker').value = state.selectedWorker || '';
-        el('w0-worker').disabled = !!state.selectedWorker;
+        if (!workerScope.isStaff(state.selectedWorker)) el('w0-worker').value = state.selectedWorker || '';
+        el('w0-worker').disabled = !!state.selectedWorker && !workerScope.isStaff(state.selectedWorker);
         const worker = el('w0-worker').value, status = el('w0-status').value;
         el('w0-community').textContent = village || 'ทุกชุมชน';
         el('w0-scope').textContent = `${worker || 'ทุกคณะทำงาน'} · ภาพรวมคณะทำงาน: ${names[status] || 'ทุกสถานะ'}`;

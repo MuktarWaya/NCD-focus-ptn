@@ -420,3 +420,4 @@ test('workspace guards stop other-worker profile reads and writes before network
  assert.equal(requests,0);await c.run("postToAPI('addQuarterly',{target_id:1})");assert.equal(requests,1);
  c.run('state.selectedWorker=null');await assert.rejects(c.run("postToAPI('getTargetDetail',{id:1})"),/เลือกชื่อ/);
 });
+test('staff overview permits reads but rejects every mutation before fetch',async()=>{const c=client();let calls=0;c.context.fetch=async()=>{calls++;return {ok:true,json:async()=>({success:true,data:{}})};};c.run("state.connectionReady=true;state.selectedWorker=workerScope.STAFF_ALL;state.targets=[{id:1,responsible_worker:'ทีม ก'}]");await c.run("postToAPI('getTargetDetail',{id:1})");assert.equal(calls,1);for(const action of ['addTarget','updateTarget','addQuarterly','addDailyLog'])await assert.rejects(c.run(`postToAPI('${action}',{id:1,target_id:1,responsible_worker:'ทีม ก'})`),/โหมดเจ้าหน้าที่/);assert.equal(calls,1);});

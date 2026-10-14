@@ -1,0 +1,2 @@
+# Plan: staff overview option
+Add explicit staff/all choice in existing shared-password workspace selector. Staff sees all targets and reports/exports with worker filters available. Regular workers remain scoped. User requested viewing; staff overview is read-only, not a new permission to change assignments or health records. No backend changes. Test selection, global totals, outside-worker profile read, readonly write guard, switching back, and regression; publish frontend with unchanged data verification. Baseline f163163.
