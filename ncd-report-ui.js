@@ -96,8 +96,8 @@ const ncdReportUI = (() => {
         const status = document.getElementById('ncd-export-status');
         if (!state.secondaryReady) { status.textContent = 'รอโหลดทะเบียนและผลติดตามให้ครบก่อนส่งออก'; return; }
         try {
-            const r = ncdExport.buildReport(state.targets, state.quarterlyExportData, options());
-            status.textContent = `กลุ่มเสี่ยง ${r.risk.length} คน / กลุ่มป่วย ${r.patient.length} คน · ไม่มีผลรอบนี้ ${r.missingRecords} คน · พฤติกรรมยังไม่ครบ ${r.incompleteBehavior} คน · ยังไม่จำแนกประเภทกลุ่มเสี่ยง ${r.unclassified} คน`;
+            const r = ncdExport.buildReport(getScopedTargets(), state.quarterlyExportData, options());
+            status.textContent = `${state.selectedWorker} · กลุ่มเสี่ยง ${r.risk.length} คน / กลุ่มป่วย ${r.patient.length} คน · ไม่มีผลรอบนี้ ${r.missingRecords} คน · พฤติกรรมยังไม่ครบ ${r.incompleteBehavior} คน · ยังไม่จำแนกประเภทกลุ่มเสี่ยง ${r.unclassified} คน`;
         } catch (err) { status.textContent = err.message; }
     }
     function loadLibrary() {
@@ -131,7 +131,7 @@ const ncdReportUI = (() => {
             // Re-read before exporting so a recent save by this or another worker is included.
             const refreshed = await refreshData();
             if (!refreshed || !state.secondaryReady) throw new Error('โหลดข้อมูลล่าสุดไม่ครบ กรุณาเชื่อมต่อใหม่ก่อนส่งออก');
-            const report = ncdExport.buildReport(state.targets, state.quarterlyExportData, selectedOptions);
+            const report = ncdExport.buildReport(getScopedTargets(), state.quarterlyExportData, selectedOptions);
             preview();
             timer = setTimeout(() => abort.abort(), 20000);
             const [ExcelJS, template] = await Promise.all([
@@ -147,7 +147,7 @@ const ncdReportUI = (() => {
             const url = URL.createObjectURL(new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const a = document.createElement('a');
             a.href = url;
-            a.download = `NCDs_${report.options.village}_${report.options.round}.xlsx`.replace(/[\\/:*?"<>|]/g, '_');
+            a.download = `NCDs_${state.selectedWorker}_${report.options.village}_${report.options.round}.xlsx`.replace(/[\\/:*?"<>|]/g, '_');
             document.body.appendChild(a); a.click(); a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 10000);
             showToast('ส่งออกตามแบบหน่วยจัดการเรียบร้อยแล้ว');

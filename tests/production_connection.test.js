@@ -15,7 +15,8 @@ function client({ search = '', captureLogs = false, stubSpinner = true } = {}) {
                 values: new Set(),
                 add(...names) { names.forEach(name => this.values.add(name)); },
                 remove(...names) { names.forEach(name => this.values.delete(name)); },
-                contains(name) { return this.values.has(name); }
+                contains(name) { return this.values.has(name); },
+                toggle(name,force) { const add=force ?? !this.values.has(name); if(add)this.values.add(name);else this.values.delete(name);return add; }
             },
             querySelector() { return element(id + '-child'); }
         });
@@ -25,15 +26,16 @@ function client({ search = '', captureLogs = false, stubSpinner = true } = {}) {
         console: { error() {}, warn() {}, log(...args) { if (captureLogs) logs.push(args.join(' ')); } },
         location: { search }, AbortController, setTimeout, clearTimeout,
         trackingUtils: require('../tracking-utils'),
+        workerScope: require('../worker-scope'),
         ncdReportUI: { collect: () => ({}) },
         ncdExport: require('../ncd-export'),
-        document: { addEventListener() {}, getElementById: element, querySelectorAll: () => [], createElement: () => ({}), head: { appendChild() {} } },
+        document: { querySelector: () => null, addEventListener() {}, getElementById: element, querySelectorAll: () => [], createElement: () => ({}), head: { appendChild() {} } },
         localStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
         sessionStorage: { getItem: k => storage.get(k), setItem: (k, v) => storage.set(k, v), removeItem: k => storage.delete(k) },
         fetch: async () => { throw new Error('network down'); }
     });
     vm.runInContext(fs.readFileSync(require.resolve('../app.js'), 'utf8'), context);
-    vm.runInContext(`showToast = () => {}; ${stubSpinner ? 'showSpinner = () => {};' : ''} switchView = () => {}; populateWorkerControls = () => {}; renderDashboardSecondary = () => {}; renderDashboardLoading = () => {};`, context);
+    vm.runInContext(`showToast = () => {}; ${stubSpinner ? 'showSpinner = () => {};' : ''} switchView = () => {}; populateWorkerControls = () => {}; renderDashboardSecondary = () => {}; renderDashboardLoading = () => {}; ensureWorkerSelection = () => {}; showWorkerChoice = () => {};`, context);
     return { context, storage, elements, logs, run: code => vm.runInContext(code, context) };
 }
 
@@ -93,11 +95,12 @@ test('complete recovery permits real writes, failed write locks further writes w
         return { ok: true, json: async () => ({ success: true, data }) };
     };
     assert.equal(await c.run('refreshData()'), true);
-    await c.run("postToAPI('addDailyLog', {})");
+    c.run("state.selectedWorker='ทีม ก';state.targets=[{id:1,responsible_worker:'ทีม ก'}]");
+    await c.run("postToAPI('addDailyLog', {target_id:1})");
     const before = requests;
     c.context.fetch = async () => { requests++; throw new Error('response lost'); };
-    await assert.rejects(c.run("postToAPI('addQuarterly', {})"), /ตรวจรายการก่อนบันทึกซ้ำ/);
-    await assert.rejects(c.run("postToAPI('addQuarterly', {})"), /ยังไม่พร้อมบันทึก/);
+    await assert.rejects(c.run("postToAPI('addQuarterly', {target_id:1})"), /ตรวจรายการก่อนบันทึกซ้ำ/);
+    await assert.rejects(c.run("postToAPI('addQuarterly', {target_id:1})"), /ยังไม่พร้อมบันทึก/);
     assert.equal(requests, before + 1);
 });
 
@@ -124,7 +127,7 @@ test('missing quarterly data keeps writes locked even after core data renders', 
     assert.equal(c.run('state.coreDataReady'), true);
     // แต่ quarterly ขาด → ระบบยังล็อกการบันทึก (write safety คงเดิม ไม่เปิดก่อนเวลา)
     assert.equal(c.run('state.connectionReady'), false);
-    await assert.rejects(c.run("postToAPI('addQuarterly', {})"), /ยังไม่พร้อมบันทึก/);
+    await assert.rejects(c.run("postToAPI('addQuarterly', {target_id:1})"), /ยังไม่พร้อมบันทึก/);
 });
 
 test('bootstrap endpoint is used when available and skips legacy reads', async () => {
@@ -160,7 +163,7 @@ test('malformed bootstrap quarterly data keeps secondary and writes locked', asy
     assert.equal(await c.run('refreshData()'), false);
     assert.equal(c.run('state.secondaryReady'), false);
     assert.equal(c.run('state.connectionReady'), false);
-    await assert.rejects(c.run("postToAPI('addQuarterly', {})"), /ยังไม่พร้อมบันทึก/);
+    await assert.rejects(c.run("postToAPI('addQuarterly', {target_id:1})"), /ยังไม่พร้อมบันทึก/);
 });
 
 test('malformed bootstrap workers data keeps writes locked', async () => {
@@ -409,4 +412,11 @@ test('shared login works but maintenance actions are denied even with a legacy a
     assert.equal(request('admin-test', 'setupSheets').success, false);
     delete properties.ADMIN_PASSCODE;
     assert.equal(request('admin-test').success, false);
+});
+test('workspace guards stop other-worker profile reads and writes before network requests',async()=>{
+ const c=client();let requests=0;c.context.fetch=async()=>{requests++;return {ok:true,json:async()=>({success:true,data:{}})};};
+ c.run("state.connectionReady=true;state.selectedWorker='ทีม ก';state.targets=[{id:1,responsible_worker:'ทีม ก'},{id:2,responsible_worker:'ทีม ข'}]");
+ for(const [action,data] of [['getTargetDetail',{id:2}],['addQuarterly',{target_id:2}],['addDailyLog',{target_id:2}],['updateTarget',{id:2,responsible_worker:'ทีม ก'}],['addTarget',{responsible_worker:'ทีม ข'}]])await assert.rejects(c.run(`postToAPI(${JSON.stringify(action)},${JSON.stringify(data)})`),/รับผิดชอบ/);
+ assert.equal(requests,0);await c.run("postToAPI('addQuarterly',{target_id:1})");assert.equal(requests,1);
+ c.run('state.selectedWorker=null');await assert.rejects(c.run("postToAPI('getTargetDetail',{id:1})"),/เลือกชื่อ/);
 });

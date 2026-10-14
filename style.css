@@ -908,3 +908,16 @@ body.w0-capture .w0-summary { padding:8px 0; margin-bottom:8px; }
 body.w0-capture .w0-comparison-section { margin:12px 0; }
 body.w0-capture .w0-comparison-section h3 { margin-bottom:6px; }
 body.w0-capture #w0-tracking-view .w0-comparison-table th,body.w0-capture #w0-tracking-view .w0-comparison-table td { padding:6px 4px; }
+.worker-choice-panel { width:100%; max-width:480px; background:#fff; color:#0f172a; border:1px solid #cbd5e1; border-radius:16px; padding:28px; box-shadow:0 16px 40px #0f172a1a; }
+.worker-choice-panel h2 { font-size:24px; font-weight:700; margin-bottom:12px; }
+.worker-choice-panel p { font-size:14px; line-height:1.7; margin-bottom:16px; }
+.worker-choice-panel label { display:block; font-size:14px; font-weight:600; margin-bottom:6px; }
+.worker-choice-panel select { width:100%; margin-bottom:12px; }
+.worker-choice-panel button { margin:4px 4px 4px 0; }
+.worker-identity { margin-top:16px; padding:12px 0; border-top:1px solid var(--line,#dbe5e1); font-size:13px; overflow-wrap:anywhere; }
+.worker-identity p { font-weight:600; }
+#worker-change { margin-top:8px; text-decoration:underline; text-underline-offset:3px; min-height:32px; }
+.dark .worker-choice-panel { background:#0f172a; color:#e2e8f0; border-color:#64748b; }
+body.mobile-nav-open .mobile-bottom-nav,body.worker-choosing .mobile-bottom-nav { display:none!important; }
+#worker-choice-modal { overflow-y:auto; }
+@media(max-width:1023px) { #app-sidebar { overflow-y:auto; } }

@@ -110,7 +110,7 @@
         };
     </script>
     <!-- Local CSS stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261014-w0-table">
+    <link rel="stylesheet" href="style.css?v=20261014-worker">
 </head>
 <body class="bg-background-base text-on-surface antialiased font-body-md h-full flex flex-col overflow-hidden">
 
@@ -142,6 +142,18 @@
     </div>
 
     <!-- Main Container -->
+    <div id="worker-choice-modal" class="hidden fixed inset-0 z-50 bg-background-base/95 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="worker-choice-title">
+        <form id="worker-choice-form" class="worker-choice-panel">
+            <h2 id="worker-choice-title">คุณเป็นคณะทำงานคนใด?</h2>
+            <p>เลือกชื่อเพื่อเปิดกลุ่มเป้าหมายที่คุณรับผิดชอบ ส่วน Dashboard ยังดูภาพรวมทุกชุมชนได้</p>
+            <label for="worker-choice-select">ชื่อคณะทำงาน</label>
+            <select id="worker-choice-select" class="report-input" required disabled><option value="">กำลังโหลดรายชื่อ…</option></select>
+            <p id="worker-choice-info" role="status">กำลังอ่านทะเบียนและข้อมูลล่าสุด</p>
+            <button id="worker-choice-confirm" type="submit" class="report-primary-btn" disabled>เข้ากลุ่มเป้าหมายของฉัน</button>
+            <button id="worker-choice-retry" type="button" class="report-secondary-btn hidden">อ่านข้อมูลอีกครั้ง</button>
+            <button id="worker-choice-logout" type="button" class="report-secondary-btn">ออกจากระบบ</button>
+        </form>
+    </div>
     <div id="app-container" class="flex flex-1 h-full w-full relative overflow-hidden">
         
         <!-- Mobile navigation overlay -->
@@ -186,6 +198,7 @@
                 </a>
             </nav>
 
+            <div class="worker-identity"><p id="worker-identity-name">ยังไม่ได้เลือกคณะทำงาน</p><button id="worker-change" type="button">เปลี่ยนคณะทำงาน</button></div>
             <div class="mt-auto pt-6 border-t border-white/40 flex flex-col gap-4">
                 <div class="flex items-center gap-3 px-2">
                     <div class="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-700">
@@ -1532,9 +1545,10 @@
     <!-- Script Application Logic -->
     <script src="tracking-utils.js?v=20260719-biweekly"></script>
     <script src="ncd-export.js?v=20261014-community"></script>
-    <script src="w0-completeness.js?v=20261014-w0-table"></script>
-    <script src="app.js?v=20261014-w0-table"></script>
-    <script src="ncd-report-ui.js?v=20261014-community"></script>
-    <script src="w0-tracking-ui.js?v=20261014-w0-table"></script>
+    <script src="w0-completeness.js?v=20261014-worker"></script>
+    <script src="worker-scope.js?v=20261014-worker"></script>
+    <script src="app.js?v=20261014-worker"></script>
+    <script src="ncd-report-ui.js?v=20261014-worker"></script>
+    <script src="w0-tracking-ui.js?v=20261014-worker"></script>
 </body>
 </html>

@@ -63,6 +63,7 @@ const MOCK_WORKERS = [
 
 const state = {
     currentView: 'dashboard-view',
+    selectedWorker: sessionStorage.getItem('ncd_selected_worker') || null,
     connectionMode: 'online', // Production only: never fall back to simulated data.
     connectionReady: false,   // write-ready: เปิดเฉพาะ hydrate ครบแล้ว (targets+stats+quarterly+workers)
     coreDataReady: false,     // targets + dashboardStats พร้อม (แสดง dashboard ได้ read-only)
@@ -132,6 +133,12 @@ function updateConnectionIndicator() {
     document.querySelectorAll('#target-form [type="submit"], #quarterly-form [type="submit"], #daily-form [type="submit"]').forEach(button => {
         button.disabled = !state.connectionReady;
     });
+    const workerDialog = document.getElementById('worker-choice-modal');
+    if (workerDialog && !workerDialog.classList.contains('hidden')) {
+        document.getElementById('worker-choice-select').disabled = !state.connectionReady;
+        document.getElementById('worker-choice-confirm').disabled = !state.connectionReady;
+        document.getElementById('worker-choice-retry').classList.toggle('hidden',state.connectionReady);
+    }
     if (typeof ncdReportUI !== 'undefined') ncdReportUI.updateBackendSupport?.();
     if (typeof w0TrackingUI !== 'undefined' && state.currentView === 'w0-tracking-view') w0TrackingUI.render();
 }
@@ -208,6 +215,79 @@ function calculateWorkerSummary() {
     }).filter(item => item.total > 0 || item.worker !== UNASSIGNED_WORKER);
 }
 
+function getScopedTargets() {
+    return workerScope.targetsFor(state.targets, state.selectedWorker);
+}
+
+function showWorkerChoice() {
+    if (typeof w0TrackingUI !== 'undefined') w0TrackingUI.capture(false);
+    closeMobileNav();
+    document.getElementById('worker-choice-modal')?.classList.remove('hidden');
+    document.getElementById('app-container').inert = true;
+    document.body.classList.add('worker-choosing');
+    document.getElementById('worker-choice-select').disabled = !state.connectionReady;
+    document.getElementById('worker-choice-confirm').disabled = !state.connectionReady;
+    document.getElementById('worker-choice-retry').classList.toggle('hidden', state.connectionReady);
+}
+
+function ensureWorkerSelection() {
+    const names = workerScope.choices(state.targets, state.w0WorkerDirectory);
+    const select = document.getElementById('worker-choice-select');
+    if (!select) return;
+    select.innerHTML = '<option value="">เลือกชื่อของคุณ</option>' + names.map(name=>`<option value="${escapeHTML(name)}">${escapeHTML(name)} (${workerScope.targetsFor(state.targets,name).length} คน)</option>`).join('');
+    select.disabled = false;
+    document.getElementById('worker-choice-confirm').disabled = false;
+    document.getElementById('worker-choice-info').textContent = 'หากไม่พบชื่อหรือผู้รับผิดชอบไม่ตรง กรุณาประสานผู้ดูแลทะเบียน';
+    document.getElementById('worker-choice-retry').classList.add('hidden');
+    if (state.selectedWorker && names.includes(workerScope.clean(state.selectedWorker))) {
+        state.selectedWorker = workerScope.clean(state.selectedWorker);
+        select.value = state.selectedWorker;
+        applyWorkerControls();
+        document.getElementById('worker-choice-modal').classList.add('hidden');
+        document.getElementById('app-container').inert = false;
+        document.body.classList.remove('worker-choosing');
+    } else {
+        state.selectedWorker = null;
+        sessionStorage.removeItem('ncd_selected_worker');
+        showWorkerChoice();
+    }
+}
+
+function applyWorkerControls() {
+    const name = state.selectedWorker;
+    const badge = document.getElementById('worker-identity-name');
+    if (badge) badge.textContent = name ? `${name} · รับผิดชอบ ${getScopedTargets().length} คน` : 'ยังไม่ได้เลือกคณะทำงาน';
+    const targetNav = document.querySelector('.nav-item[data-view="targets-view"] .font-body-md');
+    if (targetNav && name) targetNav.textContent = `กลุ่มเป้าหมายของฉัน (${getScopedTargets().length} คน)`;
+    ['filter-worker','form-target-worker'].forEach(id=>{
+        const select=document.getElementById(id);
+        if (select && name) { select.innerHTML=`<option value="${escapeHTML(name)}">${escapeHTML(name)}</option>`; select.value=name; select.disabled=true; }
+    });
+}
+
+function selectWorker(name) {
+    if (!state.connectionReady || !workerScope.choices(state.targets,state.w0WorkerDirectory).includes(name)) return;
+    state.selectedWorker=name;
+    sessionStorage.setItem('ncd_selected_worker',name);
+    state.selectedTargetId=null;state.selectedTargetProfile=null;state.selectedTargetQuarterly=[];state.selectedTargetDailyLogs=[];state.currentPage=1;
+    document.querySelectorAll('.modal-overlay').forEach(modal=>modal.classList.add('hidden'));
+    ['filter-type','filter-village','filter-disease','registry-filter-color','registry-filter-village','focusgroup-filter-village','interp-village-filter'].forEach(id=>{const input=document.getElementById(id);if(input)input.value='all';});
+    ['interp-target-select','target-search-input','w0-village','w0-worker','w0-status','ncd-export-village'].forEach(id=>{const input=document.getElementById(id);if(input)input.value='';});
+    document.getElementById('worker-choice-modal').classList.add('hidden');
+    document.getElementById('app-container').inert = false;
+    document.body.classList.remove('worker-choosing');
+    applyWorkerControls();
+    document.getElementById('interp-import-btn')?.classList.add('hidden');
+    if (typeof ncdReportUI !== 'undefined') ncdReportUI.preview();
+    switchView('targets-view');
+}
+
+function logoutWorkspace() {
+    sessionStorage.removeItem('ncd_selected_worker');
+    sessionStorage.removeItem('ncd_authenticated');
+    location.reload();
+}
+
 function checkAuthentication() {
     const loginScreen = document.getElementById('login-screen');
     if (!loginScreen) return;
@@ -215,6 +295,7 @@ function checkAuthentication() {
     const isAuthenticated = sessionStorage.getItem('ncd_authenticated') === 'true';
     if (isAuthenticated) {
         loginScreen.classList.add('hidden');
+        showWorkerChoice();
         refreshData();
     } else {
         loginScreen.classList.remove('hidden');
@@ -453,7 +534,9 @@ function finishSecondaryRender() {
     if (state.currentView === 'dashboard-view') renderDashboardSecondary();
     state.connectionReady = true;
     state.w0DataReadAt = new Date().toISOString();
+    if (typeof workerScope !== 'undefined') ensureWorkerSelection();
     updateConnectionIndicator();
+    if (state.selectedWorker) switchView(state.currentView);
 }
 
 function normalizeTrackingRecord(record) {
@@ -672,6 +755,7 @@ function setMobileNavOpen(isOpen) {
     sidebar.classList.toggle('-translate-x-full', !isOpen);
     overlay.classList.toggle('hidden', !isOpen);
     document.body.classList.toggle('overflow-hidden', isOpen);
+    document.body.classList.toggle('mobile-nav-open', isOpen);
     if (toggle) toggle.setAttribute('aria-expanded', String(isOpen));
 }
 
@@ -691,8 +775,8 @@ function updateHeaderTitles(viewId) {
         title.textContent = isMobileViewport() ? 'แผงควบคุม' : 'แผงควบคุม (Dashboard)';
         subtitle.textContent = 'สรุปสถิติสถานะสุขภาพและการเปลี่ยนแปลงพฤติกรรมภาพรวม';
     } else if (viewId === 'targets-view') {
-        title.textContent = 'รายชื่อกลุ่มเป้าหมาย';
-        subtitle.textContent = 'แสดงข้อมูลประชากรเป้าหมาย นำเข้า ติดตามผล และกรองกลุ่มเสี่ยง/กลุ่มป่วย';
+        title.textContent = 'กลุ่มเป้าหมายของฉัน';
+        subtitle.textContent = state.selectedWorker ? `ผู้รับผิดชอบ: ${state.selectedWorker} · ${getScopedTargets().length} คน` : 'เลือกชื่อคณะทำงานเพื่อเริ่มบันทึก';
     } else if (viewId === 'w0-tracking-view') {
         title.textContent = 'ติดตามข้อมูล W0';
         subtitle.textContent = 'ความครบของข้อมูลรอบเริ่มต้น แยกตามชุมชนและคณะทำงาน';
@@ -903,7 +987,7 @@ function getRegistryRows() {
     const colorFilter = (document.getElementById('registry-filter-color') || {}).value || 'all';
     const villageFilter = (document.getElementById('registry-filter-village') || {}).value || 'all';
 
-    const rows = state.targets.map(t => {
+    const rows = getScopedTargets().map(t => {
         const latest = getLatestLogForTarget(t.id);
         const color = latest ? pingpongRules.classify(latest, t) : pingpongRules.colors.unknown;
         return { target: t, latest: latest, color: color };
@@ -1048,7 +1132,7 @@ function buildFocusGroupData() {
         muscle: []
     };
 
-    state.targets.forEach(t => {
+    getScopedTargets().forEach(t => {
         if (villageFilter !== 'all' && getTargetVillage(t) !== villageFilter) return;
 
         const latest = getLatestLogForTarget(t.id);
@@ -1626,7 +1710,7 @@ function renderTargetsList() {
     });
 
     // Filter targets
-    let filtered = state.targets.filter(t => {
+    let filtered = getScopedTargets().filter(t => {
         // Search Name & Address
         const village = getTargetVillage(t);
         const worker = getTargetWorker(t);
@@ -1682,14 +1766,14 @@ function renderTargetsList() {
     // Result count
     if (resultCount) {
         const hasFilter = Boolean(searchVal || filterType !== 'all' || filterVillage !== 'all' || filterWorker !== 'all' || filterDisease !== 'all');
-        resultCount.textContent = (hasFilter && totalItems !== state.targets.length)
-            ? `พบ ${totalItems} รายจาก ${state.targets.length} ราย`
+        resultCount.textContent = (hasFilter && totalItems !== getScopedTargets().length)
+            ? `พบ ${totalItems} รายจาก ${getScopedTargets().length} ราย`
             : `พบ ${totalItems} ราย`;
     }
     
     // Empty state
     if (totalItems === 0) {
-        const msg = state.targets.length === 0
+        const msg = getScopedTargets().length === 0
             ? 'ยังไม่มีรายชื่อกลุ่มเป้าหมาย'
             : (searchVal ? 'ไม่พบรายชื่อที่ตรงกับคำค้น' : 'ไม่พบข้อมูลตามเงื่อนไขที่เลือก');
         if (tableBody) tableBody.innerHTML = '';
@@ -1808,6 +1892,7 @@ function buildTargetCard({ t, log, pp, village }) {
 
 // --- View 3: Target Profile Rendering ---
 async function viewTargetProfile(targetId) {
+    if (!workerScope.owns(state.targets,state.selectedWorker,targetId)) { showToast('รายชื่อนี้อยู่ภายใต้คณะทำงานอื่น กรุณาตรวจชื่อผู้รับผิดชอบ','warning'); return; }
     state.selectedTargetId = targetId;
     
     showSpinner(true, 'กำลังโหลดข้อมูลรายบุคคล...');
@@ -1817,6 +1902,11 @@ async function viewTargetProfile(targetId) {
             const json = await postToAPI('getTargetDetail', { id: targetId });
             if (!json.success) throw new Error(json.error);
             
+            if (workerScope.owner(json.data.profile) !== state.selectedWorker) {
+                state.targets = state.targets.map(target=>String(target.id)===String(targetId)?json.data.profile:target);
+                state.selectedTargetId=null;state.selectedTargetProfile=null;state.selectedTargetQuarterly=[];state.selectedTargetDailyLogs=[];
+                switchView('targets-view');showToast('ผู้รับผิดชอบรายนี้เปลี่ยนแล้ว กรุณาอ่านข้อมูลล่าสุด','warning');return;
+            }
             state.selectedTargetProfile = json.data.profile;
             state.selectedTargetQuarterly = json.data.quarterly;
             state.selectedTargetDailyLogs = json.data.dailyLogs;
@@ -2356,6 +2446,7 @@ function refreshCharts() {
 
 // --- Form & Modals Management ---
 function openModal(modalId) {
+    if (modalId === 'target-modal') applyWorkerControls();
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('hidden');
@@ -2502,6 +2593,9 @@ function setupEventListeners() {
                 perfLog('login-auth', loginStart);
                 if (login.data?.role !== 'user') throw new Error('กรุณาอัปเดต Apps Script เป็นเวอร์ชันล่าสุด');
                 sessionStorage.setItem('ncd_authenticated', 'true');
+                sessionStorage.removeItem('ncd_selected_worker');
+                state.selectedWorker = null;
+                showWorkerChoice();
                 const loginScreen = document.getElementById('login-screen');
                 if (loginScreen) loginScreen.classList.add('hidden');
                 errorDiv.classList.add('hidden');
@@ -2616,10 +2710,12 @@ function setupEventListeners() {
     document.getElementById('retry-connection').addEventListener('click', () => {
         if (sessionStorage.getItem('ncd_authenticated') === 'true') refreshData();
     });
-    document.getElementById('logout-btn').addEventListener('click', () => {
-        sessionStorage.removeItem('ncd_authenticated');
-        location.reload();
-    });
+    document.getElementById('logout-btn').addEventListener('click', logoutWorkspace);
+    document.getElementById('worker-choice-logout')?.addEventListener('click',logoutWorkspace);
+    document.getElementById('worker-change')?.addEventListener('click',showWorkerChoice);
+    document.getElementById('worker-choice-retry')?.addEventListener('click',()=>refreshData());
+    document.getElementById('worker-choice-form')?.addEventListener('submit',event=>{event.preventDefault();selectWorker(document.getElementById('worker-choice-select').value);});
+    document.getElementById('worker-choice-select')?.addEventListener('change',event=>{document.getElementById('worker-choice-info').textContent = event.target.value ? `รับผิดชอบ ${workerScope.targetsFor(state.targets,event.target.value).length} คน` : 'กรุณาเลือกชื่อของคุณ';});
 
     // --- Modal buttons and forms ---
     
@@ -2640,7 +2736,7 @@ function setupEventListeners() {
             const importBtn = document.getElementById('interp-import-btn');
             
             if (val) {
-                const target = state.targets.find(t => t.id === parseInt(val));
+                const target = getScopedTargets().find(t => t.id === parseInt(val));
                 if (target) {
                     // Populate gender and height
                     document.getElementById('interp-gender').value = inferGender(target.name);
@@ -2806,6 +2902,7 @@ function setupEventListeners() {
 
     document.getElementById('target-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (!state.connectionReady) { showToast('ยังไม่พร้อมบันทึก กรุณาเชื่อมต่อใหม่ ข้อมูลในฟอร์มยังอยู่','danger'); return; }
         
         const targetId = document.getElementById('form-target-id').value;
         const action = targetId ? 'updateTarget' : 'addTarget';
@@ -2829,7 +2926,7 @@ function setupEventListeners() {
             return;
         }
 
-        if (!getWorkerOptions().includes(formData.responsible_worker)) {
+        if (formData.responsible_worker !== state.selectedWorker) {
             showToast("กรุณาเลือกคณะทำงานที่รับผิดชอบจากรายการที่กำหนด", "warning");
             return;
         }
@@ -3021,6 +3118,12 @@ async function postToAPI(action, data, passcode = state.apiPasscode, opts = {}) 
     const isWrite = ['addTarget', 'updateTarget', 'addQuarterly', 'addDailyLog'].includes(action);
     if (isWrite && (state.connectionMode !== 'online' || !state.connectionReady || sessionStorage.getItem('ncd_authenticated') !== 'true')) {
         throw new Error('ยังไม่พร้อมบันทึก กรุณาเชื่อมต่อใหม่ให้สำเร็จก่อน ข้อมูลในฟอร์มยังอยู่');
+    }
+    if (isWrite || action === 'getTargetDetail') {
+        if (!state.selectedWorker) throw new Error('กรุณาเลือกชื่อคณะทำงานก่อน');
+        const targetId = action === 'getTargetDetail' || action === 'updateTarget' ? data.id : data.target_id;
+        if (action !== 'addTarget' && !workerScope.owns(state.targets,state.selectedWorker,targetId)) throw new Error('รายชื่อนี้ไม่ได้อยู่ในกลุ่มที่คุณรับผิดชอบ');
+        if (['addTarget','updateTarget'].includes(action) && workerScope.owner(data) !== state.selectedWorker) throw new Error('ผู้รับผิดชอบต้องตรงกับชื่อคณะทำงานที่เลือก');
     }
     if (!state.gasUrl || !state.apiPasscode) {
         throw new Error("ยังไม่ได้ตั้งค่า URL หรือรหัสผ่าน API");
@@ -3293,7 +3396,7 @@ function renderInterpreterView() {
     const villageFilter = document.getElementById('interp-village-filter');
     const selectedVillage = villageFilter ? villageFilter.value : 'all';
     const currentValue = select.value;
-    const filteredTargets = state.targets.filter(t => {
+    const filteredTargets = getScopedTargets().filter(t => {
         return selectedVillage === 'all' || getTargetVillage(t) === selectedVillage;
     });
 
@@ -3536,7 +3639,7 @@ function setupQuarterlyFormRealtimeInterpretation() {
     
     const updateFormFat = () => {
         const targetId = parseInt(document.getElementById('form-q-target-id').value);
-        const target = state.targets.find(t => t.id === targetId) || state.selectedTargetProfile || {};
+        const target = getScopedTargets().find(t => t.id === targetId) || state.selectedTargetProfile || {};
         const gender = inferGender(target.name);
         const fat = parseFloat(fatInput.value) || 0;
         const badge = document.getElementById('form-q-badge-fat');
@@ -3563,7 +3666,7 @@ function setupQuarterlyFormRealtimeInterpretation() {
     
     const updateFormMuscle = () => {
         const targetId = parseInt(document.getElementById('form-q-target-id').value);
-        const target = state.targets.find(t => t.id === targetId) || state.selectedTargetProfile || {};
+        const target = getScopedTargets().find(t => t.id === targetId) || state.selectedTargetProfile || {};
         const gender = inferGender(target.name);
         const muscle = parseFloat(muscleInput.value) || 0;
         const badge = document.getElementById('form-q-badge-muscle');
@@ -3662,7 +3765,8 @@ function loadTrackingRoundRecord(round) {
 }
 
 function openQuarterlyModal(targetId) {
-    const t = state.targets.find(t => t.id === targetId) || state.selectedTargetProfile;
+    if (!workerScope.owns(state.targets,state.selectedWorker,targetId)) { showToast('รายชื่อนี้ไม่ได้อยู่ในกลุ่มที่คุณรับผิดชอบ','warning');return; }
+    const t = getScopedTargets().find(t => t.id === targetId) || state.selectedTargetProfile;
     if (!t) return;
     
     document.getElementById('quarterly-form').reset();

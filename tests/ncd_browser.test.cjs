@@ -14,7 +14,7 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
         { id: 1, name: 'ทดสอบ ผู้ป่วย', type: 'กลุ่มป่วย', village: 'หมู่ 2 บ้านตรัง', age: 50, height: 160, address: '001/2', chronic_disease: 'DM', co_morbidity: '', onset_year: '2560', medicines: 'ยาทดสอบ', responsible_worker: 'อสม.ทดสอบ' },
         { id: 2, name: 'ทดสอบ กลุ่มเสี่ยง', type: 'กลุ่มเสี่ยง', village: 'หมู่ 2 บ้านตรัง', age: 45, height: 170, address: '002/3', chronic_disease: '', responsible_worker: 'อสม.ทดสอบ' },
         { id: 3, name: 'ทดสอบ ชุมชนอื่น', type: 'กลุ่มเสี่ยง', village: 'หมู่ 3 บ้านเขาวัง', age: 40, height: 160 },
-        { id: 4, name: 'ทดสอบ ยังไม่มีผล', type: 'กลุ่มเสี่ยง', village: 'หมู่ 2 บ้านตรัง', age: 40, height: 160 }
+        { id: 4, responsible_worker:'อสม.ทดสอบ', name: 'ทดสอบ ยังไม่มีผล', type: 'กลุ่มเสี่ยง', village: 'หมู่ 2 บ้านตรัง', age: 40, height: 160 }
     ];
     const initial = [{ id: 1, target_id: 1, quarter: 'W0', date: '14/10/2026', weight: 60, bmi: 23.4, waist: 80, dtx: 100, bp: '120/80', body_fat: '', muscle_mass: '', visceral_fat: '', body_age: '', hba1c: 6 }];
     const headers = Object.keys(initial[0]);
@@ -41,7 +41,7 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
     let rejectBootstrap = false;
     try {
         const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } });
-        await context.addInitScript(() => { sessionStorage.setItem('ncd_authenticated', 'true'); sessionStorage.setItem('ncd_role', 'admin'); });
+        await context.addInitScript(() => { sessionStorage.setItem('ncd_authenticated', 'true'); sessionStorage.setItem('ncd_selected_worker','อสม.ทดสอบ'); sessionStorage.setItem('ncd_role', 'admin'); });
         await context.route('https://script.google.com/**', async route => {
             const payload = route.request().postDataJSON();
             actions.push(payload.action);
