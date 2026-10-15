@@ -39,6 +39,8 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
     const errors = [];
     const actions = [];
     let rejectBootstrap = false;
+    let incompleteDetailOnce = true;
+    let rejectDetail = false;
     try {
         const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } });
         await context.addInitScript(() => { sessionStorage.setItem('ncd_authenticated', 'true'); sessionStorage.setItem('ncd_selected_worker','อสม.ทดสอบ'); sessionStorage.setItem('ncd_role', 'admin'); });
@@ -49,8 +51,13 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
             if (payload.action === 'getBootstrapData') {
                 if (rejectBootstrap) result = { success: false, error: 'ทดสอบการโหลดล้มเหลว' };
                 else result = { success: true, data: { targets, quarterly: records(), workers: ['อสม.ทดสอบ'], ncdReportVersion: 1, dashboardStats: backend.computeDashboardStats_(targets, records(), ['อสม.ทดสอบ']) } };
+            } else if (payload.action === 'getAllQuarterly') {
+                result = {success:true,data:{quarterly:records(),ncdReportVersion:1}};
             } else if (payload.action === 'getTargetDetail') {
-                result = { success: true, data: { profile: targets.find(t => t.id === Number(payload.data.id)), quarterly: records().filter(r => Number(r.target_id) === Number(payload.data.id)), dailyLogs: [] } };
+                const history = incompleteDetailOnce ? [] : records().filter(r => Number(r.target_id) === Number(payload.data.id));
+                incompleteDetailOnce = false;
+                result = { success: true, data: { profile: targets.find(t => t.id === Number(payload.data.id)), quarterly: history, dailyLogs: [] } };
+                if (rejectDetail) result = {success:false,error:'ทดสอบอ่านประวัติไม่สำเร็จ'};
             } else if (payload.action === 'addQuarterly') result = backend.addQuarterly(ss, payload.data);
             else result = { success: false, error: 'unsupported test action' };
             await route.fulfill({ json: result, headers: { 'access-control-allow-origin': '*' } });
@@ -65,9 +72,20 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
         await page.goto(process.env.NCD_QA_URL || 'http://127.0.0.1:8765', { waitUntil: 'networkidle' });
         await page.waitForFunction(() => state.connectionReady && document.getElementById('form-report-smoking'));
         await page.evaluate(() => viewTargetProfile(1));
-        await page.locator('#btn-add-quarterly').click();
-        await page.locator('#form-q-round').selectOption('W0');
+        assert.ok(actions.includes('getAllQuarterly'));
+        assert.ok(!(await page.locator('#profile-snapshot').innerText()).includes('ยังไม่มีผลติดตาม'));
+        await page.locator('.record-first-btn[data-round="W0"]').click();
+        await page.locator('#quarterly-modal').waitFor({state:'visible'});
+        assert.equal(await page.locator('#form-q-round').inputValue(),'W0');
+        assert.equal(await page.locator('#form-q-weight').inputValue(),'60');
+        assert.equal(await page.locator('#form-q-hba1c').inputValue(),'6');
+        assert.equal(await page.locator('#form-q-date').inputValue(),'14/10/2026');
+        assert.match(await page.locator('#form-q-history-status').innerText(),/ดึงประวัติ W0 เดิม/);
         assert.equal(await page.locator('#form-q-fat').inputValue(), '');
+        await page.screenshot({path:path.join(qa,'resume-w0-desktop.png')});
+        await page.setViewportSize({width:390,height:844});
+        await page.screenshot({path:path.join(qa,'resume-w0-mobile.png')});
+        await page.setViewportSize({width:1440,height:1000});
         await page.locator('#form-report-report_exercise_minutes').fill('0');
         await page.locator('#form-report-food_overeat').selectOption('no');
         await page.locator('#form-report-food_unhealthy').selectOption('yes');
@@ -82,10 +100,12 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
         await page.locator('.report-assessment-section').screenshot({ path: path.join(qa, 'assessment-desktop.png') });
         await page.locator('#quarterly-form button[type="submit"]').click();
         await page.waitForFunction(() => document.getElementById('quarterly-modal').classList.contains('hidden'));
+        assert.equal(records().filter(r=>r.target_id===1 && r.quarter==='W0').length,1);
         assert.equal(records()[0].food_habit, 'ประเมินอาหารทดสอบ'); assert.equal(records()[0].body_fat, '');
         await page.waitForFunction(() => document.querySelector('.report-profile-summary'));
         await page.locator('#btn-add-quarterly').click();
-        await page.locator('#form-q-round').selectOption('W0');
+        await page.locator('#quarterly-modal').waitFor({state:'visible'});
+        assert.equal(await page.locator('#form-q-round').inputValue(),'W0');
         assert.equal(await page.locator('#form-report-smoking').inputValue(), 'no');
         assert.equal(await page.locator('#form-report-veggie_fruit').inputValue(), '0');
         assert.equal(await page.locator('#form-report-food_habit').inputValue(), 'ประเมินอาหารทดสอบ');
@@ -98,8 +118,12 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
         await page.locator('.report-assessment-section').screenshot({ path: path.join(qa, 'assessment-mobile.png') });
         await page.locator('#quarterly-modal .close-modal-btn').first().click();
         await page.waitForFunction(() => document.getElementById('quarterly-modal').classList.contains('hidden'));
-        await page.evaluate(() => viewTargetProfile(2));
-        await page.locator('#btn-add-quarterly').click();
+        await page.locator('#back-to-list-btn').click();
+        await page.locator('#targets-mobile-list .record-btn[data-id="2"]').click();
+        await page.locator('#quarterly-modal').waitFor({state:'visible'});
+        assert.equal(await page.locator('#form-q-target-id').inputValue(),'2');
+        assert.equal(await page.locator('#form-q-weight').inputValue(),'');
+        assert.equal(await page.locator('#form-report-food_habit').inputValue(),'');
         await page.locator('#form-q-round').selectOption('W12');
         assert.equal(await page.locator('[data-report-key="risk_category"]').isVisible(), true);
         for (const [id, value] of [['weight', '70'], ['waist', '90'], ['dtx', '110'], ['bp', '130/85']]) await page.locator(`#form-q-${id}`).fill(value);
@@ -163,6 +187,15 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
         await page.locator('#quarterly-modal .close-modal-btn').first().click();
         await page.locator('#ncd-export-btn').waitFor({ state: 'visible' });
         await page.waitForFunction(() => !document.getElementById('ncd-export-btn').disabled);
+        await page.evaluate(()=>viewTargetProfile(1));
+        rejectDetail=true;
+        await page.locator('#btn-add-quarterly').click();
+        await page.waitForFunction(()=>!state.connectionReady);
+        assert.equal(await page.locator('#quarterly-modal').isVisible(),false);
+        rejectDetail=false;
+        await page.evaluate(()=>refreshData());
+        await page.evaluate(()=>switchView('registry-view'));
+        await page.locator('#ncd-export-village').selectOption('หมู่ 2 บ้านตรัง');
         rejectBootstrap = true;
         let extraDownloads = 0; page.on('download', () => extraDownloads++);
         await page.locator('#ncd-export-btn').click();

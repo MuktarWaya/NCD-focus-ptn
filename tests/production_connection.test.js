@@ -27,6 +27,7 @@ function client({ search = '', captureLogs = false, stubSpinner = true } = {}) {
         location: { search }, AbortController, setTimeout, clearTimeout,
         trackingUtils: require('../tracking-utils'),
         workerScope: require('../worker-scope'),
+        trackingHistory: require('../tracking-history'),
         ncdReportUI: { collect: () => ({}) },
         ncdExport: require('../ncd-export'),
         document: { querySelector: () => null, addEventListener() {}, getElementById: element, querySelectorAll: () => [], createElement: () => ({}), head: { appendChild() {} } },

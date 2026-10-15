@@ -1807,9 +1807,7 @@ function renderTargetsList() {
         btn.addEventListener('click', (e) => {
             const id = parseInt(e.currentTarget.getAttribute('data-id'));
             if (e.currentTarget.classList.contains('record-btn')) {
-                state.selectedTargetId = id;
-                state.selectedTargetQuarterly = state.quarterlyData.filter(q => String(q.target_id) === String(id));
-                openQuarterlyModal(id);
+                openQuarterlyWithHistory(id);
             } else {
                 viewTargetProfile(id);
             }
@@ -1911,6 +1909,14 @@ async function viewTargetProfile(targetId) {
                 state.selectedTargetId=null;state.selectedTargetProfile=null;state.selectedTargetQuarterly=[];state.selectedTargetDailyLogs=[];
                 switchView('targets-view');showToast('ผู้รับผิดชอบรายนี้เปลี่ยนแล้ว กรุณาอ่านข้อมูลล่าสุด','warning');return;
             }
+            if (!Array.isArray(json.data.quarterly)) throw new Error('ประวัติผลติดตามยังอ่านไม่ครบ กรุณาลองอีกครั้ง');
+            const known = trackingHistory.forTarget(state.quarterlyExportData,targetId);
+            const detailRounds = new Set(json.data.quarterly.map(row=>trackingHistory.round(row.quarter)));
+            if (known.some(row=>!detailRounds.has(row.quarter))) {
+                const all = await postToAPI('getAllQuarterly',{});
+                if (!Array.isArray(all.data?.quarterly)) throw new Error('ยังยืนยันประวัติเดิมไม่ได้ กรุณาอ่านข้อมูลใหม่ก่อนบันทึก');
+                json.data.quarterly = trackingHistory.forTarget(all.data.quarterly,targetId);
+            }
             state.selectedTargetProfile = json.data.profile;
             state.selectedTargetQuarterly = json.data.quarterly;
             state.selectedTargetDailyLogs = json.data.dailyLogs;
@@ -1946,10 +1952,12 @@ async function viewTargetProfile(targetId) {
         state.selectedTargetQuarterly.sort((a, b) => roundSortValue(a.quarter) - roundSortValue(b.quarter));
         
         switchView('profile-view');
+        return true;
     } catch (err) {
         console.error("Error viewing profile:", err);
         reportConnectionError(err);
         showToast("ไม่สามารถโหลดโปรไฟล์เป้าหมายได้: " + err.message, "danger");
+        return false;
     } finally {
         showSpinner(false);
     }
@@ -2014,7 +2022,7 @@ function renderProfileSnapshot() {
     const dateEl = document.getElementById('profile-latest-date');
     if (!container) return;
     const t = state.selectedTargetProfile;
-    const logs = state.selectedTargetQuarterly || [];
+    const logs = getTargetTrackingHistory(t.id).sort((a,b)=>roundSortValue(a.quarter)-roundSortValue(b.quarter));
     const latest = logs.length > 0 ? logs[logs.length - 1] : null;
     
     if (!latest) {
@@ -2062,6 +2070,9 @@ function renderProfileSnapshot() {
             <strong class="text-base">${pp.rank >= 0 ? `${pp.label} · ${pp.sub}` : 'ยังไม่ประเมิน'}</strong>
         </div>
     `;
+    if (logs.some(row=>trackingHistory.round(row.quarter)==='W0')) {
+        container.insertAdjacentHTML('beforeend', `<div class="col-span-full"><button type="button" class="record-first-btn report-secondary-btn" data-id="${t.id}" data-round="W0">เติม / แก้ไขข้อมูล W0 เดิม</button></div>`);
+    }
 }
 
 function getStoredWeekSummary(log, weekIndex) {
@@ -2501,9 +2512,9 @@ function setupProfileActionFallbacks() {
             document.getElementById('target-modal-title').textContent = 'แก้ไขข้อมูลส่วนตัวกลุ่มเป้าหมาย';
             openModal('target-modal');
         } else if (button.id === 'btn-add-quarterly') {
-            openQuarterlyModal(state.selectedTargetId);
+            openQuarterlyWithHistory(state.selectedTargetId);
         } else if (button.classList.contains('record-first-btn')) {
-            openQuarterlyModal(state.selectedTargetId);
+            openQuarterlyWithHistory(Number(button.dataset.id)||state.selectedTargetId,'W0');
         } else if (button.id === 'btn-add-daily') {
             if (!state.selectedTargetId) {
                 showToast("กรุณาเลือกกลุ่มเป้าหมายก่อนบันทึกพฤติกรรม", "warning");
@@ -2565,7 +2576,7 @@ function setupEventListeners() {
     if (quickRecordBtn) {
         quickRecordBtn.addEventListener('click', () => {
             if (state.currentView === 'profile-view' && state.selectedTargetId && state.selectedTargetProfile) {
-                openQuarterlyModal(state.selectedTargetId);
+                openQuarterlyWithHistory(state.selectedTargetId);
                 return;
             }
             switchView('targets-view');
@@ -2968,7 +2979,7 @@ function setupEventListeners() {
 
     // 2. Add Quarterly Data Form
     document.getElementById('btn-add-quarterly').addEventListener('click', () => {
-        openQuarterlyModal(state.selectedTargetId);
+        openQuarterlyWithHistory(state.selectedTargetId);
     });
 
     document.getElementById('form-q-round').addEventListener('change', (event) => loadTrackingRoundRecord(event.target.value));
@@ -3742,8 +3753,32 @@ function setTrackingField(id, value) {
     if (field) field.value = value ?? '';
 }
 
+function getTargetTrackingHistory(targetId) {
+    const raw = trackingHistory.forTarget(state.quarterlyExportData,targetId);
+    if (raw.length) return raw;
+    return trackingHistory.sameId(state.selectedTargetProfile?.id,targetId)
+        ? trackingHistory.forTarget(state.selectedTargetQuarterly,targetId) : [];
+}
+
+let quarterlyHistoryRequest = 0;
+async function openQuarterlyWithHistory(targetId, preferredRound) {
+    if (workerScope.isStaff(state.selectedWorker)) { showToast('โหมดเจ้าหน้าที่ใช้ดูข้อมูล เลือกชื่อผู้รับผิดชอบก่อนบันทึก','warning');return; }
+    const request = ++quarterlyHistoryRequest;
+    const worker = state.selectedWorker;
+    const loaded = await viewTargetProfile(targetId);
+    if (!loaded || request !== quarterlyHistoryRequest || worker !== state.selectedWorker || !trackingHistory.sameId(state.selectedTargetProfile?.id,targetId)) return;
+    openQuarterlyModal(Number(targetId),preferredRound);
+}
+
 function loadTrackingRoundRecord(round) {
-    const record = state.selectedTargetQuarterly.find(item => item.quarter === round);
+    const targetId = document.getElementById('form-q-target-id').value;
+    let record;
+    try { record = trackingHistory.find(getTargetTrackingHistory(targetId),targetId,round); }
+    catch (error) { showToast(error.message,'danger');closeModal('quarterly-modal');return false; }
+    const status = document.getElementById('form-q-history-status');
+    if (status) status.textContent = record
+        ? `ดึงประวัติ ${round} เดิมแล้ว เติมช่องที่ขาดได้ การบันทึกจะปรับปรุงรายการรอบเดิม เลือกรอบอื่นเมื่อต้องการบันทึกรอบใหม่`
+        : `ยังไม่มีผล ${round} กำลังเริ่มรายการใหม่${getTargetTrackingHistory(targetId).some(r=>r.quarter==='M0')?' · พบข้อมูลเดิม M0 กรุณาตรวจรอบกับผู้ประสานงานก่อนกรอกซ้ำ':''}`;
     const physicalFields = {
         'form-q-weight': 'weight', 'form-q-waist': 'waist', 'form-q-bp': 'bp', 'form-q-dtx': 'dtx',
         'form-q-fat': 'body_fat', 'form-q-muscle': 'muscle_mass', 'form-q-visceral': 'visceral_fat',
@@ -3752,7 +3787,7 @@ function loadTrackingRoundRecord(round) {
         'form-q-ldl': 'ldl', 'form-q-chol': 'cholesterol'
     };
     Object.entries(physicalFields).forEach(([id, key]) => setTrackingField(id, record ? (record._ncdRawPhysical?.[key] ?? record[key]) : ''));
-    ncdReportUI.load(record, state.selectedTargetProfile);
+    ncdReportUI.load(record, getScopedTargets().find(t=>trackingHistory.sameId(t.id,targetId)));
     if (record) {
         setTrackingField('form-q-date', record.date);
     } else {
@@ -3769,9 +3804,10 @@ function loadTrackingRoundRecord(round) {
     updateTrackingRoundForm();
 }
 
-function openQuarterlyModal(targetId) {
+function openQuarterlyModal(targetId, preferredRound) {
+    if (workerScope.isStaff(state.selectedWorker)) { showToast('โหมดเจ้าหน้าที่ใช้ดูข้อมูล เลือกชื่อผู้รับผิดชอบก่อนบันทึก','warning');return; }
     if (!workerScope.owns(state.targets,state.selectedWorker,targetId)) { showToast('รายชื่อนี้ไม่ได้อยู่ในกลุ่มที่คุณรับผิดชอบ','warning');return; }
-    const t = getScopedTargets().find(t => t.id === targetId) || state.selectedTargetProfile;
+    const t = getScopedTargets().find(t => trackingHistory.sameId(t.id,targetId));
     if (!t) return;
     
     document.getElementById('quarterly-form').reset();
@@ -3784,9 +3820,8 @@ function openQuarterlyModal(targetId) {
     const yyyy = d.getFullYear();
     document.getElementById('form-q-date').value = `${dd}/${mm}/${yyyy}`;
     
-    const recordedRounds = new Set(state.selectedTargetQuarterly.map(item => item.quarter));
-    const nextRound = TRACKING_ROUNDS.find(item => !recordedRounds.has(item.value));
-    document.getElementById('form-q-round').value = nextRound ? nextRound.value : 'W24';
+    try { document.getElementById('form-q-round').value = trackingHistory.initialRound(getTargetTrackingHistory(targetId),targetId,TRACKING_ROUNDS,preferredRound); }
+    catch (error) {showToast(error.message,'danger');return;}
     
     // Reset badges
     document.getElementById('form-q-badge-bmi').innerHTML = 'BMI: -';
@@ -3794,7 +3829,7 @@ function openQuarterlyModal(targetId) {
     document.getElementById('form-q-badge-visceral').innerHTML = 'ช่องท้อง: -';
     document.getElementById('form-q-badge-muscle').innerHTML = 'กล้ามเนื้อ: -';
 
-    loadTrackingRoundRecord(document.getElementById('form-q-round').value);
+    if (loadTrackingRoundRecord(document.getElementById('form-q-round').value) === false) return;
     
     openModal('quarterly-modal');
 }

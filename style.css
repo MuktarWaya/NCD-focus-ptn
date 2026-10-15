@@ -921,3 +921,5 @@ body.w0-capture #w0-tracking-view .w0-comparison-table th,body.w0-capture #w0-tr
 body.mobile-nav-open .mobile-bottom-nav,body.worker-choosing .mobile-bottom-nav { display:none!important; }
 #worker-choice-modal { overflow-y:auto; }
 @media(max-width:1023px) { #app-sidebar { overflow-y:auto; } }
+#form-q-history-status { padding:12px; margin-bottom:14px; border-radius:8px; background:var(--brand-soft,#ccfbf1); color:var(--brand-deep,#134e4a); font-size:14px; line-height:1.65; }
+.dark #form-q-history-status { background:#102b2d; color:#ccfbf1; }
