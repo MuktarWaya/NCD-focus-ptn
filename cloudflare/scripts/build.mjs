@@ -45,6 +45,16 @@ await fs.writeFile(path.join(out,'app.js'),source);
 await fs.copyFile(path.join(here,'client.js'),path.join(out,'cloudflare-client.js'));
 let html=await fs.readFile(path.join(out,'index.html'),'utf8');
 html=html.replace(/<script src="app.js[^>]*><\/script>/,'<script src="cloudflare-client.js?v=20261015-cloudflare"></script>\n    <script src="app.js?v=20261015-cloudflare"></script>');
+html=html.replace('ใช้รายชื่อ mock ชั่วคราว สามารถเปลี่ยนเป็นรายชื่อจริงภายหลังได้','แสดงรายชื่อคณะทำงานและผู้รับผิดชอบจากฐานข้อมูล');
 await fs.writeFile(path.join(out,'index.html'),html);
 await fs.writeFile(path.join(out,'_headers'),`/*\n  X-Frame-Options: DENY\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  Cache-Control: public, max-age=0, must-revalidate\n`);
+const allowed=new Set([...files,'app.js','cloudflare-client.js','_headers']);
+async function verifyDirectory(directory,prefix=''){
+  for(const entry of await fs.readdir(directory,{withFileTypes:true})){
+    const relative=prefix+entry.name;
+    if(entry.isDirectory())await verifyDirectory(path.join(directory,entry.name),relative+'/');
+    else if(!entry.isFile()||!allowed.has(relative))throw Error('Unexpected public asset; deployment blocked: '+relative);
+  }
+}
+await verifyDirectory(out);
 console.log('Built '+(files.length+3)+' allowlisted public assets; no source data or credentials');

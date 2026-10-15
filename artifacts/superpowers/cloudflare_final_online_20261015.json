@@ -1,0 +1,15 @@
+{
+  "verifiedAt": "2026-10-15T05:36:36.013Z",
+  "production": "https://ncd-focus-ptn.muktar32.workers.dev",
+  "legacyRedirect": true,
+  "login": true,
+  "writesEnabled": true,
+  "counts": {
+    "targets": 170,
+    "quarterly": 97,
+    "workers": 35
+  },
+  "clinicalTestWrites": 0,
+  "notificationTestMessages": 0,
+  "latestFrontend": true
+}

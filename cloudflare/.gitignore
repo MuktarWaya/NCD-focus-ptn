@@ -3,6 +3,7 @@ public/
 .wrangler/
 .dev.vars
 .dev.vars.*
+!.dev.vars.example
 worker-configuration.d.ts
 private/
 test-results/

@@ -1,0 +1,4 @@
+# Local synthetic testing only. Never use this example password in production.
+API_PASSCODE="local-test-password"
+TELEGRAM_BOT_TOKEN=""
+TELEGRAM_CHAT_ID=""

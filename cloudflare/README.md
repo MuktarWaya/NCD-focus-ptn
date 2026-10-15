@@ -20,7 +20,7 @@ npx wrangler d1 migrations apply DB --local
 npx wrangler dev
 ```
 
-Local `.dev.vars` must contain `API_PASSCODE`; Telegram keys are optional. These files are ignored. `wrangler types` generates the ignored runtime/binding declarations. Configure real secrets with `wrangler secret bulk PRIVATE_JSON --env production` (or `secret put`); never put them in source/config/public files. The generated public JS contains no shared password or legacy endpoint.
+Copy `.dev.vars.example` to the ignored `.dev.vars` before generating types. Fill the local `API_PASSCODE`; keep both Telegram keys present but blank when testing without notifications. `wrangler types` generates the ignored runtime/binding declarations from these key names. Configure real secrets with `wrangler secret bulk PRIVATE_JSON --env production` (or `secret put`); never put them in source/config/public files. The generated public JS contains no shared password or legacy endpoint.
 
 For the real local D1 browser flow, initialize **only the local synthetic database** with the fixture from `tests/helpers.mjs`, import it, and set `settings.migration_state=verified`. Set `NCD_QA_NODE_MODULES` to a directory containing Playwright and run `node --test tests/browser.test.mjs`. Chrome must be installed. Tests write only to this local fixture database; there are no live patient test writes or test Telegram sends. A fixture database with an audit history cannot be reimported until it is explicitly reset; the production importer deliberately rejects overwriting post-migration clinical edits.
 
@@ -34,7 +34,7 @@ Every write has a request ID, original form revision, atomic D1 receipt/write/au
 
 ## Notifications
 
-Clinical transactions only enqueue a durable outbox row. A Cron runs every five minutes to deliver pending messages, and `0 0 * * *` creates the daily 07:00 Asia/Bangkok summary. Retries use leases/backoff, eight attempts then a visible failed row; inspect `notification_outbox` for delivery failures. Telegram has no idempotency key, so an ambiguous send can duplicate a notification (at-least-once delivery). Clinical records/receipts remain exactly-once for a request. No detailed measurements appear in messages. `NOTIFICATIONS_ENABLED=false` disables all outbound sends; staging always uses false. Enable production only after the old scheduled sender has been disabled. Historical NotificationLog is archived, never replayed.
+Clinical transactions only enqueue a durable outbox row. A Cron runs every five minutes to deliver up to ten pending messages per run; backlog/retries can delay delivery further. `0 0 * * *` creates the daily 07:00 Asia/Bangkok summary. Retries use leases/backoff, eight attempts then a visible failed row; inspect `notification_outbox` for delivery failures. Telegram has no idempotency key, so an ambiguous send can duplicate a notification (at-least-once delivery). Clinical records/receipts remain exactly-once for a request. No detailed measurements appear in messages. `NOTIFICATIONS_ENABLED=false` disables all outbound sends; staging always uses false. Enable production only after the old scheduled sender has been disabled. Historical NotificationLog is archived, never replayed.
 
 ## Data migration and cutover
 
