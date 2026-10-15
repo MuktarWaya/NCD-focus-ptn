@@ -1,0 +1,75 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ncd-focus-local",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-15",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "account_id": "01e9204589785674da17b371230faa1a",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api",
+      "/api/*"
+    ]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "ENVIRONMENT": "local",
+    "WRITES_ENABLED": "true",
+    "NOTIFICATIONS_ENABLED": "false"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ncd-focus-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    "staging": {
+      "name": "ncd-focus-staging",
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "WRITES_ENABLED": "false",
+        "NOTIFICATIONS_ENABLED": "false"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ncd-focus-staging",
+          "database_id": "5d12dbb9-b2fc-442b-9cf2-e443fee740bd",
+          "migrations_dir": "migrations"
+        }
+      ]
+    },
+    "production": {
+      "name": "ncd-focus-ptn",
+      "vars": {
+        "ENVIRONMENT": "production",
+        "WRITES_ENABLED": "false",
+        "NOTIFICATIONS_ENABLED": "false"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ncd-focus-production",
+          "database_id": "3c3f1932-8e86-45e2-9186-912adcc50241",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "triggers": {
+        "crons": [
+          "*/5 * * * *",
+          "0 0 * * *"
+        ]
+      }
+    }
+  }
+}

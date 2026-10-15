@@ -1,3 +1,6 @@
+> **ระบบจริงย้ายไป Cloudflare Workers + D1 (15 ตุลาคม 2569)**
+> ใช้ https://ncd-focus-ptn.muktar32.workers.dev/ และคู่มือ `cloudflare/README.md` สำหรับการพัฒนา/นำขึ้นระบบจริง
+> Google Sheets และโค้ด Apps Script ด้านล่างเก็บเพื่ออ้างอิงย้อนหลัง ห้ามนำ backend เดิมขึ้นใหม่เพื่อเปิดรับเขียนพร้อม D1 โดยไม่ตรวจเทียบข้อมูลและทำตามแผนย้อนกลับ
 # Production-only connection
 
 All staff use the existing shared API_PASSCODE. There is no separate app administrator password or settings screen. Connection defaults are maintained in app.js; Google project settings are managed through the owner's Google account. Legacy browser-local connection overrides are removed on startup.

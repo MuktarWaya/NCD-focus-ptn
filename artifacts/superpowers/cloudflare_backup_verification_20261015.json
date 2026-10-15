@@ -1,0 +1,25 @@
+{
+  "verifiedAt": "2026-10-15T05:27:43.018Z",
+  "checks": {
+    "targets": true,
+    "quarterly": true,
+    "dailyLogs": true,
+    "workers": true
+  },
+  "counts": {
+    "targets": 170,
+    "quarterly": 97,
+    "dailyLogs": 0,
+    "workers": 35
+  },
+  "snapshotHash": "35bcdb49d6c225384654646516c76beeaf6a4858bb02aa0cefc6056b6a141619",
+  "archiveChecks": {
+    "Targets": true,
+    "QuarterlyData": true,
+    "DailyLogs": true,
+    "OSM": true,
+    "NotificationLog": true
+  },
+  "postCutoverClinicalWrites": 0,
+  "manualBackupVerified": true
+}

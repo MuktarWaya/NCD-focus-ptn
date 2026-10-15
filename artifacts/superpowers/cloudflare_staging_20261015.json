@@ -1,0 +1,62 @@
+{
+  "verifiedAt": "2026-10-15T05:15:38.427Z",
+  "base": "https://ncd-focus-staging.muktar32.workers.dev",
+  "checks": {
+    "targets": true,
+    "quarterly": true,
+    "dailyLogs": true,
+    "workers": true
+  },
+  "counts": {
+    "targets": 170,
+    "quarterly": 97,
+    "dailyLogs": 0,
+    "workers": 35
+  },
+  "snapshotHash": "55f3c092148d833709d7944d8d30fb2d7de3ebbe1b424717866121e375c9d612",
+  "privatePathsBlocked": true,
+  "clinicalWrites": 0,
+  "timings": [
+    {
+      "action": "login",
+      "ms": 328,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 184,
+      "status": 200
+    },
+    {
+      "action": "selectWorker",
+      "ms": 170,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 176,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 165,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 176,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 208,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 173,
+      "status": 200
+    }
+  ],
+  "frontendHash": "a1eac5088bf649b1c8b917de0fcbcb3410f77458a69dc516a1bfd31b9f5a81ff"
+}
