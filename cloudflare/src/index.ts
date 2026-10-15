@@ -1,4 +1,5 @@
-import { cookie, login, session } from './auth.ts';
+import { cookie, login, session, adminActive, elevateAdmin } from './auth.ts';
+import { adminList, adminSave, saveWorker } from './admin.ts';
 import { read, mutate, isWrite, workspaceChoices, assertWorkspace } from './api.ts';
 import { ApiError, clean, STAFF, type Document } from './types.ts';
 import { enqueueDaily, flushOutbox } from './notifications.ts';
@@ -28,10 +29,16 @@ export default {
       const body=await boundedBody(request);const action=clean(body.action);
       const data=(body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data:{}) as Document;
       if(action==='login'){
-        const token=await login(request,env,body.passcode);
-        return json({success:true,data:{role:'user',backend:'cloudflare'}},200,{'Set-Cookie':cookie(token,request)});
+        const auth=await login(request,env,body.passcode);
+        return json({success:true,data:{role:'user',admin:auth.admin,backend:'cloudflare'}},200,{'Set-Cookie':cookie(auth.token,request)});
       }
       const current=await session(request,env);
+      if(action==='adminStatus')return json({success:true,data:{unlocked:adminActive(current),expiresAt:current.admin_expires_at||0}});
+      if(action==='adminLogin'){const until=await elevateAdmin(request,env,current,body.passcode);return json({success:true,data:{unlocked:true,expiresAt:until}});}
+      if(action==='adminLock'){await env.DB.prepare('UPDATE sessions SET admin_expires_at=0 WHERE token_hash=?').bind(current.token_hash).run();return json({success:true,data:{unlocked:false}});}
+      if(action==='adminList')return json({success:true,data:await adminList(data,env,current)});
+      if(action==='adminSave')return json({success:true,data:await adminSave(data,String(body.requestId||''),body.expectedRevision,env,current)});
+      if(action==='adminWorker')return json({success:true,data:await saveWorker(data,String(body.requestId||''),body.expectedRevision,env,current)});
       if(action==='logout'){
         await env.DB.prepare('DELETE FROM sessions WHERE token_hash=?').bind(current.token_hash).run();
         return json({success:true,data:{}},200,{'Set-Cookie':cookie('',request,true)});

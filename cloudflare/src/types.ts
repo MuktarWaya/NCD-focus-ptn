@@ -1,7 +1,7 @@
 export type Cell = string | number | boolean | null;
 export type Document = Record<string, Cell>;
 export type StoredRow = { id: number; document: string; revision: number; worker?: string; village?: string; target_id?: number; quarter?: string };
-export type Session = { token_hash: string; worker: string; expires_at: number };
+export type Session = { token_hash: string; worker: string; expires_at: number; admin_expires_at?:number };
 export class ApiError extends Error {
   status: number;
   code: string;

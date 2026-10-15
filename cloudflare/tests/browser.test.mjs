@@ -8,7 +8,7 @@ const require=createRequire(import.meta.url);
 test('real local Worker + D1: password, workspace, W0, round save/reopen, staff, exports and ambiguous write', {skip:!process.env.NCD_QA_NODE_MODULES,timeout:120000},async()=>{
   const {chromium}=require(path.join(process.env.NCD_QA_NODE_MODULES,'playwright'));
   const ExcelJS=require('../../vendor/exceljs-4.4.0.min.js');
-  const browser=await chromium.launch({channel:'chrome',headless:true});
+  const browser=await chromium.launch({...(process.env.NCD_QA_CHROME?{executablePath:process.env.NCD_QA_CHROME}:{channel:'chrome'}),headless:true,args:['--renderer-process-limit=1','--disable-gpu']});
   const out=new URL('../test-results/',import.meta.url);await fs.mkdir(out,{recursive:true});
   try{
     const context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});

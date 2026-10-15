@@ -1,6 +1,6 @@
-import { hash, assertWorkspace } from './auth.ts';
+import { hash, assertWorkspace, assertAdmin } from './auth.ts';
 import { ApiError, clean, id, owner, STAFF, unpack, type Document, type Session, type StoredRow } from './types.ts';
-import { computeDashboardStats_, validateTrackingData_, pingpongClassify_, getTodayThaiDate, trackingRoundOrder_, parseDate } from './rules.mjs';
+import { computeDashboardStats_, validateTrackingData_, validateNcdReportData_, pingpongClassify_, getTodayThaiDate, trackingRoundOrder_, parseDate } from './rules.mjs';
 import { eventMessage } from './notifications.ts';
 
 const targetFields = 'name address village responsible_worker age height type chronic_disease co_morbidity onset_year medicines'.split(' ');
@@ -18,10 +18,10 @@ export async function workspaceChoices(env:Env):Promise<string[]>{
 async function records(env:Env,table:'targets'|'tracking_records'|'daily_logs_legacy'):Promise<Document[]>{
   return (await env.DB.prepare(`SELECT * FROM ${table} ORDER BY id`).all<StoredRow>()).results.map(unpack);
 }
-async function assertTarget(env:Env,current:Session,targetId:number,write=false):Promise<StoredRow>{
+async function assertTarget(env:Env,current:Session,targetId:number,write=false,admin=false):Promise<StoredRow>{
   const row=await env.DB.prepare('SELECT * FROM targets WHERE id=?').bind(targetId).first<StoredRow>();
   if(!row)throw new ApiError('ไม่พบข้อมูลกลุ่มเป้าหมาย',404,'NOT_FOUND');
-  if((write&&current.worker===STAFF)||(current.worker!==STAFF&&row.worker!==current.worker))throw new ApiError('รายชื่อนี้ไม่ได้อยู่ในกลุ่มที่คุณรับผิดชอบ',403,'FORBIDDEN');
+  if(!admin&&((write&&current.worker===STAFF)||(current.worker!==STAFF&&row.worker!==current.worker)))throw new ApiError('รายชื่อนี้ไม่ได้อยู่ในกลุ่มที่คุณรับผิดชอบ',403,'FORBIDDEN');
   return row;
 }
 export async function read(action:string,data:Document,env:Env,current:Session):Promise<unknown>{
@@ -64,13 +64,14 @@ function newId():number{
   const bytes=crypto.getRandomValues(new Uint8Array(6));
   return bytes.reduce((n,b)=>n*256+b,0)||1;
 }
-export async function mutate(action:string,data:Document,requestId:string,expected:unknown,env:Env,current:Session):Promise<unknown>{
+export async function mutate(action:string,data:Document,requestId:string,expected:unknown,env:Env,current:Session,admin=false):Promise<unknown>{
+  if(admin)assertAdmin(current);
   if(env.WRITES_ENABLED!=='true')throw new ApiError('ระบบอยู่ระหว่างตรวจสอบข้อมูล ยังไม่เปิดรับบันทึก',503,'READ_ONLY');
   const migration=await env.DB.prepare("SELECT value FROM settings WHERE key='migration_state'").first<{value:string}>();
   if(migration?.value!=='verified')throw new ApiError('ยังตรวจสอบข้อมูลย้ายเข้าไม่ครบ',503,'UNVERIFIED_DATA');
-  if(current.worker===STAFF)throw new ApiError('โหมดเจ้าหน้าที่ดูข้อมูลทั้งหมด ใช้ดูข้อมูลเท่านั้น กรุณาเลือกชื่อผู้รับผิดชอบก่อนบันทึก',403,'FORBIDDEN');
+  if(!admin&&current.worker===STAFF)throw new ApiError('โหมดเจ้าหน้าที่ดูข้อมูลทั้งหมด ใช้ดูข้อมูลเท่านั้น กรุณาเลือกชื่อผู้รับผิดชอบก่อนบันทึก',403,'FORBIDDEN');
   if(!/^[a-zA-Z0-9-]{16,100}$/.test(requestId))throw new ApiError('ไม่พบรหัสยืนยันคำขอบันทึก');
-  const payloadHash=await hash(JSON.stringify({action,data,expected,worker:current.worker}));
+  const payloadHash=await hash(JSON.stringify({action,data,expected,worker:current.worker,...(admin?{admin:true}:{})}));
   const prior=await env.DB.prepare('SELECT * FROM mutation_receipts WHERE request_id=?').bind(requestId).first<{session_hash:string;payload_hash:string;result:string}>();
   if(prior){
     if(prior.session_hash!==current.token_hash||prior.payload_hash!==payloadHash)throw new ApiError('รหัสคำขอบันทึกถูกใช้กับข้อมูลอื่นแล้ว',409,'IDEMPOTENCY_CONFLICT');
@@ -80,25 +81,37 @@ export async function mutate(action:string,data:Document,requestId:string,expect
   let existing:StoredRow|null=null;let target:Document;let document:Document;
   if(action==='addTarget'||action==='updateTarget'){
     table='targets';
-    if(action==='updateTarget')existing=await assertTarget(env,current,id(data.id),true);
+    if(action==='updateTarget')existing=await assertTarget(env,current,id(data.id),true,admin);
     document={...(existing?JSON.parse(existing.document):{}),...pick(data,targetFields)};
-    if(owner(document)!==current.worker)throw new ApiError('ผู้รับผิดชอบต้องตรงกับชื่อคณะทำงานที่เลือก',403,'FORBIDDEN');
+    if(!admin&&owner(document)!==current.worker)throw new ApiError('ผู้รับผิดชอบต้องตรงกับชื่อคณะทำงานที่เลือก',403,'FORBIDDEN');
+    if(admin&&Object.hasOwn(data,'responsible_worker')){
+      document.responsible_worker=clean(data.responsible_worker);
+      if(!['ยังไม่ระบุคณะทำงาน',...await workspaceChoices(env)].includes(owner(document)))throw new ApiError('กรุณาเลือกคณะทำงานจากรายการ หรือเพิ่มคณะทำงานก่อน');
+    }
     validateTarget(document);target=document;
   }else{
-    const targetId=id(data.target_id);target=JSON.parse((await assertTarget(env,current,targetId,true)).document);
+    const targetId=id(data.target_id);target=JSON.parse((await assertTarget(env,current,targetId,true,admin)).document);
     if(action==='addQuarterly'){
       table='tracking_records';
       const quarter=clean(data.quarter);
       existing=await env.DB.prepare('SELECT * FROM tracking_records WHERE target_id=? AND quarter=?').bind(targetId,quarter).first<StoredRow>();
       document={...(existing?JSON.parse(existing.document):{}),...pick(data,trackFields),target_id:targetId,quarter};
-      document.date=document.date||getTodayThaiDate();
-      if(document.weight&&document.height)document.bmi=(Number(document.weight)/(Number(document.height)/100)**2).toFixed(1);
-      const invalid=validateTrackingData_(document);if(invalid)throw new ApiError(invalid);
+      if(!admin||!Object.hasOwn(data,'date'))document.date=document.date||getTodayThaiDate();
+      if(admin&&Object.hasOwn(data,'weight'))document.height=target.height;
+      if((!admin||Object.hasOwn(data,'weight'))&&document.weight&&document.height)document.bmi=(Number(document.weight)/(Number(document.height)/100)**2).toFixed(1);
+      const invalid=admin?validateNcdReportData_(data):validateTrackingData_(document);if(invalid)throw new ApiError(invalid);
+      if(admin)for(const [key,value] of Object.entries(data)){
+        if(!/^week[12]_/.test(key)||value===''||value===null)continue;
+        const max=key.endsWith('healthy_menu_days')?7:key.endsWith('sleep_avg')?24:key.includes('_avoid_')?5:10080;
+        const min=key.includes('_avoid_')?1:0;
+        if(!Number.isFinite(Number(value))||Number(value)<min||Number(value)>max)throw new ApiError('ค่าสรุปสัปดาห์ไม่อยู่ในช่วงที่กำหนด');
+      }
       for(const key of ['weight','height','bmi','waist','dtx','body_fat','muscle_mass','visceral_fat','body_age','hba1c','egfr','creatinine','triglyceride','ldl','cholesterol']){
+        if(admin&&!Object.hasOwn(data,key))continue;
         const value=document[key];if(value!==''&&value!==null&&value!==undefined&&(!Number.isFinite(Number(value))||Number(value)<0))throw new ApiError('ข้อมูล '+key+' ไม่ถูกต้อง');
       }
-      if(!['W0','W12','W24'].includes(quarter))for(const field of ['hba1c','egfr','creatinine','triglyceride','ldl','cholesterol'])document[field]='';
-      const pp=pingpongClassify_(document,target);document.pingpong=pp.colorTh;document.pingpong_rank=pp.rank;
+      if(!admin&&!['W0','W12','W24'].includes(quarter))for(const field of ['hba1c','egfr','creatinine','triglyceride','ldl','cholesterol'])document[field]='';
+      if(!admin||['dtx','hba1c','bp'].some(key=>Object.hasOwn(data,key))){const pp=pingpongClassify_(document,target);document.pingpong=pp.colorTh;document.pingpong_rank=pp.rank;}
     }else{
       table='daily_logs_legacy';document={...pick(data,dailyFields),target_id:targetId};document.date=document.date||getTodayThaiDate();
     }
@@ -123,7 +136,7 @@ export async function mutate(action:string,data:Document,requestId:string,expect
   }else if(table==='targets')batch.push(env.DB.prepare('INSERT INTO targets(id,worker,village,document) VALUES(?,?,?,?)').bind(recordId,owner(document),clean(document.village),documentJson));
   else if(table==='tracking_records')batch.push(env.DB.prepare('INSERT INTO tracking_records(id,target_id,quarter,document) VALUES(?,?,?,?)').bind(recordId,document.target_id,document.quarter,documentJson));
   else batch.push(env.DB.prepare('INSERT INTO daily_logs_legacy(id,target_id,document) VALUES(?,?,?)').bind(recordId,document.target_id,documentJson));
-  batch.push(env.DB.prepare('INSERT INTO audit_log(request_id,actor,action,target_id,before_document,after_document) VALUES(?,?,?,?,?,?)').bind(requestId,current.worker,action,table==='targets'?recordId:document.target_id,existing?.document??null,documentJson));
+  batch.push(env.DB.prepare('INSERT INTO audit_log(request_id,actor,action,target_id,before_document,after_document) VALUES(?,?,?,?,?,?)').bind(requestId,admin?'ผู้ดูแลระบบ':current.worker,admin?'admin:'+action:action,table==='targets'?recordId:document.target_id,existing?.document??null,documentJson));
   // Persist notifications atomically, then deliver asynchronously by Cron. Never send in the save path.
   const notificationAction=action==='addQuarterly'&&existing?'updateQuarterly':action;
   batch.push(env.DB.prepare('INSERT INTO notification_outbox(id,kind,message) VALUES(?,?,?)').bind(requestId,notificationAction,eventMessage(notificationAction,target,document,existing?JSON.parse(existing.document):undefined)));
@@ -135,3 +148,5 @@ export async function mutate(action:string,data:Document,requestId:string,expect
   return result;
 }
 export { assertWorkspace };
+export const adminTargetFields=targetFields;
+export const adminTrackingFields=trackFields.filter(key=>!['target_id','quarter','height','bmi'].includes(key));

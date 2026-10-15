@@ -1,0 +1,57 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+const require=createRequire(import.meta.url);
+test('admin UI: scoped user cannot edit, unlock, correct table, audit, worker cascade and lock',{skip:!process.env.NCD_QA_NODE_MODULES,timeout:240000},async()=>{
+ const {chromium}=require(path.join(process.env.NCD_QA_NODE_MODULES,'playwright'));
+ const browser=await chromium.launch({...(process.env.NCD_QA_CHROME?{executablePath:process.env.NCD_QA_CHROME}:{channel:'chrome'}),headless:true,args:['--renderer-process-limit=1','--disable-gpu']});
+ try{
+  const page=await browser.newPage({viewport:{width:1440,height:1000}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route(url=>url.hostname==='cdn.tailwindcss.com',async route=>{const response=await page.request.get(route.request().url());await route.fulfill({response});});
+  await page.goto('http://127.0.0.1:8787',{waitUntil:'networkidle'});
+  console.log('Local page',page.url(),await page.title(),'login fields',await page.locator('#login-passcode').count(),'errors',errors);
+  await page.locator('#login-passcode').fill('local-test-password');await page.locator('#login-form [type=submit]').click();
+  await page.waitForFunction(()=>state.connectionReady);
+  await page.locator('#worker-choice-select').selectOption('คณะ ก');await page.locator('#worker-choice-confirm').click();
+  await page.locator('[data-view="admin-view"]').click();await page.locator('#admin-unlock').waitFor({state:'visible'});
+  assert.equal(await page.locator('#admin-content').isVisible(),false);
+  await page.locator('#admin-password').fill('local-admin-password');await page.locator('#admin-unlock button').click();
+  await page.locator('#admin-table tbody tr').first().waitFor();
+  console.log('Admin unlocked');
+  // Locate by immutable fixture ID even if a prior run changed its name.
+  const first=page.locator('#admin-table tbody tr').first();
+  const address='แก้ตารางทดสอบ '+Date.now();await first.locator('[data-field="address"]').fill(address);
+  await first.getByRole('button',{name:'บันทึกแถว',exact:true}).click();
+  await page.waitForFunction(()=>document.getElementById('admin-status').textContent==='บันทึกแถวสำเร็จแล้ว');
+  assert.equal(await page.locator('#admin-table tbody tr').first().locator('[data-field="address"]').inputValue(),address);
+  console.log('Target saved');
+  await page.locator('[data-admin-table="tracking"]').click();await page.locator('#admin-columns').selectOption('behavior');await page.locator('[data-field="food_habit"]').first().waitFor();
+  assert.ok(await page.locator('[data-field="sleep"] option').allTextContents().then(x=>x.some(t=>t.includes('น้อยกว่า'))));
+  const food='แก้พฤติกรรมในตาราง '+Date.now();await page.locator('[data-field="food_habit"]').first().fill(food);
+  await page.locator('#admin-table tbody tr').first().getByRole('button',{name:'บันทึกแถว',exact:true}).click();
+  await page.waitForFunction(()=>document.getElementById('admin-status').textContent==='บันทึกแถวสำเร็จแล้ว');
+  console.log('Tracking saved');
+  await page.locator('[data-admin-table="audit"]').click();await page.locator('.admin-diff').first().waitFor();
+  assert.ok((await page.locator('#admin-table').textContent()).includes(food));
+  await page.locator('[data-admin-table="workers"]').click();await page.locator('#admin-add-worker').waitFor({state:'visible'});
+  await page.locator('#admin-table tbody tr').first().waitFor();
+  const workerRow=page.locator('#admin-table tbody tr').filter({has:page.locator('input[data-field="name"][value="คณะ ก"]')});
+  await workerRow.locator('[data-field="name"]').fill('คณะ ก แก้ไขทดสอบ');await workerRow.getByRole('button',{name:'บันทึกแถว',exact:true}).click();
+  await page.waitForFunction(()=>document.getElementById('admin-status').textContent==='บันทึกแถวสำเร็จแล้ว');
+  const renamed=page.locator('#admin-table tbody tr').filter({has:page.locator('input[data-field="name"][value="คณะ ก แก้ไขทดสอบ"]')});
+  assert.ok((await renamed.textContent()).includes('รับผิดชอบ 1 คน'));
+  await renamed.locator('[data-field="name"]').fill('คณะ ก');await renamed.getByRole('button',{name:'บันทึกแถว',exact:true}).click();
+  await page.waitForFunction(()=>document.getElementById('admin-status').textContent==='บันทึกแถวสำเร็จแล้ว');
+  await fs.mkdir(new URL('../test-results/',import.meta.url),{recursive:true});
+  await page.screenshot({path:fileURLToPath(new URL('../test-results/admin-desktop.png',import.meta.url)),fullPage:false});
+  await page.setViewportSize({width:390,height:844});
+  await page.waitForFunction(()=>document.getElementById('app-sidebar').getBoundingClientRect().right<=1);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+  await page.screenshot({path:fileURLToPath(new URL('../test-results/admin-mobile.png',import.meta.url)),fullPage:false});
+  await page.locator('#admin-lock').click();await page.locator('#admin-unlock').waitFor({state:'visible'});
+  assert.equal(await page.locator('#admin-content').isVisible(),false);assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});

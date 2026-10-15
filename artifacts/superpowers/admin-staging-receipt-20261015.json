@@ -1,0 +1,21 @@
+{
+  "verifiedAt": "2026-10-15T06:09:13.289Z",
+  "base": "https://ncd-focus-staging.muktar32.workers.dev",
+  "passed": true,
+  "checks": [
+    "ordinary/staff cannot access admin",
+    "admin unlock",
+    "allowlisted table reads",
+    "lock revokes capability",
+    "normal session remains valid",
+    "direct admin login",
+    "published admin assets without embedded credential"
+  ],
+  "counts": {
+    "targets": 170,
+    "tracking": 97,
+    "workers": 38,
+    "audit": 0
+  },
+  "clinicalMutationRequests": 0
+}

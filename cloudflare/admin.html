@@ -1,0 +1,17 @@
+<section id="admin-view" class="view-section hidden">
+ <div class="admin-panel">
+  <h2>จัดการฐานข้อมูล</h2><p>แก้ไขข้อมูลในช่องตาราง แล้วกดบันทึกแต่ละแถว การเปลี่ยนชื่อคณะทำงานจะเปลี่ยนผู้รับผิดชอบของทุกคนที่เกี่ยวข้องด้วย</p>
+  <form id="admin-unlock"><label>รหัสผ่านแอดมิน <input id="admin-password" type="password" autocomplete="current-password" required></label> <button type="submit">ปลดล็อกแอดมิน</button></form>
+  <p id="admin-status" role="status" aria-live="polite"></p>
+  <div id="admin-content" hidden>
+   <div class="admin-toolbar"><span id="admin-expiry"></span><button id="admin-lock" type="button">ล็อกแอดมิน</button></div>
+   <div class="admin-toolbar" role="group" aria-label="เลือกตาราง"><button data-admin-table="targets">กลุ่มเป้าหมาย</button><button data-admin-table="tracking">ผลติดตาม</button><button data-admin-table="workers">คณะทำงาน</button><button data-admin-table="audit">ประวัติแก้ไข</button></div>
+   <form id="admin-filter" class="admin-toolbar"><label>ค้นหาชื่อ / รหัส <input id="admin-search" type="search"></label><label>หมู่บ้าน <select id="admin-village"><option value="">ทุกหมู่บ้าน</option></select></label><label>คณะทำงาน <select id="admin-worker"><option value="">ทุกคน</option></select></label><label>รอบ <input id="admin-round" placeholder="เช่น W0" size="6"></label><button>ค้นหา / โหลดล่าสุด</button></form>
+   <form id="admin-add-worker" hidden><label>ชื่อคณะทำงานใหม่ <input id="admin-new-worker" required maxlength="200"></label> <button>เพิ่มคณะทำงาน</button></form>
+   <label id="admin-columns-label" hidden>ชุดช่องผลติดตาม <select id="admin-columns"><option value="physical">ตรวจร่างกาย</option><option value="behavior">พฤติกรรม W0</option><option value="labs">ผลแล็บ</option><option value="weeks">สรุปสัปดาห์</option></select></label>
+   <p>ช่องว่างหมายถึงยังไม่มีข้อมูล • เลข 0 เป็นข้อมูลที่บันทึกแล้ว • หากข้อมูลถูกแก้พร้อมกัน ให้ยกเลิกแถว โหลดล่าสุด แล้วตรวจแก้ใหม่</p>
+   <div class="admin-grid" tabindex="0" aria-label="ตารางฐานข้อมูล เลื่อนแนวนอนเพื่อดูช่องเพิ่มเติม"><table id="admin-table"></table></div>
+   <div class="admin-toolbar"><button id="admin-prev">ก่อนหน้า</button><span id="admin-page"></span><button id="admin-next">ถัดไป</button></div>
+  </div>
+ </div>
+</section>

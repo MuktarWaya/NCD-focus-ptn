@@ -5,7 +5,7 @@ import {timingSafeEqual} from 'node:crypto';
 // Workers provides this extension; Node's WebCrypto needs an equivalent in unit tests.
 if(!crypto.subtle.timingSafeEqual)crypto.subtle.timingSafeEqual=(a,b)=>timingSafeEqual(a,b);
 export class SqliteD1 {
-  constructor(){this.sqlite=new DatabaseSync(':memory:');this.sqlite.exec(fs.readFileSync(new URL('../migrations/0001_initial.sql',import.meta.url),'utf8'));}
+  constructor(){this.sqlite=new DatabaseSync(':memory:');for(const file of ['0001_initial.sql','0002_admin.sql'])this.sqlite.exec(fs.readFileSync(new URL('../migrations/'+file,import.meta.url),'utf8'));}
   prepare(sql){return new Statement(this,sql,[]);}
   async batch(statements){this.sqlite.exec('BEGIN IMMEDIATE');try{const results=statements.map(s=>s.execute());this.sqlite.exec('COMMIT');return results;}catch(e){this.sqlite.exec('ROLLBACK');throw e;}}
 }
@@ -26,7 +26,7 @@ export async function setup({verified=true}={}){
   const DB=new SqliteD1();const {importSQL}=await import('../scripts/migration.mjs');
   DB.sqlite.exec(importSQL({...structuredClone(fixtures),snapshotId:'fixture'}));
   if(verified)DB.sqlite.exec("UPDATE settings SET value='verified' WHERE key='migration_state'");
-  const env={DB,API_PASSCODE:'test-password',ENVIRONMENT:'local',WRITES_ENABLED:'true',NOTIFICATIONS_ENABLED:'false',TELEGRAM_BOT_TOKEN:'',TELEGRAM_CHAT_ID:'',ASSETS:{fetch:()=>new Response('asset')}};
+  const env={DB,API_PASSCODE:'test-password',ADMIN_PASSCODE:'local-admin-password',ENVIRONMENT:'local',WRITES_ENABLED:'true',NOTIFICATIONS_ENABLED:'false',TELEGRAM_BOT_TOKEN:'',TELEGRAM_CHAT_ID:'',ASSETS:{fetch:()=>new Response('asset')}};
   let cookie='';
   async function api(action,data={},extra={}){
     const response=await worker.fetch(new Request('https://ncd.test/api',{method:'POST',headers:{'X-NCD-Client':'1','Content-Type':'application/json','Cookie':cookie,Origin:'https://ncd.test'},body:JSON.stringify({action,data,worker:'คณะ ก',...extra})}),env,{});

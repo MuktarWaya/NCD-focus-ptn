@@ -32,6 +32,16 @@ Login uses the existing shared password and a 12-hour HttpOnly/Secure/SameSite c
 
 Every write has a request ID, original form revision, atomic D1 receipt/write/audit/outbox batch, and a unique person/round constraint. Repeating the same request returns the receipt; stale concurrent edits return 409 without overwriting. The client never automatically resends a write. An ambiguous write leaves the form and pending request ID intact; reconnect and inspect history before submitting again. Staff may select a responsible worker to edit, following the existing workflow.
 
+## Admin table corrections
+
+Set `ADMIN_PASSCODE` as a separate Worker secret (never in the asset bundle). Apply `migrations/0002_admin.sql` before publishing the admin build. Back up live D1 privately before applying migrations. Existing shared passwords and staff selection do not unlock admin endpoints.
+
+Sign in with the admin password, or open **จัดการฐานข้อมูล** after ordinary login and unlock there. The capability expires after 30 minutes; **ล็อกแอดมิน** revokes it immediately. Normal sign-in remains valid. Target profiles/assignments, follow-up records and worker names can be corrected in tables; click **บันทึกแถว** to commit or **ยกเลิก** to discard. Search and village/worker/round filters paginate 25 rows. Follow-up columns are grouped into physical measures, W0 behavior, labs and weekly summaries. IDs and person/round links stay immutable; there is no patient delete command. Blank and zero values remain distinct.
+
+Worker renames atomically cascade to linked targets, increment their revisions, and invalidate the old selected workspace. Duplicate directory names require explicit reassignment instead of implicit merging. Every change records before/after values in the admin history table. Stale revisions reject overwrites. Ambiguous saves keep their request ID while the page remains open; inspect the latest data before retrying. Unsaved drafts warn before closing/reloading the page and are not stored on disk.
+
+The admin credential is shared administration, not individual editor identity: history labels these corrections **ผู้ดูแลระบบ**. It does not identify a person sharing that password.
+
 ## Notifications
 
 Clinical transactions only enqueue a durable outbox row. A Cron runs every five minutes to deliver up to ten pending messages per run; backlog/retries can delay delivery further. `0 0 * * *` creates the daily 07:00 Asia/Bangkok summary. Retries use leases/backoff, eight attempts then a visible failed row; inspect `notification_outbox` for delivery failures. Telegram has no idempotency key, so an ambiguous send can duplicate a notification (at-least-once delivery). Clinical records/receipts remain exactly-once for a request. No detailed measurements appear in messages. `NOTIFICATIONS_ENABLED=false` disables all outbound sends; staging always uses false. Enable production only after the old scheduled sender has been disabled. Historical NotificationLog is archived, never replayed.

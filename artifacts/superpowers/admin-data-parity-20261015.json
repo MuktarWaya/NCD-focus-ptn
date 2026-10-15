@@ -1,0 +1,27 @@
+{
+  "verifiedAt": "2026-10-15T06:14:47.582Z",
+  "checks": {
+    "targets": {
+      "beforeCount": 170,
+      "afterCount": 170,
+      "unchanged": true,
+      "beforeHash": "96e00bb5168a95a9ca8256fe9045607715cb7f7f1880de86971197896b33e4f3",
+      "afterHash": "96e00bb5168a95a9ca8256fe9045607715cb7f7f1880de86971197896b33e4f3"
+    },
+    "tracking_records": {
+      "beforeCount": 97,
+      "afterCount": 97,
+      "unchanged": true,
+      "beforeHash": "7afe78f8e5c432c7612a5e14eaa2623a2df225460bb473107a0c93fcd9f97cfe",
+      "afterHash": "7afe78f8e5c432c7612a5e14eaa2623a2df225460bb473107a0c93fcd9f97cfe"
+    },
+    "workers": {
+      "beforeCount": 35,
+      "afterCount": 35,
+      "unchanged": true,
+      "beforeHash": "367c90ad41995cd343c887ba153ae70067281b7d68e59da86852aa0b54ac63ec",
+      "afterHash": "367c90ad41995cd343c887ba153ae70067281b7d68e59da86852aa0b54ac63ec"
+    }
+  },
+  "allClinicalAndDirectoryDataUnchanged": true
+}

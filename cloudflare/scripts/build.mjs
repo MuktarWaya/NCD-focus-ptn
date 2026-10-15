@@ -33,6 +33,10 @@ replaceOnce("    const d = raw && raw.data;", `    const d = raw && raw.data;
         else sessionStorage.removeItem('ncd_selected_worker');
     }`);
 replaceOnce('function loadTrackingRoundRecord(round) {', 'function loadTrackingRoundRecord(round) {');
+replaceOnce('function switchView(viewId) {',`function switchView(viewId) {
+    if(viewId==='admin-view'&&state.currentView!==viewId)queueMicrotask(()=>ncdAdminUI.open());`);
+replaceOnce("    const subtitle = document.getElementById('view-subtitle');",`    const subtitle = document.getElementById('view-subtitle');
+    if(viewId==='admin-view'){title.textContent='จัดการฐานข้อมูล';subtitle.textContent='แก้ไขข้อมูลและตรวจประวัติสำหรับผู้ดูแลระบบ';return;}`);
 replaceOnce("    const status = document.getElementById('form-q-history-status');", "    ncdTransport.beginQuarterly(targetId,round,record);\n    const status = document.getElementById('form-q-history-status');");
 replaceOnce('function openModal(modalId) {',`function openModal(modalId) {
     if(modalId==='target-modal') {
@@ -44,11 +48,16 @@ if(/script\.google\.com|DEFAULT_API_PASSCODE\s*=\s*'[^']+'/.test(source))throw E
 await fs.writeFile(path.join(out,'app.js'),source);
 await fs.copyFile(path.join(here,'client.js'),path.join(out,'cloudflare-client.js'));
 let html=await fs.readFile(path.join(out,'index.html'),'utf8');
+html=html.replace('</main>',(await fs.readFile(path.join(here,'admin.html'),'utf8'))+'\n</main>');
+html=html.replace('</nav>','<a href="#" class="nav-item" data-view="admin-view"><span class="material-symbols-outlined">admin_panel_settings</span><span>จัดการฐานข้อมูล</span></a>\n</nav>');
+html=html.replace('</head>','<link rel="stylesheet" href="admin.css?v=20261015">\n</head>');
+html=html.replace('</body>','<script src="admin.js?v=20261015"></script>\n</body>');
+for(const file of ['admin.js','admin.css'])await fs.copyFile(path.join(here,file),path.join(out,file));
 html=html.replace(/<script src="app.js[^>]*><\/script>/,'<script src="cloudflare-client.js?v=20261015-cloudflare"></script>\n    <script src="app.js?v=20261015-cloudflare"></script>');
 html=html.replace('ใช้รายชื่อ mock ชั่วคราว สามารถเปลี่ยนเป็นรายชื่อจริงภายหลังได้','แสดงรายชื่อคณะทำงานและผู้รับผิดชอบจากฐานข้อมูล');
 await fs.writeFile(path.join(out,'index.html'),html);
 await fs.writeFile(path.join(out,'_headers'),`/*\n  X-Frame-Options: DENY\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: no-referrer\n  Cache-Control: public, max-age=0, must-revalidate\n`);
-const allowed=new Set([...files,'app.js','cloudflare-client.js','_headers']);
+const allowed=new Set([...files,'app.js','cloudflare-client.js','admin.js','admin.css','_headers']);
 async function verifyDirectory(directory,prefix=''){
   for(const entry of await fs.readdir(directory,{withFileTypes:true})){
     const relative=prefix+entry.name;
@@ -57,4 +66,4 @@ async function verifyDirectory(directory,prefix=''){
   }
 }
 await verifyDirectory(out);
-console.log('Built '+(files.length+3)+' allowlisted public assets; no source data or credentials');
+console.log('Built '+allowed.size+' allowlisted public assets; no source data or credentials');
