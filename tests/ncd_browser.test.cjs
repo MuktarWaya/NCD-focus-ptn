@@ -103,6 +103,11 @@ test('browser saves and reopens assessments, then exports fresh data on desktop 
         assert.equal(records().filter(r=>r.target_id===1 && r.quarter==='W0').length,1);
         assert.equal(records()[0].food_habit, 'ประเมินอาหารทดสอบ'); assert.equal(records()[0].body_fat, '');
         await page.waitForFunction(() => document.querySelector('.report-profile-summary'));
+        await page.locator('.nav-item[data-view="w0-tracking-view"]').click();
+        assert.match(await page.locator('#w0-summary').innerText(),/ครบพฤติกรรม W0\s*1 คน/);
+        await page.locator('.w0-members summary').click();
+        await page.locator('[data-target-id="1"]').click();
+        await page.locator('#profile-view').waitFor({state:'visible'});
         await page.locator('#btn-add-quarterly').click();
         await page.locator('#quarterly-modal').waitFor({state:'visible'});
         assert.equal(await page.locator('#form-q-round').inputValue(),'W0');

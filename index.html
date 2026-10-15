@@ -110,7 +110,7 @@
         };
     </script>
     <!-- Local CSS stylesheet -->
-    <link rel="stylesheet" href="style.css?v=20261015-history">
+    <link rel="stylesheet" href="style.css?v=20261015-behavior">
 </head>
 <body class="bg-background-base text-on-surface antialiased font-body-md h-full flex flex-col overflow-hidden">
 
@@ -605,9 +605,9 @@
                     <div id="w0-report" hidden>
                         <header class="w0-report-heading"><h2>ติดตามความครบ W0 · <span id="w0-community"></span></h2><p id="w0-scope"></p><p>อ่านข้อมูลล่าสุด: <time id="w0-time"></time></p></header>
                         <div id="w0-summary" class="w0-summary" aria-live="polite"></div>
-                        <p class="w0-explanation">สีแสดงความครบของข้อมูล ไม่ใช่ระดับความเสี่ยงสุขภาพ เขียว = ครบตามแบบ W0 · เหลือง = มีบางส่วนหรือมีผลรอบอื่น · แดง = ยังไม่มีผลติดตามเลย</p>
-                        <p class="w0-explanation">พฤติกรรมบางช่องเพิ่งเพิ่ม จำนวนแต่ละหัวข้ออาจซ้ำคนกัน หัวข้อผลประเมินนับเฉพาะผู้มี W0 ส่วนข้อมูลทะเบียนตรวจทุกคน ผลแล็บที่ยังไม่มีให้ประสานผลเดิมหรือแจ้งสถานะ</p>
-                        <p class="w0-table-note">สีแสดงความครบของข้อมูล W0 · บางส่วนรวมผู้มี M0 / รอบอื่น · ต้องดู = บางส่วน + ยังไม่มีผลติดตาม · เครื่องหมาย * ให้ผู้ประสานงานตรวจชื่อผู้รับผิดชอบ</p>
+                        <p class="w0-explanation">สีแสดงความครบของข้อมูล ไม่ใช่ระดับความเสี่ยงสุขภาพ เขียว = บันทึกพฤติกรรม W0 ครบ 9 หัวข้อ · เหลือง = มีบางส่วนหรือมีผลรอบอื่น · แดง = ยังไม่มีผลติดตามเลย</p>
+                        <p class="w0-explanation">ทะเบียน ค่าตรวจ ประเภทความเสี่ยง แล็บ และข้อสังเกตการนอนแสดงให้ตรวจแยก ไม่หักยอดพฤติกรรมครบ จำนวนแต่ละหัวข้ออาจซ้ำคนกัน หัวข้อผลประเมินนับเฉพาะผู้มี W0 ส่วนข้อมูลทะเบียนตรวจทุกคน ผลแล็บที่ยังไม่มีให้ประสานผลเดิมหรือแจ้งสถานะ</p>
+                        <p class="w0-table-note">ตารางนับความครบพฤติกรรม W0 9 หัวข้อ ไม่ใช่ความครบของ Excel ทั้งแบบ · บางส่วนรวมผู้มี M0 / รอบอื่น · ต้องดู = บางส่วน + ยังไม่มีผลติดตาม · เครื่องหมาย * ให้ผู้ประสานงานตรวจชื่อผู้รับผิดชอบ</p>
                         <div id="w0-comparison"></div>
                         <div id="w0-workers"></div>
                     </div>
@@ -1546,11 +1546,11 @@
     <!-- Script Application Logic -->
     <script src="tracking-utils.js?v=20260719-biweekly"></script>
     <script src="ncd-export.js?v=20261014-community"></script>
-    <script src="w0-completeness.js?v=20261015-history"></script>
-    <script src="worker-scope.js?v=20261015-history"></script>
-    <script src="tracking-history.js?v=20261015-history"></script>
-    <script src="app.js?v=20261015-history"></script>
-    <script src="ncd-report-ui.js?v=20261015-history"></script>
-    <script src="w0-tracking-ui.js?v=20261015-history"></script>
+    <script src="w0-completeness.js?v=20261015-behavior"></script>
+    <script src="worker-scope.js?v=20261015-behavior"></script>
+    <script src="tracking-history.js?v=20261015-behavior"></script>
+    <script src="app.js?v=20261015-behavior"></script>
+    <script src="ncd-report-ui.js?v=20261015-behavior"></script>
+    <script src="w0-tracking-ui.js?v=20261015-behavior"></script>
 </body>
 </html>
