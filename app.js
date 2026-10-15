@@ -3128,7 +3128,8 @@ function setupEventListeners() {
     });
 }
 
-// Post request handler using POST redirect trick for GAS (Text payload with text/plain to bypass Preflight)
+// GAS ContentService redirects responses to temporary URLs; keep each request distinct.
+let apiRequestSequence = 0;
 async function postToAPI(action, data, passcode = state.apiPasscode, opts = {}) {
     const isWrite = ['addTarget', 'updateTarget', 'addQuarterly', 'addDailyLog'].includes(action);
     if (isWrite && (state.connectionMode !== 'online' || !state.connectionReady || sessionStorage.getItem('ncd_authenticated') !== 'true')) {
@@ -3153,10 +3154,12 @@ async function postToAPI(action, data, passcode = state.apiPasscode, opts = {}) 
     
     // We send POST request without headers object to avoid triggering CORS preflight check
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), 45000);
     try {
-        const response = await fetch(state.gasUrl, {
-            method: 'POST', body: JSON.stringify(payload), signal: controller.signal
+        const separator = state.gasUrl.includes('?') ? '&' : '?';
+        const requestUrl = state.gasUrl + separator + '_ncd_request=' + Date.now() + '-' + (++apiRequestSequence) + '-' + Math.random().toString(36).slice(2);
+        const response = await fetch(requestUrl, {
+            method: 'POST', cache: 'no-store', redirect: 'follow', body: JSON.stringify(payload), signal: controller.signal
         });
         if (!response.ok) throw new Error(`เซิร์ฟเวอร์ตอบ HTTP ${response.status}`);
         const json = await response.json();

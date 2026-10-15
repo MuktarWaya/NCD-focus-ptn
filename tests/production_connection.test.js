@@ -422,3 +422,32 @@ test('workspace guards stop other-worker profile reads and writes before network
  c.run('state.selectedWorker=null');await assert.rejects(c.run("postToAPI('getTargetDetail',{id:1})"),/เลือกชื่อ/);
 });
 test('staff overview permits reads but rejects every mutation before fetch',async()=>{const c=client();let calls=0;c.context.fetch=async()=>{calls++;return {ok:true,json:async()=>({success:true,data:{}})};};c.run("state.connectionReady=true;state.selectedWorker=workerScope.STAFF_ALL;state.targets=[{id:1,responsible_worker:'ทีม ก'}]");await c.run("postToAPI('getTargetDetail',{id:1})");assert.equal(calls,1);for(const action of ['addTarget','updateTarget','addQuarterly','addDailyLog'])await assert.rejects(c.run(`postToAPI('${action}',{id:1,target_id:1,responsible_worker:'ทีม ก'})`),/โหมดเจ้าหน้าที่/);assert.equal(calls,1);});
+
+test('POST requests use unique uncached URLs with credentials only in the body', async () => {
+    const c = client(); const calls = [];
+    c.context.fetch = async (url, options) => {
+        calls.push({url, options});
+        return {ok:true,json:async()=>({success:true,data:{}})};
+    };
+    await c.run("postToAPI('getTargets', {}, 'test-secret')");
+    await c.run("postToAPI('getTargets', {}, 'test-secret')");
+    assert.notEqual(calls[0].url, calls[1].url);
+    for (const {url,options} of calls) {
+        assert.match(url, /[?&]_ncd_request=/);
+        assert.equal(url.includes('test-secret'),false);
+        assert.equal(options.method,'POST');
+        assert.equal(options.cache,'no-store');
+        assert.equal(options.redirect,'follow');
+        assert.equal(JSON.parse(options.body).passcode,'test-secret');
+        assert.equal(options.headers,undefined); // stays a simple cross-origin request
+    }
+});
+
+test('GET-only rejection of a write remains ambiguous and is never retried', async () => {
+    const c=client(); let requests=0;
+    c.run("state.connectionReady=true;state.selectedWorker='ทีม ก';state.targets=[{id:1,responsible_worker:'ทีม ก'}]");
+    c.context.fetch=async()=>{requests++;return {ok:true,json:async()=>({success:false,error:'API นี้ต้องเรียกผ่าน POST พร้อมรหัสผ่านเท่านั้น'})};};
+    await assert.rejects(c.run("postToAPI('addQuarterly',{target_id:1})"),/ตรวจรายการก่อนบันทึกซ้ำ/);
+    assert.equal(requests,1);
+    assert.equal(c.run('state.connectionReady'),false);
+});
