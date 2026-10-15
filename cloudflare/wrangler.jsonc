@@ -53,8 +53,8 @@
       "name": "ncd-focus-ptn",
       "vars": {
         "ENVIRONMENT": "production",
-        "WRITES_ENABLED": "false",
-        "NOTIFICATIONS_ENABLED": "false"
+        "WRITES_ENABLED": "true",
+        "NOTIFICATIONS_ENABLED": "true"
       },
       "d1_databases": [
         {

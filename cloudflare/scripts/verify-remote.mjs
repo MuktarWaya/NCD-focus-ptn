@@ -30,5 +30,5 @@ const checks=await Promise.all(['/env.txt','/data/targets.csv','/backend/gas_bac
 if(checks.some(c=>c.status!==404))throw Error('Private asset path is accessible');
 const app=await(await fetch(base+'/app.js')).text();if(/script\.google\.com|DEFAULT_API_PASSCODE\s*=\s*'[^']+'/.test(app))throw Error('Legacy endpoint or credential in frontend');
 for(let i=0;i<5;i++)await api('getBootstrapData');
-const receipt={verifiedAt:new Date().toISOString(),base,...verification,exportReports,privatePathsBlocked:true,clinicalWrites:0,timings,frontendHash:digest(app)};
+const receipt={verifiedAt:new Date().toISOString(),base,...verification,exportReports,writesEnabled:bootstrap.writesEnabled,privatePathsBlocked:true,clinicalWrites:0,timings,frontendHash:digest(app)};
 await fs.writeFile(receiptPath,JSON.stringify(receipt,null,2));console.log(receipt);

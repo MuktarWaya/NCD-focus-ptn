@@ -1,6 +1,12 @@
-# Netlify configuration for NCDs Focus Web App
+# Legacy URL only: the application and API now run on Cloudflare Workers + D1.
 [build]
-  publish = "."
+  publish = "cloudflare/legacy-redirect"
+
+[[redirects]]
+  from = "/*"
+  to = "https://ncd-focus-ptn.muktar32.workers.dev/:splat"
+  status = 302
+  force = true
 
 [[headers]]
   for = "/*"
@@ -9,4 +15,4 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "no-referrer-when-downgrade"
-    Cache-Control = "public, max-age=0, must-revalidate"
+    Cache-Control = "no-store"

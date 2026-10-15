@@ -1,0 +1,12 @@
+{
+  "verifiedAt": "2026-10-15T05:30:38.527Z",
+  "sixMinuteDrain": true,
+  "sourceStable": true,
+  "checks": {
+    "targets": true,
+    "quarterly": true,
+    "dailyLogs": true,
+    "workers": true,
+    "archive": true
+  }
+}

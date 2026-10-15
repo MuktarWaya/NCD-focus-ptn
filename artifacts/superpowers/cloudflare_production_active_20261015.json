@@ -1,0 +1,64 @@
+{
+  "verifiedAt": "2026-10-15T05:33:59.846Z",
+  "base": "https://ncd-focus-ptn.muktar32.workers.dev",
+  "checks": {
+    "targets": true,
+    "quarterly": true,
+    "dailyLogs": true,
+    "workers": true
+  },
+  "counts": {
+    "targets": 170,
+    "quarterly": 97,
+    "dailyLogs": 0,
+    "workers": 35
+  },
+  "snapshotHash": "fe520deb5d334a218f182340c59b4e04464de5f8ee313a2ca7eab4447399e47b",
+  "exportReports": 52,
+  "writesEnabled": true,
+  "privatePathsBlocked": true,
+  "clinicalWrites": 0,
+  "timings": [
+    {
+      "action": "login",
+      "ms": 725,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 433,
+      "status": 200
+    },
+    {
+      "action": "selectWorker",
+      "ms": 407,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 411,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 413,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 420,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 387,
+      "status": 200
+    },
+    {
+      "action": "getBootstrapData",
+      "ms": 416,
+      "status": 200
+    }
+  ],
+  "frontendHash": "384957c5164d9b70c2b584afb55b249ac5749b0e2d0da4715c0d12fcbe0060af"
+}
