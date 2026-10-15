@@ -15,7 +15,7 @@
         { key: 'veggie_fruit', label: 'ผักและผลไม้ (ส่วนต่อวัน)', type: 'number', max: 100, step: '0.1' },
         { key: 'depression_2q', label: 'ผลคัดกรองภาวะซึมเศร้า 2Q', options: YES_NO },
         { key: 'report_sleep_hours', label: 'นอนเฉลี่ย (ชั่วโมงต่อวัน)', type: 'number', max: 24, step: '0.01' },
-        { key: 'sleep', label: 'ช่องการนอนตามแบบหน่วยจัดการ', options: [['low', '≤ 7–8 ชม. ตามแบบ'], ['high', '≥ 7–8 ชม. ตามแบบ']] },
+        { key: 'sleep', label: 'ช่องการนอนตามแบบหน่วยจัดการ', options: [['low', 'น้อยกว่าหรือเท่ากับ 7–8 ชั่วโมง ตามแบบ'], ['high', 'มากกว่าหรือเท่ากับ 7–8 ชั่วโมง ตามแบบ']] },
         { key: 'smoking', label: 'การสูบบุหรี่', options: [['yes', 'สูบ'], ['no', 'ไม่สูบ']] },
         { key: 'alcohol', label: 'การดื่มเครื่องดื่มแอลกอฮอล์', options: [['yes', 'ดื่ม'], ['no', 'ไม่ดื่ม']] },
         { key: 'risk_category', label: 'ประเภทกลุ่มเสี่ยงในรอบนี้ (สำหรับกลุ่มเสี่ยง)', options: RISK_CATEGORIES.map(v => [v, v]) }
